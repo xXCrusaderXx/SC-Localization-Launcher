@@ -1,0 +1,17 @@
+*.aps
+*.obj
+*.user
+*.tlog
+*.pdb
+*.pch
+*.log
+*.res
+*/obj
+*/obj_*
+*.jpg
+*.png
+*.cache
+build/
+release/
+
+submodules/ArenaSDK/ArenaSDK_Linux*

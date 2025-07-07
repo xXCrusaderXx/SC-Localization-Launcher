@@ -1,0 +1,10 @@
+{
+    "enviroments": {
+        "live": "eng",
+        "ptu": "eng",
+        "eptu": "eng",
+        "hotfix": "eng",
+        "tech-preview": "eng"
+    },
+    "path": "path/to/enviroments-root"
+}
