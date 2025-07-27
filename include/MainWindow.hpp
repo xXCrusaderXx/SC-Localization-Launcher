@@ -2,195 +2,186 @@
 #include <QLabel>
 #include <QMainWindow>
 #include <QMessageBox>
+#include <QMouseEvent>
 #include <QPixmap>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <QWindow>
 #include <QtConcurrent/QtConcurrent>
 
-#include "EnvActions/EptuEnv.hpp"
-#include "EnvActions/HotfixEnv.hpp"
-#include "EnvActions/LiveEnv.hpp"
-#include "EnvActions/PtuEnv.hpp"
-#include "EnvActions/TechPreviewEnv.hpp"
+#include "frontend/Channels/EptuChannel.hpp"
+#include "frontend/Channels/HotfixChannel.hpp"
+#include "frontend/Channels/LiveChannel.hpp"
+#include "frontend/Channels/PtuChannel.hpp"
+#include "frontend/Channels/TechPreviewChannel.hpp"
+#include "frontend/MenuBar/MenuBar.hpp"
+#include "frontend/Settings/Settings.hpp"
+#include "frontend/Update/Update.hpp"
 
-#include "GitRepoHandler/GitChecker.hpp"
-#include "GitRepoHandler/GitCloner.hpp"
+#include "backend/BackEnd.hpp"
+#include "logging/logging.h"
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
    private:
+    LoggerFramework::LogEx lg;
+    BackEnd backEnd;
     QLabel *labelLogo;
-    QLabel *labelBigText;
-    QLabel *labelStatusLive;
-    QLabel *labelStatusPtu;
-    QLabel *labelStatusEptu;
-    QLabel *labelStatusHotfix;
-    QLabel *labelStatusTechPreview;
-
-    QPushButton *buttonUpdate;
-    QPushButton *buttonUpdateVailable;
+    QLabel *labelTitel;
 
     QPushButton *buttonSettings;
 
-    QWidget *centralWidget;
-    QGridLayout *gridLayout;
+    MenuBar *menuBar = nullptr;
+    LiveChannel *live = nullptr;
+    PtuChannel *ptu = nullptr;
+    EptuChannel *eptu = nullptr;
+    HotfixChannel *hotfix = nullptr;
+    TechPreviewChannel *techPreview = nullptr;
 
-    LiveEnv *live = nullptr;
-    PtuEnv *ptu = nullptr;
-    EptuEnv *eptu = nullptr;
-    HotfixEnv *hotfix = nullptr;
-    TechPreviewEnv *techPreview = nullptr;
+    Settings *settings = nullptr;
+    UpdateButton *update = nullptr;
 
-    GitCloner *gitCloner = nullptr;
-    GitChecker *gitChecker = nullptr;
+   protected:
+    bool eventFilter (QObject *obj, QEvent *event) override;
 
    public:
     MainWindow (QWidget *parent = nullptr)
         : QMainWindow(parent)
+        , lg("MainWindow")
     {
-        this->setStyleSheet(R"(
-            QMainWindow {
-                background-image: url(:/background.png);
-                background-repeat: no-repeat;
-                background-position: center;
-            }
-        )");
-        // this->setStyleSheet("background-color: #1e1e1e;");
+        this->setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
+        setWindowTitle("::MainWindow()");
+        setFixedSize(800, 430);
 
-        setWindowTitle("SC Deutsch Launcher Linux");
-        setFixedSize(800, 450);
+        QWidget *central = new QWidget(this);
+        setCentralWidget(central);
+        centralWidget()->installEventFilter(this);
+        QGridLayout *mainGrid = new QGridLayout(central);
+        central->setLayout(mainGrid);
 
-        centralWidget = new QWidget(this);
+        QWidget *topMenuBar = new QWidget(central);
+        topMenuBar->setMinimumSize(1, 2);
+        mainGrid->addWidget(topMenuBar, 0, 0, 1, 2);
+        QGridLayout *layoutMenuBar = new QGridLayout(topMenuBar);
+        topMenuBar->setLayout(layoutMenuBar);
+        menuBar = new MenuBar(this, layoutMenuBar);
 
-        gridLayout = new QGridLayout(centralWidget);
+        QWidget *top = new QWidget(central);
+        top->setMinimumSize(1, 2);
+        mainGrid->addWidget(top, 1, 0, 1, 2);
+        QGridLayout *layoutTop = new QGridLayout(top);
+        top->setLayout(layoutTop);
+        setupTopWidged(top, layoutTop);
 
-        setupButtons(gridLayout);
+        QWidget *left = new QWidget(central);
+        mainGrid->addWidget(left, 2, 0, 1, 1);
+        QGridLayout *layoutLeft = new QGridLayout(left);
+        left->setLayout(layoutLeft);
+        setupChannelWidged(left, layoutLeft);
 
-        // Logo
+        QWidget *right = new QWidget(central);
+        mainGrid->addWidget(right, 2, 1, 1, 1);
+        QGridLayout *layoutRight = new QGridLayout(right);
+        right->setLayout(layoutRight);
+
+        setupLogoWidged(right, layoutRight);
+
+        QWidget *bottom = new QWidget(central);
+        bottom->setMinimumSize(2, 0);
+        mainGrid->addWidget(bottom, 3, 0, 1, 2);
+        QGridLayout *layoutBottom = new QGridLayout(bottom);
+        bottom->setLayout(layoutBottom);
+
+        QLabel *label1 = new QLabel(bottom);
+        label1->setText("LIVE");
+        layoutBottom->addWidget(label1, 0, 0, 1, 2);
+
+        QLabel *label2 = new QLabel(bottom);
+        label2->setText("PTU");
+        layoutBottom->addWidget(label2, 0, 2, 1, 2);
+
+        QLabel *label3 = new QLabel(bottom);
+        label3->setText("EPTU");
+        layoutBottom->addWidget(label3, 0, 4, 1, 2);
+
+        layoutBottom->setRowStretch(1, 1);
+
+        backEnd.initGui();
+    }
+
+    void setupTopWidged (QWidget *widged, QGridLayout *grid)
+    {
+        LOG_DEBUG(lg) << "::setupTopWidged()";
+        labelTitel = new QLabel(this);
+        labelTitel->setAlignment(Qt::AlignLeft);
+        labelTitel->setStyleSheet(R"(
+    QLabel {
+        font-size: 28px;
+        font-weight: bold;
+        color: white;
+        margin: 0px;
+        padding: 0px;
+    }
+)");
+
+        QString htmlText = R"(
+    <div style="font-size:28px; font-weight:bold; line-height: 1.0;">
+        SC Deutsch Launcher<br>
+        <span style="font-size:13px; font-weight:normal; line-height: 1.0;">
+            Offizielle Community Edition
+        </span>
+    </div>
+)";
+        labelTitel->setText(htmlText);
+        grid->addWidget(labelTitel, 0, 0, 1, 2);
+
+        settings = new Settings(this, grid);
+        settings->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
+        backEnd.setGuiCallback(settings->getName(), [this] (const nlohmann::json &msg) { settings->updateStatus(msg); });
+    };
+
+    void setupLogoWidged (QWidget *widged, QGridLayout *grid)
+    {
+        LOG_DEBUG(lg) << "::setupLogoWidged()";
         labelLogo = new QLabel(this);
-        labelLogo->setFixedHeight(150);
-        labelLogo->setAlignment(Qt::AlignCenter);
+        labelLogo->setFixedSize(100, 100);
+        labelLogo->setAlignment(Qt::AlignBottom | Qt::AlignRight);
         QPixmap logo(":/logo.png");
         if(!logo.isNull())
         {
             labelLogo->setPixmap(logo.scaled(labelLogo->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
         }
-        gridLayout->addWidget(labelLogo, 0, 5, 1, 3);
-
-        // Status-Label
-        labelBigText = new QLabel("SC Deutsch Launcher Linux", this);
-        labelBigText->setAlignment(Qt::AlignCenter);
-        gridLayout->addWidget(labelBigText, 0, 0, 1, 4);
-
-        labelStatusLive = new QLabel("4.0.2 LIVE (02.03.2025, 18:46)", this);
-        labelStatusLive->setAlignment(Qt::AlignCenter);
-        gridLayout->addWidget(labelStatusLive, 8, 0, 1, 2);
-
-        labelStatusPtu = new QLabel("4.0.2 PTU (02.03.2025, 18:47)", this);
-        labelStatusPtu->setAlignment(Qt::AlignCenter);
-        gridLayout->addWidget(labelStatusPtu, 8, 2, 1, 2);
-
-        labelStatusEptu = new QLabel("4.0.2 PTU (02.03.2025, 18:47)", this);
-        labelStatusEptu->setAlignment(Qt::AlignCenter);
-        gridLayout->addWidget(labelStatusEptu, 8, 4, 1, 2);
-
-        setCentralWidget(centralWidget);
-
-        checkGitRepo();
+        grid->setColumnStretch(0, 1);
+        grid->setRowStretch(0, 1);
+        grid->addWidget(labelLogo, 1, 1);
     }
 
-    void setupButtons (QGridLayout *grid)
+    void setupChannelWidged (QWidget *widged, QGridLayout *grid)
     {
-        live = new LiveEnv(this, grid);
-        ptu = new PtuEnv(this, grid);
-        eptu = new EptuEnv(this, grid);
-        hotfix = new HotfixEnv(this, grid);
-        techPreview = new TechPreviewEnv(this, grid);
+        LOG_DEBUG(lg) << "::setupChannelWidged()";
 
-        buttonUpdate = new QPushButton("Update Übersetzng", this);
-        buttonUpdateVailable = new QPushButton("Update Verfügbar", this);
-        grid->addWidget(buttonUpdate, 7, 0, 1, 2);
-        grid->addWidget(buttonUpdateVailable, 7, 2, 1, 2);
+        live = new LiveChannel(this, grid);
+        ptu = new PtuChannel(this, grid);
+        eptu = new EptuChannel(this, grid);
+        hotfix = new HotfixChannel(this, grid);
+        techPreview = new TechPreviewChannel(this, grid);
+        update = new UpdateButton(this, grid);
 
-        connect(buttonUpdate, &QPushButton::clicked, this, &MainWindow::onUpdateClicked);
-        connect(buttonUpdateVailable, &QPushButton::clicked, this, &MainWindow::buttonUpdateVailableClicked);
+        live->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
+        ptu->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
+        eptu->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
+        hotfix->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
+        techPreview->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
+        update->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
 
-        buttonUpdate->setDisabled(true);
-        buttonUpdateVailable->setDisabled(true);
-
-        buttonUpdate->setStyleSheet(Style::UpdateButtons::ButtonInactive);
-        buttonUpdateVailable->setStyleSheet(Style::UpdateButtons::ButtonInactive);
+        backEnd.setGuiCallback(live->getName(), [this] (const nlohmann::json &msg) { live->updateStatus(msg); });
+        backEnd.setGuiCallback(ptu->getName(), [this] (const nlohmann::json &msg) { ptu->updateStatus(msg); });
+        backEnd.setGuiCallback(eptu->getName(), [this] (const nlohmann::json &msg) { eptu->updateStatus(msg); });
+        backEnd.setGuiCallback(hotfix->getName(), [this] (const nlohmann::json &msg) { hotfix->updateStatus(msg); });
+        backEnd.setGuiCallback(techPreview->getName(), [this] (const nlohmann::json &msg) { techPreview->updateStatus(msg); });
+        backEnd.setGuiCallback(update->getName(), [this] (const nlohmann::json &msg) { update->updateStatus(msg); });
     }
-
-    void setUpdateAvailableButton (bool upToDate)
-    {
-        if(upToDate)
-        {
-            buttonUpdateVailable->setText("Datenbank Aktuell");
-            buttonUpdateVailable->setStyleSheet(Style::UpdateButtons::ButtonInfo);
-            buttonUpdate->setDisabled(true);
-            buttonUpdate->setStyleSheet(Style::UpdateButtons::ButtonDisabled);
-
-            live->updateButtons();
-            ptu->updateButtons();
-            eptu->updateButtons();
-        }
-        else
-        {
-            buttonUpdateVailable->setText("Update Verfügbar");
-            buttonUpdateVailable->setStyleSheet(Style::UpdateButtons::ButtonActiv);
-            buttonUpdate->setDisabled(false);
-            buttonUpdate->setStyleSheet(Style::UpdateButtons::ButtonInactive);
-        }
-    }
-
-    void checkGitRepo ()
-    {
-        std::cout << "CheckGitRepo for Update" << std::endl;
-
-        auto *gitChecker = new GitChecker(
-            [this] (bool upToDate)
-            {
-                QMetaObject::invokeMethod(
-                    this,
-                    [this, upToDate] ()
-                    {
-                        std::cout << "Update verfügbar: " << std::boolalpha << upToDate << std::endl;
-                        setUpdateAvailableButton(upToDate);
-                    },
-                    Qt::QueuedConnection);
-            });
-
-        std::thread t(&GitChecker::run, gitChecker);
-        t.join();
-    }
-
-   private slots:
-    void onStartClicked ()
-    {
-        // labelStatus->setText("Status: Spiel wird gestartet...");
-        QMessageBox::information(this, "Start", "Spiel wird gestartet!");
-        // labelStatus->setText("Status: Bereit");
-    }
-
-    void onUpdateClicked ()
-    {
-        auto *gitCloner =
-            new GitCloner([this] (bool upToDate)
-                          { QMetaObject::invokeMethod(this, [this, upToDate] () { setUpdateAvailableButton(upToDate); }, Qt::QueuedConnection); });
-
-        std::thread t(&GitCloner::run, gitCloner);
-        t.detach();
-
-        buttonUpdateVailable->setText("Update Läuft...");
-        buttonUpdateVailable->setStyleSheet(Style::UpdateButtons::ButtonActiv);
-        buttonUpdate->setDisabled(true);
-    }
-
-    void buttonUpdateVailableClicked () {}
-
-    void onSettingsClicked () { QMessageBox::information(this, "Einstellungen", "Einstellungen öffnen..."); }
 };

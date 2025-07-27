@@ -1,10 +1,20 @@
 {
-    "enviroments": {
-        "live": "eng",
-        "ptu": "eng",
-        "eptu": "eng",
-        "hotfix": "eng",
-        "tech-preview": "eng"
-    },
-    "path": "path/to/enviroments-root"
+    "channels": {
+        "EPTU": {
+            "installPath": "/home/marko/Dokumente/GitHub/StarCitizen-Deutsch-Launcher/build/EPTU",
+            "selectedTrans": "eng"
+        },
+        "LIVE": {
+            "installPath": "/home/marko/Dokumente/GitHub/StarCitizen-Deutsch-Launcher/build/LIVE",
+            "selectedTrans": "deVoll"
+        },
+        "PTU": {
+            "installPath": "/home/marko/Dokumente/GitHub/StarCitizen-Deutsch-Launcher/build/PTU",
+            "selectedTrans": "eng"
+        },
+        "TECH-PREVIEW": {
+            "installPath": "/home/marko/Dokumente/GitHub/StarCitizen-Deutsch-Launcher/build/TECH-PREVIEW",
+            "selectedTrans": "eng"
+        }
+    }
 }
