@@ -53,7 +53,7 @@ class SettingsJsonParser
         return true;
     }
 
-    void getChannelSettings (Database::Channels& channels)
+    void getChannelSettings (Database::DataBase& database)
     {
         loadJsonFile();
 
@@ -63,6 +63,12 @@ class SettingsJsonParser
             throw std::runtime_error("settings.json is empty");
         }
 
+        getChannels(database);
+        getSettings(database);
+    }
+
+    void getChannels (Database::DataBase& database)
+    {
         if(!json.contains("channels"))
         {
             LOG_DEBUG(lg) << "getChannelSettings () - missing node: channels";
@@ -88,16 +94,129 @@ class SettingsJsonParser
             }
             Database::Paths paths;
             paths.installPath = std::filesystem::path(value.at("installPath"));
-            channels[key].controls = controls;
-            channels[key].paths = paths;
+            database.channelData[key].controls = controls;
+            database.channelData[key].paths = paths;
         }
     }
 
-    void saveChannelSettings (const Database::Channels& channels)
+    void getSettings (Database::DataBase& database)
+    {
+        if(!json.contains("settings"))
+        {
+            LOG_DEBUG(lg) << "getSettings () - missing node: settings";
+            throw std::runtime_error("missing node: settings");
+        }
+
+        if(!json.at("settings").contains("autoTranslationAtStart"))
+        {
+            LOG_DEBUG(lg) << "getSettings () - missing node: autoTranslationAtStart";
+            throw std::runtime_error("missing node: autoTranslationAtStart");
+        }
+        else
+        {
+            try
+            {
+                json.at("settings")["autoTranslationAtStart"].get<bool>();
+            }
+            catch(const std::exception& e)
+            {
+                throw std::runtime_error(e.what());
+            }
+        }
+        if(!json.at("settings").contains("autoNewTranslation"))
+        {
+            LOG_DEBUG(lg) << "getSettings () - missing node: autoNewTranslation";
+            throw std::runtime_error("missing node: autoNewTranslation");
+        }
+        else
+        {
+            try
+            {
+                json.at("settings")["autoNewTranslation"].get<bool>();
+            }
+            catch(const std::exception& e)
+            {
+                throw std::runtime_error(e.what());
+            }
+        }
+        if(!json.at("settings").contains("minimizeScdAfterUpdate"))
+        {
+            LOG_DEBUG(lg) << "getSettings () - missing node: minimizeScdAfterUpdate";
+            throw std::runtime_error("missing node: minimizeScdAfterUpdate");
+        }
+        else
+        {
+            try
+            {
+                json.at("settings")["minimizeScdAfterUpdate"].get<bool>();
+            }
+            catch(const std::exception& e)
+            {
+                throw std::runtime_error(e.what());
+            }
+        }
+        if(!json.at("settings").contains("LaunchScAfterTranslation"))
+        {
+            LOG_DEBUG(lg) << "getSettings () - missing node: LaunchScAfterTranslation";
+            throw std::runtime_error("missing node: LaunchScAfterTranslation");
+        }
+        else
+        {
+            try
+            {
+                json.at("settings")["LaunchScAfterTranslation"].get<bool>();
+            }
+            catch(const std::exception& e)
+            {
+                throw std::runtime_error(e.what());
+            }
+        }
+        if(!json.at("settings").contains("startScdWithSystemStart"))
+        {
+            LOG_DEBUG(lg) << "getSettings () - missing node: startScdWithSystemStart";
+            throw std::runtime_error("missing node: startScdWithSystemStart");
+        }
+        else
+        {
+            try
+            {
+                json.at("settings")["startScdWithSystemStart"].get<bool>();
+            }
+            catch(const std::exception& e)
+            {
+                throw std::runtime_error(e.what());
+            }
+        }
+        if(!json.at("settings").contains("showUpdateStatus"))
+        {
+            LOG_DEBUG(lg) << "getSettings () - missing node: showUpdateStatus";
+            throw std::runtime_error("missing node: showUpdateStatus");
+        }
+        else
+        {
+            try
+            {
+                json.at("settings")["showUpdateStatus"].get<bool>();
+            }
+            catch(const std::exception& e)
+            {
+                throw std::runtime_error(e.what());
+            }
+        }
+
+        database.settings.autoTranslationAtStart = json["settings"]["autoTranslationAtStart"];
+        database.settings.autoNewTranslation = json["settings"]["autoNewTranslation"];
+        database.settings.minimizeScdAfterUpdate = json["settings"]["minimizeScdAfterUpdate"];
+        database.settings.LaunchScAfterTranslation = json["settings"]["LaunchScAfterTranslation"];
+        database.settings.startScdWithSystemStart = json["settings"]["startScdWithSystemStart"];
+        database.settings.showUpdateStatus = json["settings"]["showUpdateStatus"];
+    }
+
+    void saveChannelSettings (const Database::DataBase& database)
     {
         nlohmann::json newChannelsJson;
 
-        for(const auto& [key, channel] : channels)
+        for(const auto& [key, channel] : database.channelData)
         {
             nlohmann::json value;
 
@@ -117,6 +236,13 @@ class SettingsJsonParser
 
         json["channels"] = newChannelsJson;
 
+        json["settings"]["autoTranslationAtStart"] = database.settings.autoTranslationAtStart;
+        json["settings"]["autoNewTranslation"] = database.settings.autoNewTranslation;
+        json["settings"]["minimizeScdAfterUpdate"] = database.settings.minimizeScdAfterUpdate;
+        json["settings"]["LaunchScAfterTranslation"] = database.settings.LaunchScAfterTranslation;
+        json["settings"]["startScdWithSystemStart"] = database.settings.startScdWithSystemStart;
+        json["settings"]["showUpdateStatus"] = database.settings.showUpdateStatus;
+
         std::ofstream file(filePath);
         if(file.is_open())
         {
@@ -128,6 +254,4 @@ class SettingsJsonParser
             LOG_DEBUG(lg) << "saveChannelSettings () - Fehler beim Öffnen der Datei zum Schreiben!";
         }
     }
-
-    bool compare (const nlohmann::json& oldJson, const nlohmann::json& newJson) { return true; }
 };

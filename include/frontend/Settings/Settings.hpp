@@ -20,6 +20,7 @@ class Settings : public QWidget
     LoggerFramework::LogEx lg;
     std::string channel;
     std::unique_ptr<SettingsWindow> settingsWindow;
+    nlohmann::json settingsStatus;
 
     using Callback = std::function<void(const std::string key, const nlohmann::json &)>;
     Callback updateBackendCallback;
@@ -42,7 +43,13 @@ class Settings : public QWidget
         LOG_DEBUG(lg) << "clicked_Settings()";
         if(!settingsWindow || !settingsWindow->isVisible())
         {
-            settingsWindow = std::make_unique<SettingsWindow>(this);
+            settingsWindow = std::make_unique<SettingsWindow>(this, settingsStatus);
+            settingsWindow->setSettingsCallback(
+                [this] (const nlohmann::json &msg)
+                {
+                    updateBackendCallback(channel, msg);
+                    settingsStatus = msg;
+                });
             settingsWindow->show();
         }
         else
@@ -55,8 +62,8 @@ class Settings : public QWidget
    public:
     explicit Settings (QWidget *parent = nullptr, QGridLayout *grid = nullptr)
         : QWidget(parent)
-        , lg("MenuBar")
-        , channel("Settings")
+        , lg("SETTINGS")
+        , channel("SETTINGS")
     {
         buttonSettings = new QPushButton("Einstellungen", this);
 
@@ -82,5 +89,9 @@ class Settings : public QWidget
 
     std::string getName () { return channel; }
 
-    void updateStatus (const nlohmann::json &msg) { LOG_DEBUG(lg) << "updateStatus() - msg:\n" << msg.dump(4); }
+    void updateStatus (const nlohmann::json &msg)
+    {
+        LOG_DEBUG(lg) << "updateStatus() - msg:\n" << msg.dump(4);
+        settingsStatus = msg;
+    }
 };

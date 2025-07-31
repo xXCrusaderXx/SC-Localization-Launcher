@@ -30,18 +30,32 @@ struct Controls
     bool buttonDeFull_Selected = false;
 };
 
+struct Settings
+{
+    bool autoTranslationAtStart = false;
+    bool autoNewTranslation = false;
+    bool minimizeScdAfterUpdate = false;
+    bool LaunchScAfterTranslation = false;
+    bool startScdWithSystemStart = false;
+    bool showUpdateStatus = false;
+};
+
 struct Paths
 {
     std::filesystem::path installPath = "";
     std::filesystem::path backupPath = "";
 };
 
-struct DataBase
+struct ChannelData
 {
     Info info;
     Controls controls;
     Paths paths;
 };
 
-using Channels = std::map<std::string, DataBase>;
+struct DataBase
+{
+    std::map<std::string, ChannelData> channelData;
+    Settings settings;
+};
 }  // namespace Database

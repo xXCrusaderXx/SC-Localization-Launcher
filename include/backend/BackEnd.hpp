@@ -13,7 +13,7 @@ class BackEnd
 {
    private:
     LoggerFramework::LogEx lg;
-    Database::Channels database;
+    Database::DataBase database;
     ChannelsJsonParser channelsJsonParser;
     SettingsJsonParser settingsJsonParser;
     UpdateHandler updateHandler;
@@ -23,7 +23,7 @@ class BackEnd
 
     void updateControlsByDataBase ()
     {
-        for(auto& [channel, data] : database)
+        for(auto& [channel, data] : database.channelData)
         {
             data.controls.buttonEng_Enabled = true;
 
@@ -61,18 +61,18 @@ class BackEnd
 
         if(key == "LIVE" || key == "PTU" || key == "EPTU" || key == "HOTFIX" || key == "TECH-PREVIEW")
         {
-            if(msg.contains("buttonEngSelected")) database[key].controls.buttonEng_Selected = msg["buttonEngSelected"];
-            if(msg.contains("buttonDeSelected")) database[key].controls.buttonDe_Selected = msg["buttonDeSelected"];
-            if(msg.contains("buttonDeFullSelected")) database[key].controls.buttonDeFull_Selected = msg["buttonDeFullSelected"];
+            if(msg.contains("buttonEngSelected")) database.channelData[key].controls.buttonEng_Selected = msg["buttonEngSelected"];
+            if(msg.contains("buttonDeSelected")) database.channelData[key].controls.buttonDe_Selected = msg["buttonDeSelected"];
+            if(msg.contains("buttonDeFullSelected")) database.channelData[key].controls.buttonDeFull_Selected = msg["buttonDeFullSelected"];
             if(msg.contains("installPath"))
             {
-                database[key].paths.installPath = std::filesystem::path(msg["installPath"]);
+                database.channelData[key].paths.installPath = std::filesystem::path(msg["installPath"]);
                 nlohmann::json responseMsg;
                 updateControlsByDataBase();
                 responseMsg["installPathIsSet"] = true;
                 responseMsg["buttonEngSelected"] = true;
-                responseMsg["buttonDeEnabled"] = database[key].controls.buttonDe_Enabled;
-                responseMsg["buttonDeFullEnabled"] = database[key].controls.buttonDeFull_Enabled;
+                responseMsg["buttonDeEnabled"] = database.channelData[key].controls.buttonDe_Enabled;
+                responseMsg["buttonDeFullEnabled"] = database.channelData[key].controls.buttonDeFull_Enabled;
                 guiCallbacks[key](responseMsg);
 
                 nlohmann::json updateButtonMassage;
@@ -96,6 +96,34 @@ class BackEnd
                 guiCallbacks[key](responseMsg2);
             }
         }
+
+        if(key == "SETTINGS")
+        {
+            if(msg.contains("autoTranslationAtStart"))
+            {
+                database.settings.autoTranslationAtStart = msg["autoTranslationAtStart"];
+            }
+            if(msg.contains("autoNewTranslation"))
+            {
+                database.settings.autoNewTranslation = msg["autoNewTranslation"];
+            }
+            if(msg.contains("minimizeScdAfterUpdate"))
+            {
+                database.settings.minimizeScdAfterUpdate = msg["minimizeScdAfterUpdate"];
+            }
+            if(msg.contains("LaunchScAfterTranslation"))
+            {
+                database.settings.LaunchScAfterTranslation = msg["LaunchScAfterTranslation"];
+            }
+            if(msg.contains("startScdWithSystemStart"))
+            {
+                database.settings.startScdWithSystemStart = msg["startScdWithSystemStart"];
+            }
+            if(msg.contains("showUpdateStatus"))
+            {
+                database.settings.showUpdateStatus = msg["showUpdateStatus"];
+            }
+        }
     }
 
     void initGui ()
@@ -103,35 +131,46 @@ class BackEnd
         LOG_DEBUG(lg) << "initGui()";
         bool readyForUpdate = false;
 
-        for(const auto& [channel, data] : database)
-        {
-            nlohmann::json msg;
+        nlohmann::json updateButtonInit;
+        nlohmann::json updateSettingsInit;
 
-            if(database[channel].controls.installPathIsSet == true)
+        for(const auto& [channel, data] : database.channelData)
+        {
+            nlohmann::json channelsInit;
+
+            if(database.channelData[channel].controls.installPathIsSet == true)
             {
                 readyForUpdate = true;
-                msg["buttonEngEnabled"] = database[channel].controls.buttonDe_Enabled;
-                msg["buttonDeEnabled"] = database[channel].controls.buttonDe_Enabled;
-                msg["buttonDeFullEnabled"] = database[channel].controls.buttonDeFull_Enabled;
-                msg["buttonEngSelected"] = database[channel].controls.buttonEng_Selected;
-                msg["buttonDeSelected"] = database[channel].controls.buttonDe_Selected;
-                msg["buttonDeFullSelected"] = database[channel].controls.buttonDeFull_Selected;
+                channelsInit["buttonEngEnabled"] = database.channelData[channel].controls.buttonDe_Enabled;
+                channelsInit["buttonDeEnabled"] = database.channelData[channel].controls.buttonDe_Enabled;
+                channelsInit["buttonDeFullEnabled"] = database.channelData[channel].controls.buttonDeFull_Enabled;
+                channelsInit["buttonEngSelected"] = database.channelData[channel].controls.buttonEng_Selected;
+                channelsInit["buttonDeSelected"] = database.channelData[channel].controls.buttonDe_Selected;
+                channelsInit["buttonDeFullSelected"] = database.channelData[channel].controls.buttonDeFull_Selected;
+                updateSettingsInit[channel] = database.channelData[channel].paths.installPath;
             }
             else
             {
-                msg["buttonEngEnabled"] = database[channel].controls.buttonEng_Enabled;
+                channelsInit["buttonEngEnabled"] = database.channelData[channel].controls.buttonEng_Enabled;
             }
-            msg["installPathIsSet"] = database[channel].controls.installPathIsSet;
+            channelsInit["installPathIsSet"] = database.channelData[channel].controls.installPathIsSet;
 
-            if(guiCallbacks[channel]) guiCallbacks[channel](msg);
+            if(guiCallbacks[channel]) guiCallbacks[channel](channelsInit);
         }
 
         if(readyForUpdate)
         {
-            nlohmann::json updateButtonMassage;
-            updateButtonMassage["buttonEnabled"] = true;
-            updateButtonMassage["buttonReady"] = true;
-            if(guiCallbacks["UPDATE"]) guiCallbacks["UPDATE"](updateButtonMassage);
+            updateButtonInit["buttonEnabled"] = true;
+            updateButtonInit["buttonReady"] = true;
+            if(guiCallbacks["UPDATE"]) guiCallbacks["UPDATE"](updateButtonInit);
         }
+
+        updateSettingsInit["autoTranslationAtStart"] = database.settings.autoTranslationAtStart;
+        updateSettingsInit["autoNewTranslation"] = database.settings.autoNewTranslation;
+        updateSettingsInit["minimizeScdAfterUpdate"] = database.settings.minimizeScdAfterUpdate;
+        updateSettingsInit["LaunchScAfterTranslation"] = database.settings.LaunchScAfterTranslation;
+        updateSettingsInit["startScdWithSystemStart"] = database.settings.startScdWithSystemStart;
+        updateSettingsInit["showUpdateStatus"] = database.settings.showUpdateStatus;
+        if(guiCallbacks["SETTINGS"]) guiCallbacks["SETTINGS"](updateSettingsInit);
     }
 };
