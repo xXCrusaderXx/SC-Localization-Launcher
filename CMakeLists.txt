@@ -47,6 +47,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
   ${INCLUDES}
 )
 
+qt5_add_resources(RESOURCES resources/resources.qrc)
+target_sources(${PROJECT_NAME} PRIVATE ${RESOURCES})
+
 
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/LIVE")
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/LIVE/data")
@@ -72,8 +75,26 @@ configure_file(
 )
 
 configure_file(
+  "${CMAKE_SOURCE_DIR}/resources/sc-deutsch.png"
+  "${CMAKE_BINARY_DIR}/resources/sc-deutsch.png"
+  COPYONLY
+)
+
+configure_file(
+  "${CMAKE_SOURCE_DIR}/resources/background2.png"
+  "${CMAKE_BINARY_DIR}/resources/background2.png"
+  COPYONLY
+)
+
+configure_file(
   "${CMAKE_SOURCE_DIR}/misc/settings.json"
   "${CMAKE_BINARY_DIR}/local/settings.json"
+  COPYONLY
+)
+
+configure_file(
+  "${CMAKE_SOURCE_DIR}/misc/starcitizen-launcher.desktop"
+  "${CMAKE_BINARY_DIR}/starcitizen-launcher.desktop"
   COPYONLY
 )
 

@@ -11,6 +11,7 @@ int main (int argc, char *argv[])
     LOG_DEBUG(lg) << "Start SC-Deutsch-Launcher";
 
     QApplication a(argc, argv);
+    a.setWindowIcon(QIcon(":/logo.png"));
     MainWindow w;
     w.show();
 
