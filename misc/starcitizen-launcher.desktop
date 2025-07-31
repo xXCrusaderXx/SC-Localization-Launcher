@@ -1,0 +1,12 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Name=Star Citizen Deutsch Launcher
+Comment=Launcher für Star Citizen Übersetzungen
+Exec=/home/marko/Dokumente/GitHub/StarCitizen-Deutsch-Launcher/build/StarCitizen-Launcher
+Icon=/home/marko/Dokumente/GitHub/StarCitizen-Deutsch-Launcher/build/resources/logo.png
+Path=/home/marko/Dokumente/GitHub/StarCitizen-Deutsch-Launcher/build/
+Type=Application
+Terminal=false
+StartupNotify=true
+StartupWMClass=StarCitizenLauncher
+Categories=Game;Utility;

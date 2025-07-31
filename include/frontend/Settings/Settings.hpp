@@ -68,7 +68,17 @@ class Settings : public QWidget
         buttonSettings = new QPushButton("Einstellungen", this);
 
         buttonSettings->setLayoutDirection(Qt::RightToLeft);
-        buttonSettings->setIcon(QIcon(":/settings.png"));
+
+        QIcon icon(":/settings.png");
+        if(icon.isNull())
+        {
+            LOG_DEBUG(lg) << ":/settings.png konnte nicht geladen werden!";
+        }
+        else
+        {
+            buttonSettings->setIcon(QIcon(":/settings.png"));
+        }
+
         buttonSettings->setIconSize(QSize(30, 30));
         QFont font = buttonSettings->font();
         font.setPointSize(12);

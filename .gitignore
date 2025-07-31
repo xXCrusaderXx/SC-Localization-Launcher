@@ -2,3 +2,11 @@
 build/
 
 .vscode/
+
+*.log
+
+resources/settings/vecteezy_gear-silhouette-icon_.eps
+
+*.pdf
+
+*.eps

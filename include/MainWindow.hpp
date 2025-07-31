@@ -56,6 +56,14 @@ class MainWindow : public QMainWindow
         setWindowTitle("::MainWindow()");
         setFixedSize(800, 430);
 
+        this->setStyleSheet(R"(
+    QMainWindow {
+        background-image: url(:/background2.png);
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+)");
+
         QWidget *central = new QWidget(this);
         setCentralWidget(central);
         centralWidget()->installEventFilter(this);
