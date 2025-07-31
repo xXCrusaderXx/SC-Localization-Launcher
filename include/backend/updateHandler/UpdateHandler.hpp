@@ -51,9 +51,9 @@ class UpdateHandler
     };
     ~UpdateHandler () { LOG_DEBUG(lg) << "destructed"; }
 
-    void update (const Database::Channels& database)
+    void update (const Database::DataBase& database)
     {
-        for(const auto& [channel, data] : database)
+        for(const auto& [channel, data] : database.channelData)
         {
             LOG_DEBUG(lg) << "update() - Channel: " << channel << " translation!";
             if(data.controls.buttonEng_Selected)

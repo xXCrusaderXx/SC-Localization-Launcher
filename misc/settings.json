@@ -16,5 +16,14 @@
             "installPath": "/home/marko/Dokumente/GitHub/StarCitizen-Deutsch-Launcher/build/TECH-PREVIEW",
             "selectedTrans": "eng"
         }
+    },
+    "settings": {
+        "autoTranslationAtStart": false,
+        "autoNewTranslation": false,
+        "minimizeScdAfterUpdate": false,
+        "LaunchScAfterTranslation": false,
+        "startScdWithSystemStart": false,
+        "showUpdateStatus": false,
+        "rsiLauncherInstallPath": ""
     }
 }

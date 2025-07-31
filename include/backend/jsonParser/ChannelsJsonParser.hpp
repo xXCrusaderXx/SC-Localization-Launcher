@@ -66,7 +66,7 @@ class ChannelsJsonParser
     };
     ~ChannelsJsonParser () { LOG_DEBUG(lg) << "destructed"; };
 
-    void getChannels (Database::Channels& channels)
+    void getChannels (Database::DataBase& database)
     {
         loadJsonFromWeb();
         for(const auto& [key, value] : newJson.at("channels").items())
@@ -80,7 +80,7 @@ class ChannelsJsonParser
             info.server1_fallback = value.at("server1_fallback");
             info.server2_fallback = value.at("server2_fallback");
 
-            channels[info.description].info = info;
+            database.channelData[info.description].info = info;
         }
     }
 

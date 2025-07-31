@@ -20,6 +20,23 @@ class SettingsWindow : public QWidget
 
    private:
     LoggerFramework::LogEx lg;
+    using Callback = std::function<void(const nlohmann::json &)>;
+    Callback settingsCallback;
+    nlohmann::json msg;
+
+    QCheckBox *checkbox1 = nullptr;
+    QCheckBox *checkbox2 = nullptr;
+    QCheckBox *checkbox3 = nullptr;
+    QCheckBox *checkbox4 = nullptr;
+    QCheckBox *checkbox5 = nullptr;
+    QCheckBox *checkbox6 = nullptr;
+
+    QLineEdit *pathBox1 = nullptr;
+    QLineEdit *pathBox2 = nullptr;
+    QLineEdit *pathBox3 = nullptr;
+    QLineEdit *pathBox4 = nullptr;
+    QLineEdit *pathBox5 = nullptr;
+    QLineEdit *pathBox6 = nullptr;
 
     const QString labelStyle = R"(
     QLabel {
@@ -66,14 +83,52 @@ QCheckBox::indicator:checked {
         {
             this->close();
         }
+        settingsCallback(msg);
+    }
+
+    void onCheckbox1StateChanged (int state)
+    {
+        LOG_DEBUG(lg) << "onCheckbox1StateChanged()";
+        msg["autoTranslationAtStart"] = checkbox1->isChecked();
+    }
+
+    void onCheckbox2StateChanged (int state)
+    {
+        LOG_DEBUG(lg) << "onCheckbox2StateChanged()";
+        msg["autoNewTranslation"] = checkbox2->isChecked();
+    }
+
+    void onCheckbox3StateChanged (int state)
+    {
+        LOG_DEBUG(lg) << "onCheckbox3StateChanged()";
+        msg["minimizeScdAfterUpdate"] = checkbox3->isChecked();
+    }
+
+    void onCheckbox4StateChanged (int state)
+    {
+        LOG_DEBUG(lg) << "onCheckbox4StateChanged()";
+        msg["LaunchScAfterTranslation"] = checkbox4->isChecked();
+    }
+
+    void onCheckbox5StateChanged (int state)
+    {
+        LOG_DEBUG(lg) << "onCheckbox5StateChanged()";
+        msg["startScdWithSystemStart"] = checkbox5->isChecked();
+    }
+
+    void onCheckbox6StateChanged (int state)
+    {
+        LOG_DEBUG(lg) << "onCheckbox6StateChanged()";
+        msg["showUpdateStatus"] = checkbox6->isChecked();
     }
 
    protected:
     bool eventFilter (QObject *obj, QEvent *event) override;
 
    public:
-    explicit SettingsWindow (QWidget *parent)
+    explicit SettingsWindow (QWidget *parent, nlohmann::json settings)
         : QWidget(parent)
+        , msg(settings)
         , lg("SettingsWindow")
     {
         this->setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
@@ -93,8 +148,25 @@ QCheckBox::indicator:checked {
         setupTopRightWidget(mainLayout);
         setupBottomWidget(mainLayout);
 
+        LOG_DEBUG(lg) << "Settings-Status: " << settings.dump(4);
+        checkbox1->setChecked(settings["autoTranslationAtStart"]);
+        checkbox2->setChecked(settings["autoNewTranslation"]);
+        checkbox3->setChecked(settings["minimizeScdAfterUpdate"]);
+        checkbox4->setChecked(settings["LaunchScAfterTranslation"]);
+        checkbox5->setChecked(settings["startScdWithSystemStart"]);
+        checkbox6->setChecked(settings["showUpdateStatus"]);
+
+        pathBox1->setText(QString::fromStdString(settings.value("LIVE", "")));
+        pathBox2->setText(QString::fromStdString(settings.value("PTU", "")));
+        pathBox3->setText(QString::fromStdString(settings.value("EPTU", "")));
+        pathBox4->setText(QString::fromStdString(settings.value("HOTFIX", "")));
+        pathBox5->setText(QString::fromStdString(settings.value("TECH-PREVIEW", "")));
+        pathBox6->setText(QString::fromStdString(settings.value("RSI-LAUNCHER", "")));
+
         LOG_DEBUG(lg) << "instanziated";
     }
+
+    void setSettingsCallback (Callback cb) { settingsCallback = cb; }
 
     void setupTopWidget (QGridLayout *grid)
     {
@@ -141,17 +213,28 @@ QCheckBox::indicator:checked {
         // u8"2611" 2713,2714
         // u8"2610"
 
-        QCheckBox *checkbox1 = new QCheckBox("Auto. Übersetzungs-Update beim SCD Launcher Start", topLeftWidget);
+        checkbox1 = new QCheckBox("Auto. Übersetzungs-Update beim SCD Launcher Start", topLeftWidget);
+        connect(checkbox1, &QCheckBox::stateChanged, this, &SettingsWindow::onCheckbox1StateChanged);
         checkbox1->setStyleSheet(checkBoxStyle);
-        QCheckBox *checkbox2 = new QCheckBox("Neue Übersetzung immer automatisch aktualisieren", topLeftWidget);
+
+        checkbox2 = new QCheckBox("Neue Übersetzung immer automatisch aktualisieren", topLeftWidget);
+        connect(checkbox2, &QCheckBox::stateChanged, this, &SettingsWindow::onCheckbox2StateChanged);
         checkbox2->setStyleSheet(checkBoxStyle);
-        QCheckBox *checkbox3 = new QCheckBox("SCD Launcher nach Updates in Tray minimieren", topLeftWidget);
+
+        checkbox3 = new QCheckBox("SCD Launcher nach Updates in Tray minimieren", topLeftWidget);
+        connect(checkbox3, &QCheckBox::stateChanged, this, &SettingsWindow::onCheckbox3StateChanged);
         checkbox3->setStyleSheet(checkBoxStyle);
-        QCheckBox *checkbox4 = new QCheckBox("RSI Launcher nach übersetzungs-update starten", topLeftWidget);
+
+        checkbox4 = new QCheckBox("RSI Launcher nach übersetzungs-update starten", topLeftWidget);
+        connect(checkbox4, &QCheckBox::stateChanged, this, &SettingsWindow::onCheckbox4StateChanged);
         checkbox4->setStyleSheet(checkBoxStyle);
-        QCheckBox *checkbox5 = new QCheckBox("Autostart SCD Launcher mit Systemstart", topLeftWidget);
+
+        checkbox5 = new QCheckBox("Autostart SCD Launcher mit Systemstart", topLeftWidget);
+        connect(checkbox5, &QCheckBox::stateChanged, this, &SettingsWindow::onCheckbox5StateChanged);
         checkbox5->setStyleSheet(checkBoxStyle);
-        QCheckBox *checkbox6 = new QCheckBox("Updateprozess im SCD Launcher anzeigen", topLeftWidget);
+
+        checkbox6 = new QCheckBox("Updateprozess im SCD Launcher anzeigen", topLeftWidget);
+        connect(checkbox6, &QCheckBox::stateChanged, this, &SettingsWindow::onCheckbox6StateChanged);
         checkbox6->setStyleSheet(checkBoxStyle);
 
         layoutTopLeft->addWidget(checkbox1, 0, 0);
@@ -218,12 +301,12 @@ QCheckBox::indicator:checked {
         QLabel *label6 = new QLabel("TECH-PREVIEW", topBottomWidget);
         QLabel *label7 = new QLabel("RSI-Launcher", topBottomWidget);
 
-        QLineEdit *pathBox1 = new QLineEdit("Option 1", topBottomWidget);
-        QLineEdit *pathBox2 = new QLineEdit("Option 2", topBottomWidget);
-        QLineEdit *pathBox3 = new QLineEdit("Option 3", topBottomWidget);
-        QLineEdit *pathBox4 = new QLineEdit("Option 4", topBottomWidget);
-        QLineEdit *pathBox5 = new QLineEdit("Option 5", topBottomWidget);
-        QLineEdit *pathBox6 = new QLineEdit("Option 6", topBottomWidget);
+        pathBox1 = new QLineEdit("Option 1", topBottomWidget);
+        pathBox2 = new QLineEdit("Option 2", topBottomWidget);
+        pathBox3 = new QLineEdit("Option 3", topBottomWidget);
+        pathBox4 = new QLineEdit("Option 4", topBottomWidget);
+        pathBox5 = new QLineEdit("Option 5", topBottomWidget);
+        pathBox6 = new QLineEdit("Option 6", topBottomWidget);
 
         QString buttonText = u8"\U0001F5C0";
         QFont buttonFont = QFont("Noto Color Emoji", 25);
