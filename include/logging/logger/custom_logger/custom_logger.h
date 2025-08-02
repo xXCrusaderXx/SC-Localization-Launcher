@@ -21,6 +21,11 @@ class CustomLogger : public LoggerBase
    private:
     CustomLogger (const CustomLogger&) = delete;
     CustomLogger& operator=(const CustomLogger&) = delete;
+
+    std::filesystem::path logPath = std::filesystem::current_path() / "logs";
+    int maxFiles = 5;
+
+    void cleanOffOldLogs ();
     bool init () override;
 
     std::ofstream m_LogFile;

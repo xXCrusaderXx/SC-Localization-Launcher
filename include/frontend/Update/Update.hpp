@@ -21,7 +21,7 @@ class UpdateButton : public QWidget
     {
         nlohmann::json msg;
         msg["start"] = true;
-        QtConcurrent::run([=] { updateBackendCallback(channel, msg); });
+        QtConcurrent::run([&] { updateBackendCallback(channel, msg); });
     }
 
    public:

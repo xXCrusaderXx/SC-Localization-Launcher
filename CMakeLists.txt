@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_AUTOMOC ON)
@@ -9,6 +9,8 @@ set(CMAKE_AUTORCC ON)
 
 message(STATUS "#### StarCitizen-Launcher ####")
 project(StarCitizen-Launcher)
+
+set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/release" CACHE PATH "Install path prefix." FORCE)
 
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 find_package(libgit2 REQUIRED)
@@ -50,24 +52,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 qt5_add_resources(RESOURCES resources/resources.qrc)
 target_sources(${PROJECT_NAME} PRIVATE ${RESOURCES})
 
-
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/LIVE")
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/LIVE/data")
-file(WRITE "${CMAKE_BINARY_DIR}/LIVE/user.cfg" "")
-file(WRITE "${CMAKE_BINARY_DIR}/LIVE/data/global.ini" "")
-
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/PTU")
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/PTU/data")
-
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/EPTU")
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/EPTU/data")
-
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/HOTFIX")
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/HOTFIX/data")
-
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/TECH-PREVIEW")
-file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/TECH-PREVIEW/data")
-
 configure_file(
   "${CMAKE_SOURCE_DIR}/resources/logo.png"
   "${CMAKE_BINARY_DIR}/resources/logo.png"
@@ -96,6 +80,29 @@ configure_file(
   "${CMAKE_SOURCE_DIR}/misc/starcitizen-launcher.desktop"
   "${CMAKE_BINARY_DIR}/starcitizen-launcher.desktop"
   COPYONLY
+)
+
+install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX})
+
+install(FILES
+  "${CMAKE_SOURCE_DIR}/resources/logo.png"
+  "${CMAKE_SOURCE_DIR}/resources/sc-deutsch.png"
+  "${CMAKE_SOURCE_DIR}/resources/background2.png"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/resources
+)
+
+install(FILES
+  "${CMAKE_SOURCE_DIR}/misc/settings.json"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/local
+)
+
+install(FILES
+  "${CMAKE_SOURCE_DIR}/misc/starcitizen-launcher.desktop"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}
+)
+install(FILES
+  "${CMAKE_SOURCE_DIR}/misc/create_desktop_file.sh"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}
 )
 
 #add_subdirectory(AppImageDeploy)

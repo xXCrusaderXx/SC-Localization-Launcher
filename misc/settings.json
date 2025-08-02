@@ -1,20 +1,20 @@
 {
     "channels": {
         "EPTU": {
-            "installPath": "/home/marko/Dokumente/GitHub/StarCitizen-Deutsch-Launcher/build/EPTU",
-            "selectedTrans": "eng"
+            "installPath": "",
+            "selectedTrans": ""
         },
         "LIVE": {
-            "installPath": "/home/marko/Dokumente/GitHub/StarCitizen-Deutsch-Launcher/build/LIVE",
-            "selectedTrans": "deVoll"
+            "installPath": "",
+            "selectedTrans": ""
         },
         "PTU": {
-            "installPath": "/home/marko/Dokumente/GitHub/StarCitizen-Deutsch-Launcher/build/PTU",
-            "selectedTrans": "eng"
+            "installPath": "",
+            "selectedTrans": ""
         },
         "TECH-PREVIEW": {
-            "installPath": "/home/marko/Dokumente/GitHub/StarCitizen-Deutsch-Launcher/build/TECH-PREVIEW",
-            "selectedTrans": "eng"
+            "installPath": "",
+            "selectedTrans": ""
         }
     },
     "settings": {
