@@ -137,12 +137,14 @@ class BackEnd
                     guiCallbacks[key](re);
 
                     std::thread(
-                        [this] ()
+                        [this, key] ()
                         {
                             dirFinder.findRsiInstallation();
+
                             nlohmann::json finMsg;
                             finMsg["autoSearch"] = "finished";
-                            processMassage("SETTINGS", finMsg);
+
+                            QMetaObject::invokeMethod(qApp, [this, finMsg] () { processMassage("SETTINGS", finMsg); }, Qt::QueuedConnection);
                         })
                         .detach();
                 }
@@ -155,6 +157,7 @@ class BackEnd
                     guiCallbacks[key](re);
                 }
             }
+            LOG_DEBUG(lg) << "processMassage() - finished";
         }
     }
 
@@ -206,5 +209,7 @@ class BackEnd
         updateSettingsInit["autoSearch"] = "ready";
         updateSettingsInit["rsiLauncherInstallPath"] = database.settings.rsiLauncherInstallPath;
         if(guiCallbacks["SETTINGS"]) guiCallbacks["SETTINGS"](updateSettingsInit);
+
+        LOG_DEBUG(lg) << "initGui() - finished";
     }
 };

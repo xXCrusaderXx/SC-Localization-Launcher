@@ -129,5 +129,6 @@ class Settings : public QWidget
         {
             settingsWindow->updateWindow(settingsStatus);
         }
+        LOG_DEBUG(lg) << "Settings-Status: update-finished";
     }
 };

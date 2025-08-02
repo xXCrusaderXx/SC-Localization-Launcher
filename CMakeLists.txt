@@ -10,6 +10,8 @@ set(CMAKE_AUTORCC ON)
 message(STATUS "#### StarCitizen-Launcher ####")
 project(StarCitizen-Launcher)
 
+set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/release" CACHE PATH "Install path prefix." FORCE)
+
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
 find_package(libgit2 REQUIRED)
 find_package(nlohmann_json REQUIRED)
@@ -78,6 +80,29 @@ configure_file(
   "${CMAKE_SOURCE_DIR}/misc/starcitizen-launcher.desktop"
   "${CMAKE_BINARY_DIR}/starcitizen-launcher.desktop"
   COPYONLY
+)
+
+install(TARGETS ${PROJECT_NAME} DESTINATION ${CMAKE_INSTALL_PREFIX})
+
+install(FILES
+  "${CMAKE_SOURCE_DIR}/resources/logo.png"
+  "${CMAKE_SOURCE_DIR}/resources/sc-deutsch.png"
+  "${CMAKE_SOURCE_DIR}/resources/background2.png"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/resources
+)
+
+install(FILES
+  "${CMAKE_SOURCE_DIR}/misc/settings.json"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/local
+)
+
+install(FILES
+  "${CMAKE_SOURCE_DIR}/misc/starcitizen-launcher.desktop"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}
+)
+install(FILES
+  "${CMAKE_SOURCE_DIR}/misc/create_desktop_file.sh"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}
 )
 
 #add_subdirectory(AppImageDeploy)

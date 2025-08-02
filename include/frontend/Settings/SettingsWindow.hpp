@@ -7,6 +7,7 @@
 #include <QLineEdit>
 #include <QMouseEvent>
 #include <QPushButton>
+#include <QThread>
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QWindow>
@@ -393,6 +394,12 @@ QCheckBox::indicator:checked {
 
     void updateWindow (nlohmann::json settings)
     {
+        if(QThread::currentThread() != this->thread())
+        {
+            QMetaObject::invokeMethod(this, [this, settings] () { updateWindow(msg); }, Qt::QueuedConnection);
+            return;
+        }
+
         LOG_DEBUG(lg) << "Settings-Status: " << settings.dump(4);
         if(settings.contains("autoSearch"))
         {
@@ -414,41 +421,35 @@ QCheckBox::indicator:checked {
         checkbox5->setChecked(settings["startScdWithSystemStart"]);
         checkbox6->setChecked(settings["showUpdateStatus"]);
 
-        // pathBox1->setText(QString::fromStdString(settings.value("LIVE", "")));
-        // pathBox2->setText(QString::fromStdString(settings.value("PTU", "")));
-        // pathBox3->setText(QString::fromStdString(settings.value("EPTU", "")));
-        // pathBox4->setText(QString::fromStdString(settings.value("HOTFIX", "")));
-        // pathBox5->setText(QString::fromStdString(settings.value("TECH-PREVIEW", "")));
-        // pathBox6->setText(QString::fromStdString(settings.value("rsiLauncherInstallPath", "")));
-
         if(settings.contains("LIVE"))
         {
-            pathBox1->setText(QString::fromStdString(settings.value("LIVE", "")));
+            pathBox1->setText(QString::fromStdString(settings["LIVE"]));
         }
 
         if(settings.contains("PTU"))
         {
-            pathBox2->setText(QString::fromStdString(settings.value("PTU", "")));
+            pathBox2->setText(QString::fromStdString(settings["PTU"]));
         }
 
         if(settings.contains("EPTU"))
         {
-            pathBox3->setText(QString::fromStdString(settings.value("EPTU", "")));
+            pathBox3->setText(QString::fromStdString(settings["EPTU"]));
         }
 
         if(settings.contains("HOTFIX"))
         {
-            pathBox4->setText(QString::fromStdString(settings.value("HOTFIX", "")));
+            pathBox4->setText(QString::fromStdString(settings["HOTFIX"]));
         }
 
         if(settings.contains("TECH-PREVIEW"))
         {
-            pathBox5->setText(QString::fromStdString(settings.value("TECH-PREVIEW", "")));
+            pathBox5->setText(QString::fromStdString(settings["TECH-PREVIEW"]));
         }
 
         if(settings.contains("rsiLauncherInstallPath"))
         {
-            pathBox6->setText(QString::fromStdString(settings.value("rsiLauncherInstallPath", "")));
+            pathBox6->setText(QString::fromStdString(settings["rsiLauncherInstallPath"]));
         }
+        LOG_DEBUG(lg) << "Settings-Status: update-finished";
     }
 };
