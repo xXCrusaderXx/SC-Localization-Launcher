@@ -43,7 +43,7 @@ class ChannelBase : public QWidget
         {
             nlohmann::json msg;
             msg["installPath"] = selectedDir;
-            QtConcurrent::run([=] { updateBackendCallback(channel, msg); });
+            QtConcurrent::run([msg, this] { updateBackendCallback(channel, msg); });
         }
     }
 
@@ -64,7 +64,7 @@ class ChannelBase : public QWidget
         msg["buttonEngSelected"] = true;
         msg["buttonDeSelected"] = false;
         msg["buttonDeFullSelected"] = false;
-        QtConcurrent::run([=] { updateBackendCallback(channel, msg); });
+        QtConcurrent::run([msg, this] { updateBackendCallback(channel, msg); });
     }
 
     void clicked_De ()
@@ -82,7 +82,7 @@ class ChannelBase : public QWidget
         msg["buttonEngSelected"] = false;
         msg["buttonDeSelected"] = true;
         msg["buttonDeFullSelected"] = false;
-        QtConcurrent::run([=] { updateBackendCallback(channel, msg); });
+        QtConcurrent::run([msg, this] { updateBackendCallback(channel, msg); });
     }
 
     void clicked_DeFull ()
@@ -100,7 +100,7 @@ class ChannelBase : public QWidget
         msg["buttonEngSelected"] = false;
         msg["buttonDeSelected"] = false;
         msg["buttonDeFullSelected"] = true;
-        QtConcurrent::run([=] { updateBackendCallback(channel, msg); });
+        QtConcurrent::run([msg, this] { updateBackendCallback(channel, msg); });
     }
 
    public:
@@ -141,6 +141,12 @@ class ChannelBase : public QWidget
 
     void updateStatus (const nlohmann::json &msg)
     {
+        if(QThread::currentThread() != this->thread())
+        {
+            QMetaObject::invokeMethod(this, [this, msg] () { updateStatus(msg); }, Qt::QueuedConnection);
+            return;
+        }
+
         LOG_DEBUG(lg) << "updateStatus() - msg:\n" << msg.dump(4);
         if(msg.contains("buttonEngEnabled") && msg.at("buttonEngEnabled") == true)
         {

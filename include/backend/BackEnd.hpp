@@ -1,7 +1,9 @@
 #pragma once
 
 #include <nlohmann/json.hpp>
+#include <thread>
 
+#include "backend/DirectoryFinder.hpp"
 #include "backend/utils/paths.hpp"
 #include "database/DataBase.hpp"
 #include "jsonParser/ChannelsJsonParser.hpp"
@@ -17,6 +19,7 @@ class BackEnd
     ChannelsJsonParser channelsJsonParser;
     SettingsJsonParser settingsJsonParser;
     UpdateHandler updateHandler;
+    DirectoryFinder dirFinder;
 
     using Callback = std::function<void(const nlohmann::json&)>;
     std::map<std::string, Callback> guiCallbacks;
@@ -40,11 +43,13 @@ class BackEnd
     BackEnd ()
         : settingsJsonParser(PATHS::JSON_FILES::SETTINGS)
         , lg("BackEnd")
+        , dirFinder(database)
     {
         settingsJsonParser.getChannelSettings(database);
         channelsJsonParser.getChannels(database);
 
         updateControlsByDataBase();
+
         LOG_DEBUG(lg) << "instanziated";
     }
     virtual ~BackEnd ()
@@ -57,7 +62,7 @@ class BackEnd
 
     void processMassage (const std::string& key, const nlohmann::json& msg)
     {
-        LOG_DEBUG(lg) << "processMassage() - " << key << "-msg:\n" << msg.dump(4);
+        LOG_DEBUG(lg) << "processMassage() - >" << key << "< - msg:\n" << msg.dump(4);
 
         if(key == "LIVE" || key == "PTU" || key == "EPTU" || key == "HOTFIX" || key == "TECH-PREVIEW")
         {
@@ -78,7 +83,7 @@ class BackEnd
                 nlohmann::json updateButtonMassage;
                 updateButtonMassage["buttonEnabled"] = true;
                 updateButtonMassage["buttonReady"] = true;
-                if(guiCallbacks[key]) guiCallbacks[key](updateButtonMassage);
+                if(guiCallbacks["UPDATE"]) guiCallbacks["UPDATE"](updateButtonMassage);
             }
         }
         if(key == "UPDATE")
@@ -122,6 +127,33 @@ class BackEnd
             if(msg.contains("showUpdateStatus"))
             {
                 database.settings.showUpdateStatus = msg["showUpdateStatus"];
+            }
+            if(msg.contains("autoSearch"))
+            {
+                if(msg["autoSearch"] == "start")
+                {
+                    nlohmann::json re;
+                    re["autoSearch"] = "running";
+                    guiCallbacks[key](re);
+
+                    std::thread(
+                        [this] ()
+                        {
+                            dirFinder.findRsiInstallation();
+                            nlohmann::json finMsg;
+                            finMsg["autoSearch"] = "finished";
+                            processMassage("SETTINGS", finMsg);
+                        })
+                        .detach();
+                }
+                if(msg["autoSearch"] == "finished")
+                {
+                    updateControlsByDataBase();
+                    initGui();
+                    nlohmann::json re;
+                    re["autoSearch"] = "ready";
+                    guiCallbacks[key](re);
+                }
             }
         }
     }
@@ -171,6 +203,8 @@ class BackEnd
         updateSettingsInit["LaunchScAfterTranslation"] = database.settings.LaunchScAfterTranslation;
         updateSettingsInit["startScdWithSystemStart"] = database.settings.startScdWithSystemStart;
         updateSettingsInit["showUpdateStatus"] = database.settings.showUpdateStatus;
+        updateSettingsInit["autoSearch"] = "ready";
+        updateSettingsInit["rsiLauncherInstallPath"] = database.settings.rsiLauncherInstallPath;
         if(guiCallbacks["SETTINGS"]) guiCallbacks["SETTINGS"](updateSettingsInit);
     }
 };

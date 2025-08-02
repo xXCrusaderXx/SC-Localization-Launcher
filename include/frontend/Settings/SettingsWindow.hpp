@@ -31,12 +31,21 @@ class SettingsWindow : public QWidget
     QCheckBox *checkbox5 = nullptr;
     QCheckBox *checkbox6 = nullptr;
 
+    QPushButton *buttonFindGame = nullptr;
+
     QLineEdit *pathBox1 = nullptr;
     QLineEdit *pathBox2 = nullptr;
     QLineEdit *pathBox3 = nullptr;
     QLineEdit *pathBox4 = nullptr;
     QLineEdit *pathBox5 = nullptr;
     QLineEdit *pathBox6 = nullptr;
+
+    QPushButton *button1 = nullptr;
+    QPushButton *button2 = nullptr;
+    QPushButton *button3 = nullptr;
+    QPushButton *button4 = nullptr;
+    QPushButton *button5 = nullptr;
+    QPushButton *button6 = nullptr;
 
     const QString labelStyle = R"(
     QLabel {
@@ -75,6 +84,15 @@ QCheckBox::indicator:checked {
         color: white;
     }
 )";
+
+    void clicked_autoSearch ()
+    {
+        LOG_DEBUG(lg) << "clicked_autoSearch()";
+
+        nlohmann::json newMsg;
+        newMsg["autoSearch"] = "start";
+        settingsCallback(newMsg);
+    }
 
     void clicked_Close ()
     {
@@ -122,6 +140,13 @@ QCheckBox::indicator:checked {
         msg["showUpdateStatus"] = checkbox6->isChecked();
     }
 
+    void clicked_folderButton1 () { LOG_DEBUG(lg) << "clicked_folderButton1()"; }
+    void clicked_folderButton2 () { LOG_DEBUG(lg) << "clicked_folderButton2()"; }
+    void clicked_folderButton3 () { LOG_DEBUG(lg) << "clicked_folderButton3()"; }
+    void clicked_folderButton4 () { LOG_DEBUG(lg) << "clicked_folderButton4()"; }
+    void clicked_folderButton5 () { LOG_DEBUG(lg) << "clicked_folderButton5()"; }
+    void clicked_folderButton6 () { LOG_DEBUG(lg) << "clicked_folderButton6()"; }
+
    protected:
     bool eventFilter (QObject *obj, QEvent *event) override;
 
@@ -148,20 +173,7 @@ QCheckBox::indicator:checked {
         setupTopRightWidget(mainLayout);
         setupBottomWidget(mainLayout);
 
-        LOG_DEBUG(lg) << "Settings-Status: " << settings.dump(4);
-        checkbox1->setChecked(settings["autoTranslationAtStart"]);
-        checkbox2->setChecked(settings["autoNewTranslation"]);
-        checkbox3->setChecked(settings["minimizeScdAfterUpdate"]);
-        checkbox4->setChecked(settings["LaunchScAfterTranslation"]);
-        checkbox5->setChecked(settings["startScdWithSystemStart"]);
-        checkbox6->setChecked(settings["showUpdateStatus"]);
-
-        pathBox1->setText(QString::fromStdString(settings.value("LIVE", "")));
-        pathBox2->setText(QString::fromStdString(settings.value("PTU", "")));
-        pathBox3->setText(QString::fromStdString(settings.value("EPTU", "")));
-        pathBox4->setText(QString::fromStdString(settings.value("HOTFIX", "")));
-        pathBox5->setText(QString::fromStdString(settings.value("TECH-PREVIEW", "")));
-        pathBox6->setText(QString::fromStdString(settings.value("RSI-LAUNCHER", "")));
+        updateWindow(settings);
 
         LOG_DEBUG(lg) << "instanziated";
     }
@@ -178,7 +190,7 @@ QCheckBox::indicator:checked {
         auto *labeltitel = new QLabel("Einstellungen", topMenuBar);
         topMenuLayout->addWidget(labeltitel, 1, 0);
 
-        auto *buttonClose = new QPushButton(u8"\u2715", topMenuBar);
+        auto *buttonClose = new QPushButton("\u2715", topMenuBar);
         buttonClose->setFixedSize(30, 30);
         buttonClose->setStyleSheet(R"(
     QPushButton {
@@ -294,6 +306,9 @@ QCheckBox::indicator:checked {
         topBottomWidget->setLayout(layoutBottom);
 
         QLabel *label1 = new QLabel("Star Citizen Installationen", topBottomWidget);
+        buttonFindGame = new QPushButton("Auto-Suche", topBottomWidget);
+        connect(buttonFindGame, &QPushButton::clicked, this, &SettingsWindow::clicked_autoSearch);
+
         QLabel *label2 = new QLabel("LIVE", topBottomWidget);
         QLabel *label3 = new QLabel("PTU", topBottomWidget);
         QLabel *label4 = new QLabel("EPTU", topBottomWidget);
@@ -301,43 +316,57 @@ QCheckBox::indicator:checked {
         QLabel *label6 = new QLabel("TECH-PREVIEW", topBottomWidget);
         QLabel *label7 = new QLabel("RSI-Launcher", topBottomWidget);
 
-        pathBox1 = new QLineEdit("Option 1", topBottomWidget);
-        pathBox2 = new QLineEdit("Option 2", topBottomWidget);
-        pathBox3 = new QLineEdit("Option 3", topBottomWidget);
-        pathBox4 = new QLineEdit("Option 4", topBottomWidget);
-        pathBox5 = new QLineEdit("Option 5", topBottomWidget);
-        pathBox6 = new QLineEdit("Option 6", topBottomWidget);
+        pathBox1 = new QLineEdit("", topBottomWidget);
+        pathBox2 = new QLineEdit("", topBottomWidget);
+        pathBox3 = new QLineEdit("", topBottomWidget);
+        pathBox4 = new QLineEdit("", topBottomWidget);
+        pathBox5 = new QLineEdit("", topBottomWidget);
+        pathBox6 = new QLineEdit("", topBottomWidget);
 
-        QString buttonText = u8"\U0001F5C0";
+        QString buttonText = "\U0001F5C0";
         QFont buttonFont = QFont("Noto Color Emoji", 25);
         int buttonX = 30;
         int buttonY = 30;
-        QPushButton *button1 = new QPushButton(buttonText, topBottomWidget);
+
+        button1 = new QPushButton(buttonText, topBottomWidget);
         button1->setFixedSize(buttonX, buttonY);
         button1->setFont(buttonFont);
         button1->setStyleSheet(folderButtonStyle);
-        QPushButton *button2 = new QPushButton(buttonText, topBottomWidget);
+        connect(button1, &QPushButton::clicked, this, &SettingsWindow::clicked_folderButton1);
+
+        button2 = new QPushButton(buttonText, topBottomWidget);
         button2->setFixedSize(buttonX, buttonY);
         button2->setFont(buttonFont);
         button2->setStyleSheet(folderButtonStyle);
-        QPushButton *button3 = new QPushButton(buttonText, topBottomWidget);
+        connect(button2, &QPushButton::clicked, this, &SettingsWindow::clicked_folderButton2);
+
+        button3 = new QPushButton(buttonText, topBottomWidget);
         button3->setFixedSize(buttonX, buttonY);
         button3->setFont(buttonFont);
         button3->setStyleSheet(folderButtonStyle);
-        QPushButton *button4 = new QPushButton(buttonText, topBottomWidget);
+        connect(button3, &QPushButton::clicked, this, &SettingsWindow::clicked_folderButton3);
+
+        button4 = new QPushButton(buttonText, topBottomWidget);
         button4->setFixedSize(buttonX, buttonY);
         button4->setFont(buttonFont);
         button4->setStyleSheet(folderButtonStyle);
-        QPushButton *button5 = new QPushButton(buttonText, topBottomWidget);
+        connect(button4, &QPushButton::clicked, this, &SettingsWindow::clicked_folderButton4);
+
+        button5 = new QPushButton(buttonText, topBottomWidget);
         button5->setFixedSize(buttonX, buttonY);
         button5->setFont(buttonFont);
         button5->setStyleSheet(folderButtonStyle);
-        QPushButton *button6 = new QPushButton(buttonText, topBottomWidget);
+        connect(button5, &QPushButton::clicked, this, &SettingsWindow::clicked_folderButton5);
+
+        button6 = new QPushButton(buttonText, topBottomWidget);
         button6->setFixedSize(buttonX, buttonY);
         button6->setFont(buttonFont);
         button6->setStyleSheet(folderButtonStyle);
+        connect(button6, &QPushButton::clicked, this, &SettingsWindow::clicked_folderButton6);
 
-        layoutBottom->addWidget(label1, 0, 0, 1, 6);
+        layoutBottom->addWidget(label1, 0, 0, 1, 2);
+        layoutBottom->addWidget(buttonFindGame, 0, 4, 1, 2);
+
         layoutBottom->addWidget(label2, 1, 0, 1, 1);
         layoutBottom->addWidget(label3, 2, 0, 1, 1);
         layoutBottom->addWidget(label4, 3, 0, 1, 1);
@@ -360,5 +389,66 @@ QCheckBox::indicator:checked {
         layoutBottom->addWidget(button6, 6, 5, 1, 1);
 
         layoutBottom->setRowStretch(7, 1);
+    }
+
+    void updateWindow (nlohmann::json settings)
+    {
+        LOG_DEBUG(lg) << "Settings-Status: " << settings.dump(4);
+        if(settings.contains("autoSearch"))
+        {
+            if(settings["autoSearch"] == "running")
+            {
+                buttonFindGame->setText("Suche...");
+                buttonFindGame->setDisabled(true);
+            }
+            if(settings["autoSearch"] == "ready")
+            {
+                buttonFindGame->setText("Auto-Suche");
+                buttonFindGame->setDisabled(false);
+            }
+        }
+        checkbox1->setChecked(settings["autoTranslationAtStart"]);
+        checkbox2->setChecked(settings["autoNewTranslation"]);
+        checkbox3->setChecked(settings["minimizeScdAfterUpdate"]);
+        checkbox4->setChecked(settings["LaunchScAfterTranslation"]);
+        checkbox5->setChecked(settings["startScdWithSystemStart"]);
+        checkbox6->setChecked(settings["showUpdateStatus"]);
+
+        // pathBox1->setText(QString::fromStdString(settings.value("LIVE", "")));
+        // pathBox2->setText(QString::fromStdString(settings.value("PTU", "")));
+        // pathBox3->setText(QString::fromStdString(settings.value("EPTU", "")));
+        // pathBox4->setText(QString::fromStdString(settings.value("HOTFIX", "")));
+        // pathBox5->setText(QString::fromStdString(settings.value("TECH-PREVIEW", "")));
+        // pathBox6->setText(QString::fromStdString(settings.value("rsiLauncherInstallPath", "")));
+
+        if(settings.contains("LIVE"))
+        {
+            pathBox1->setText(QString::fromStdString(settings.value("LIVE", "")));
+        }
+
+        if(settings.contains("PTU"))
+        {
+            pathBox2->setText(QString::fromStdString(settings.value("PTU", "")));
+        }
+
+        if(settings.contains("EPTU"))
+        {
+            pathBox3->setText(QString::fromStdString(settings.value("EPTU", "")));
+        }
+
+        if(settings.contains("HOTFIX"))
+        {
+            pathBox4->setText(QString::fromStdString(settings.value("HOTFIX", "")));
+        }
+
+        if(settings.contains("TECH-PREVIEW"))
+        {
+            pathBox5->setText(QString::fromStdString(settings.value("TECH-PREVIEW", "")));
+        }
+
+        if(settings.contains("rsiLauncherInstallPath"))
+        {
+            pathBox6->setText(QString::fromStdString(settings.value("rsiLauncherInstallPath", "")));
+        }
     }
 };

@@ -83,7 +83,7 @@ class SettingsJsonParser
                 LOG_DEBUG(lg) << "getChannelSettings () - missing node: selectedTrans";
                 throw std::runtime_error("missing node: selectedTrans");
             }
-            if(value.at("selectedTrans") == "eng") controls.buttonEng_Selected = true;
+            if(value.at("selectedTrans") == "eng" || value.at("selectedTrans") == "") controls.buttonEng_Selected = true;
             if(value.at("selectedTrans") == "de") controls.buttonDe_Selected = true;
             if(value.at("selectedTrans") == "deVoll") controls.buttonDeFull_Selected = true;
 
@@ -203,6 +203,22 @@ class SettingsJsonParser
                 throw std::runtime_error(e.what());
             }
         }
+        if(!json.at("settings").contains("rsiLauncherInstallPath"))
+        {
+            LOG_DEBUG(lg) << "getSettings () - missing node: rsiLauncherInstallPath";
+            throw std::runtime_error("missing node: rsiLauncherInstallPath");
+        }
+        else
+        {
+            try
+            {
+                json.at("settings")["rsiLauncherInstallPath"].get<std::string>();
+            }
+            catch(const std::exception& e)
+            {
+                throw std::runtime_error(e.what());
+            }
+        }
 
         database.settings.autoTranslationAtStart = json["settings"]["autoTranslationAtStart"];
         database.settings.autoNewTranslation = json["settings"]["autoNewTranslation"];
@@ -210,6 +226,7 @@ class SettingsJsonParser
         database.settings.LaunchScAfterTranslation = json["settings"]["LaunchScAfterTranslation"];
         database.settings.startScdWithSystemStart = json["settings"]["startScdWithSystemStart"];
         database.settings.showUpdateStatus = json["settings"]["showUpdateStatus"];
+        database.settings.rsiLauncherInstallPath = std::filesystem::path(json["settings"]["rsiLauncherInstallPath"]);
     }
 
     void saveChannelSettings (const Database::DataBase& database)
@@ -242,6 +259,7 @@ class SettingsJsonParser
         json["settings"]["LaunchScAfterTranslation"] = database.settings.LaunchScAfterTranslation;
         json["settings"]["startScdWithSystemStart"] = database.settings.startScdWithSystemStart;
         json["settings"]["showUpdateStatus"] = database.settings.showUpdateStatus;
+        json["settings"]["rsiLauncherInstallPath"] = database.settings.rsiLauncherInstallPath;
 
         std::ofstream file(filePath);
         if(file.is_open())

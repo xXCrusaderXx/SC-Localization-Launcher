@@ -38,6 +38,7 @@ struct Settings
     bool LaunchScAfterTranslation = false;
     bool startScdWithSystemStart = false;
     bool showUpdateStatus = false;
+    std::filesystem::path rsiLauncherInstallPath = "";
 };
 
 struct Paths

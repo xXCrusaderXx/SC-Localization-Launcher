@@ -54,14 +54,14 @@ class MenuBar : public QWidget
         : QWidget(parent)
         , lg("MenuBar")
     {
-        buttonNotifications = new QPushButton(u8"\U0001F514", this);
+        buttonNotifications = new QPushButton("\U0001F514", this);
         QFont fontNotify = buttonNotifications->font();
         fontNotify.setPointSize(20);
         buttonNotifications->setFont(fontNotify);
 
-        buttonMinimize = new QPushButton(u8"\u2015", this);
-        buttonMaximize = new QPushButton(u8"\u25A1", this);
-        buttonClose = new QPushButton(u8"\u2715", this);
+        buttonMinimize = new QPushButton("\u2015", this);
+        buttonMaximize = new QPushButton("\u25A1", this);
+        buttonClose = new QPushButton("\u2715", this);
 
         buttonNotifications->setFixedSize(30, 30);
         buttonMinimize->setFixedSize(30, 30);

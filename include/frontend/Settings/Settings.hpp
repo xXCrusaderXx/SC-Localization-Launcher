@@ -102,6 +102,32 @@ class Settings : public QWidget
     void updateStatus (const nlohmann::json &msg)
     {
         LOG_DEBUG(lg) << "updateStatus() - msg:\n" << msg.dump(4);
-        settingsStatus = msg;
+
+        const std::vector<std::string> keys = {"autoSearch",
+                                               "autoTranslationAtStart",
+                                               "autoNewTranslation",
+                                               "minimizeScdAfterUpdate",
+                                               "LaunchScAfterTranslation",
+                                               "startScdWithSystemStart",
+                                               "showUpdateStatus",
+                                               "LIVE",
+                                               "PTU",
+                                               "EPTU",
+                                               "HOTFIX",
+                                               "TECH-PREVIEW",
+                                               "rsiLauncherInstallPath"};
+
+        for(const auto &key : keys)
+        {
+            if(msg.contains(key))
+            {
+                settingsStatus[key] = msg[key];
+            }
+        }
+
+        if(settingsWindow)
+        {
+            settingsWindow->updateWindow(settingsStatus);
+        }
     }
 };
