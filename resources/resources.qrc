@@ -3,7 +3,8 @@
     <file>logo.png</file>
     <file>sc-deutsch.png</file>
     <file>background.jpg</file>
-    <file>background2.png</file>
+    <file>background2_main.png</file>
+     <file>background2_settings.png</file>
     <file>settings.png</file>
   </qresource>
 </RCC>

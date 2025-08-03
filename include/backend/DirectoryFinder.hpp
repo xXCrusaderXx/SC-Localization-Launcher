@@ -51,49 +51,87 @@ class DirectoryFinder
     {
         LOG_DEBUG(lg) << "find() - find target: " << target;
 
+        std::vector<std::string> rootPaths = {"/home", "/opt", "/usr", "/mnt", "/media"};
+        std::vector<std::future<void>> tasks;
+        std::atomic<bool> foundFlag{false};
+
+        for(const auto& path : rootPaths)
+        {
+            if(!std::filesystem::exists(path)) continue;
+
+            tasks.emplace_back(std::async(std::launch::async, [this, path, target, &foundFlag] { searchPath(path, target, foundFlag); }));
+        }
+
+        for(auto& t : tasks)
+        {
+            t.wait();
+        }
+
+        if(!foundFlag)
+        {
+            LOG_DEBUG(lg) << "[RESULT] Kein Pfad mit '" << target << "' gefunden.";
+        }
+        else
+        {
+            LOG_DEBUG(lg) << "[DONE] Pfad gefunden.";
+        }
+    }
+
+    void searchPath (const std::string& basePath, const std::string& target, std::atomic<bool>& foundFlag)
+    {
+        std::set<std::string> ignorePaths = {"/proc", "/sys", "/run", "/dev", "/tmp", "/var"};
+        size_t counter = 0;
+
         try
         {
-            std::set<std::string> ignorePaths = {"/proc", "/sys", "/run", "/dev", "/tmp", "/var"};
-
-            for(const auto& entry : std::filesystem::recursive_directory_iterator("/", std::filesystem::directory_options::skip_permission_denied))
+            for(const auto& entry :
+                std::filesystem::recursive_directory_iterator(basePath, std::filesystem::directory_options::skip_permission_denied))
             {
+                if(foundFlag.load()) break;  // Frühzeitiger Abbruch
+
                 if(!entry.is_directory()) continue;
 
                 std::string path = entry.path().string();
 
-                // Ignorieren, wenn Pfad mit einem der verbotenen beginnt
                 if(std::any_of(ignorePaths.begin(), ignorePaths.end(), [&] (const std::string& ignore) { return path.starts_with(ignore); }))
-                {
                     continue;
+
+                if(++counter % 1000 == 0)
+                {
+                    LOG_DEBUG(lg) << "[scan] " << path;
                 }
 
                 if(path.ends_with(target))
                 {
-                    LOG_DEBUG(lg) << "find() - found: " << path;
+                    {
+                        LOG_DEBUG(lg) << "[FOUND] " << path;
+                    }
 
                     database.settings.rsiLauncherInstallPath = path;
 
                     for(const auto& [key, suffix] : targets)
                     {
                         std::filesystem::path targetPath = entry.path().parent_path() / suffix;
-
-                        LOG_DEBUG(lg) << "find() - targetPath: " << targetPath;
+                        {
+                            LOG_DEBUG(lg) << "[check] " << targetPath;
+                        }
 
                         if(std::filesystem::exists(targetPath))
                         {
-                            LOG_DEBUG(lg) << "find() - set Path: " << targetPath;
+                            LOG_DEBUG(lg) << "[set] " << key << " → " << targetPath;
                             database.channelData[key].paths.installPath = targetPath.string();
                             database.channelData[key].controls.installPathIsSet = true;
                         }
                     }
 
+                    foundFlag = true;
                     break;
                 }
             }
         }
         catch(const std::exception& e)
         {
-            LOG_DEBUG(lg) << "find() - Error: " << e.what();
+            LOG_DEBUG(lg) << "[ERROR] " << e.what();
         }
     }
 };

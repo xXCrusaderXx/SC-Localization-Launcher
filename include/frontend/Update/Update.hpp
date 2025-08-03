@@ -1,14 +1,17 @@
 #pragma once
 
+#include <QGridLayout>
 #include <QPushButton>
 #include <QWidget>
+#include <QtConcurrent/QtConcurrent>
+#include <iostream>
 #include <nlohmann/json.hpp>
 
 #include "frontend/styles.hpp"
 
 class UpdateButton : public QWidget
 {
-    // Q_OBJECT
+    Q_OBJECT
 
    private:
     std::string channel = "UPDATE";
@@ -17,11 +20,11 @@ class UpdateButton : public QWidget
 
     QPushButton *buttonUpdate = nullptr;
 
-    void clicked ()
+    void clicked_start ()
     {
         nlohmann::json msg;
         msg["start"] = true;
-        QtConcurrent::run([&] { updateBackendCallback(channel, msg); });
+        QtConcurrent::run([this, msg] { updateBackendCallback(channel, msg); });
     }
 
    public:
@@ -29,7 +32,7 @@ class UpdateButton : public QWidget
         : QWidget(parent)
     {
         buttonUpdate = new QPushButton("Nicht Bereit", this);
-        connect(buttonUpdate, &QPushButton::clicked, this, &UpdateButton::clicked);
+        connect(buttonUpdate, &QPushButton::clicked, this, &UpdateButton::clicked_start);
         grid->addWidget(buttonUpdate, 7, 0, 1, 2);
         buttonUpdate->setStyleSheet(ButtonStyle::Disabled);
         buttonUpdate->setDisabled(true);
@@ -64,6 +67,13 @@ class UpdateButton : public QWidget
             buttonUpdate->setDisabled(true);
             buttonUpdate->setStyleSheet(ButtonStyle::Disabled);
             buttonUpdate->setText("Nicht Bereit");
+        }
+        if(msg.contains("LaunchScAfterTranslation"))
+        {
+            if(msg["LaunchScAfterTranslation"] == true)
+                buttonUpdate->setText("Update und Start");
+            else
+                buttonUpdate->setText("Update Übersetzung");
         }
     }
 
