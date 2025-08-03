@@ -13,7 +13,14 @@ CustomLogger::CustomLogger ()
 {
     if(!std::filesystem::exists(logPath))
     {
-        std::filesystem::create_directories(logPath);
+        try
+        {
+            std::filesystem::create_directories(logPath);
+        }
+        catch(const std::filesystem::filesystem_error& e)
+        {
+            throw std::runtime_error(std::string("Fehler beim erstellen bei: " + logPath.string() + "") + e.what());
+        }
     }
     cleanOffOldLogs();
     init();

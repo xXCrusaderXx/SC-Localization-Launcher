@@ -58,7 +58,7 @@ class MainWindow : public QMainWindow
 
         this->setStyleSheet(R"(
     QMainWindow {
-        background-image: url(:/background2.png);
+        background-image: url(:/background2_main.png);
         background-repeat: no-repeat;
         background-position: center;
     }

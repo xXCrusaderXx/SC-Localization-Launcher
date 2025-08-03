@@ -32,8 +32,19 @@ class SettingsJsonParser
 
     bool loadJsonFile ()
     {
+        if(!std::filesystem::exists(filePath))
+        {
+            if(!std::filesystem::exists(PATHS::JSON_FILES::SETTINGS))
+            {
+                LOG_DEBUG(lg) << "loadJsonFile () - " << filePath << " existiert nicht";
+                throw std::runtime_error("settings.json Datei existiert nicht");
+            }
+            else
+            {
+                filePath = PATHS::JSON_FILES::SETTINGS;
+            }
+        }
         std::ifstream file(filePath);
-        if(!std::filesystem::exists(filePath)) throw std::runtime_error("Datei existiert nicht");
         LOG_DEBUG(lg) << "loadJsonFile () - settings.json filePath: " << filePath;
         if(!file.is_open())
         {
@@ -261,7 +272,20 @@ class SettingsJsonParser
         json["settings"]["showUpdateStatus"] = database.settings.showUpdateStatus;
         json["settings"]["rsiLauncherInstallPath"] = database.settings.rsiLauncherInstallPath;
 
-        std::ofstream file(filePath);
+        if(!std::filesystem::exists(PATHS::JSON_FILES::SETTINGS_USER))
+        {
+            try
+            {
+                LOG_DEBUG(lg) << "Erstelle Settings.Json in USER Dir: " << PATHS::JSON_FILES::SETTINGS_USER;
+                std::filesystem::create_directory(PATHS::JSON_FILES::SETTINGS_USER.parent_path());
+            }
+            catch(const std::filesystem::filesystem_error& e)
+            {
+                throw std::runtime_error(std::string("Fehler beim Erstellen des Verzeichnisses: ") + e.what());
+            }
+        }
+
+        std::ofstream file(PATHS::JSON_FILES::SETTINGS_USER);
         if(file.is_open())
         {
             file << std::setw(4) << json << std::endl;
@@ -269,7 +293,7 @@ class SettingsJsonParser
         }
         else
         {
-            LOG_DEBUG(lg) << "saveChannelSettings () - Fehler beim Öffnen der Datei zum Schreiben!";
+            LOG_DEBUG(lg) << "saveChannelSettings () - Fehler beim Öffnen von: " << filePath;
         }
     }
 };

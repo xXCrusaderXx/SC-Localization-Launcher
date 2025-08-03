@@ -102,6 +102,12 @@ QCheckBox::indicator:checked {
         {
             this->close();
         }
+        msg["LIVE"] = pathBox1->text().toStdString();
+        msg["PTU"] = pathBox2->text().toStdString();
+        msg["EPTU"] = pathBox3->text().toStdString();
+        msg["HOTFIX"] = pathBox4->text().toStdString();
+        msg["TECH-PREVIEW"] = pathBox5->text().toStdString();
+        msg["rsiLauncherInstallPath"] = pathBox6->text().toStdString();
         settingsCallback(msg);
     }
 
@@ -161,11 +167,18 @@ QCheckBox::indicator:checked {
         resize(600, 500);
         installEventFilter(this);
 
-        this->setStyleSheet(R"(
-    QWidget {
-        background-color: rgba(28, 30, 33, 1);
-    }
-)");
+        //        this->setStyleSheet(R"(
+        //    QWidget {
+        //        background-color: rgba(28, 30, 33, 1);
+        //    }
+        //)");
+        auto *background = new QLabel(this);
+        background->setPixmap(QPixmap(":/background2_settings.png"));
+        background->setScaledContents(true);
+        background->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+        background->setGeometry(0, 0, this->width(), this->height());
+        background->lower();
+
         auto *mainLayout = new QGridLayout(this);
         mainLayout->setContentsMargins(0, 0, 0, 0);
 

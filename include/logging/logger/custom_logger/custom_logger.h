@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 
+#include "backend/utils/paths.hpp"
 #include "logging/core/LoggerBase.hpp"
 #include "logging/core/SeverityLevel.h"
 #include "logging/utils/serverityStreamOperator.h"
@@ -22,7 +23,7 @@ class CustomLogger : public LoggerBase
     CustomLogger (const CustomLogger&) = delete;
     CustomLogger& operator=(const CustomLogger&) = delete;
 
-    std::filesystem::path logPath = std::filesystem::current_path() / "logs";
+    std::filesystem::path logPath = PATHS::LOGPATH_USER / "logs";
     int maxFiles = 5;
 
     void cleanOffOldLogs ();

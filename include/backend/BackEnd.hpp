@@ -41,7 +41,7 @@ class BackEnd
 
    public:
     BackEnd ()
-        : settingsJsonParser(PATHS::JSON_FILES::SETTINGS)
+        : settingsJsonParser(PATHS::JSON_FILES::SETTINGS_USER)
         , lg("BackEnd")
         , dirFinder(database)
     {
@@ -99,6 +99,14 @@ class BackEnd
                 nlohmann::json responseMsg2;
                 responseMsg2["buttonReady"] = true;
                 guiCallbacks[key](responseMsg2);
+
+                if(database.settings.LaunchScAfterTranslation)
+                {
+                    chdir(database.settings.rsiLauncherInstallPath.string().c_str());
+                    std::string command = "/usr/bin/lutris lutris:rungame/star-citizen";
+                    std::system(command.c_str());
+                    chdir(PATHS::ROOT.c_str());
+                }
             }
         }
 
@@ -119,6 +127,9 @@ class BackEnd
             if(msg.contains("LaunchScAfterTranslation"))
             {
                 database.settings.LaunchScAfterTranslation = msg["LaunchScAfterTranslation"];
+                nlohmann::json responseMsg2;
+                responseMsg2["LaunchScAfterTranslation"] = msg["LaunchScAfterTranslation"];
+                guiCallbacks["UPDATE"](responseMsg2);
             }
             if(msg.contains("startScdWithSystemStart"))
             {
@@ -159,6 +170,8 @@ class BackEnd
             }
             LOG_DEBUG(lg) << "processMassage() - finished";
         }
+
+        settingsJsonParser.saveChannelSettings(database);
     }
 
     void initGui ()
@@ -195,6 +208,7 @@ class BackEnd
 
         if(readyForUpdate)
         {
+            updateButtonInit["LaunchScAfterTranslation"] = database.settings.LaunchScAfterTranslation;
             updateButtonInit["buttonEnabled"] = true;
             updateButtonInit["buttonReady"] = true;
             if(guiCallbacks["UPDATE"]) guiCallbacks["UPDATE"](updateButtonInit);

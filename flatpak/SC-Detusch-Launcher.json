@@ -1,0 +1,22 @@
+{
+    "app-id": "org.marko.StarCitizenDeutschLauncher",
+    "runtime": "org.freedesktop.Platform",
+    "runtime-version": "22.08",
+    "sdk": "org.freedesktop.Sdk",
+    "command": "StarCitizenLauncher",
+    "modules": [
+        {
+            "name": "starcitizen-launcher",
+            "buildsystem": "cmake",
+            "config-opts": [
+                "-DCMAKE_BUILD_TYPE=Release"
+            ],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": "."
+                }
+            ]
+        }
+    ]
+}
