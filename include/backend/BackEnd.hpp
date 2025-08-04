@@ -102,10 +102,30 @@ class BackEnd
 
                 if(database.settings.LaunchScAfterTranslation)
                 {
-                    chdir(database.settings.rsiLauncherInstallPath.string().c_str());
-                    std::string command = "/usr/bin/lutris lutris:rungame/star-citizen";
-                    std::system(command.c_str());
-                    chdir(PATHS::ROOT.c_str());
+                    bool lutris_installation = true;
+                    bool lug_installation = true;
+
+                    if(lutris_installation)
+                    {
+                        chdir(database.settings.rsiLauncherInstallPath.string().c_str());
+                        LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << database.settings.rsiLauncherInstallPath.string().c_str();
+                        std::string command = "/usr/bin/lutris lutris:rungame/star-citizen";
+                        std::system(command.c_str());
+                        chdir(PATHS::ROOT.c_str());
+                    }
+
+                    if(lug_installation)
+                    {
+                        std::string bashPath =
+                            database.settings.rsiLauncherInstallPath.parent_path().parent_path().parent_path().parent_path().string();
+                        chdir(bashPath.c_str());
+                        LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << bashPath << "/sc-launch.sh";
+                        std::string command = "sh " + bashPath + "/sc-launch.sh";
+                        std::system(command.c_str());
+                        chdir(PATHS::ROOT.c_str());
+                    }
+
+                    LOG_DEBUG(lg) << "processMassage() - SC_LAUNCH - FINISHED!";
                 }
             }
         }

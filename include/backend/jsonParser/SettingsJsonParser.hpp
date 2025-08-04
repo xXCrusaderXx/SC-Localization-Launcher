@@ -295,5 +295,7 @@ class SettingsJsonParser
         {
             LOG_DEBUG(lg) << "saveChannelSettings () - Fehler beim Öffnen von: " << filePath;
         }
+
+        LOG_DEBUG(lg) << "saveChannelSettings () - settings.json filePath: " << filePath;
     }
 };

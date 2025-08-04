@@ -1,13 +1,16 @@
 #pragma once
 
 #include <QCheckBox>
+#include <QDesktopServices>
 #include <QDialog>
+#include <QDir>
 #include <QEvent>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMouseEvent>
 #include <QPushButton>
 #include <QThread>
+#include <QUrl>
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QWindow>
@@ -147,12 +150,36 @@ QCheckBox::indicator:checked {
         msg["showUpdateStatus"] = checkbox6->isChecked();
     }
 
-    void clicked_folderButton1 () { LOG_DEBUG(lg) << "clicked_folderButton1()"; }
-    void clicked_folderButton2 () { LOG_DEBUG(lg) << "clicked_folderButton2()"; }
-    void clicked_folderButton3 () { LOG_DEBUG(lg) << "clicked_folderButton3()"; }
-    void clicked_folderButton4 () { LOG_DEBUG(lg) << "clicked_folderButton4()"; }
-    void clicked_folderButton5 () { LOG_DEBUG(lg) << "clicked_folderButton5()"; }
-    void clicked_folderButton6 () { LOG_DEBUG(lg) << "clicked_folderButton6()"; }
+    void clicked_folderButton1 ()
+    {
+        LOG_DEBUG(lg) << "clicked_folderButton1()";
+        QDesktopServices::openUrl(QUrl::fromLocalFile(pathBox1->text().trimmed()));
+    }
+    void clicked_folderButton2 ()
+    {
+        LOG_DEBUG(lg) << "clicked_folderButton2()";
+        QDesktopServices::openUrl(QUrl::fromLocalFile(pathBox2->text().trimmed()));
+    }
+    void clicked_folderButton3 ()
+    {
+        LOG_DEBUG(lg) << "clicked_folderButton3()";
+        QDesktopServices::openUrl(QUrl::fromLocalFile(pathBox3->text().trimmed()));
+    }
+    void clicked_folderButton4 ()
+    {
+        LOG_DEBUG(lg) << "clicked_folderButton4()";
+        QDesktopServices::openUrl(QUrl::fromLocalFile(pathBox4->text().trimmed()));
+    }
+    void clicked_folderButton5 ()
+    {
+        LOG_DEBUG(lg) << "clicked_folderButton5()";
+        QDesktopServices::openUrl(QUrl::fromLocalFile(pathBox5->text().trimmed()));
+    }
+    void clicked_folderButton6 ()
+    {
+        LOG_DEBUG(lg) << "clicked_folderButton6()";
+        QDesktopServices::openUrl(QUrl::fromLocalFile(pathBox6->text().trimmed()));
+    }
 
    protected:
     bool eventFilter (QObject *obj, QEvent *event) override;
@@ -284,31 +311,31 @@ QCheckBox::indicator:checked {
         int labelX = 110;
         int labelY = 60;
 
-        QLabel *label1 = new QLabel(topRightWidget);
-        label1->setFixedSize(labelX, labelY);
-        label1->setStyleSheet(labelStyle);
-        QLabel *label2 = new QLabel(topRightWidget);
-        label2->setFixedSize(labelX, labelY);
-        label2->setStyleSheet(labelStyle);
-        QLabel *label3 = new QLabel(topRightWidget);
-        label3->setFixedSize(labelX, labelY);
-        label3->setStyleSheet(labelStyle);
-        QLabel *label4 = new QLabel(topRightWidget);
-        label4->setFixedSize(labelX, labelY);
-        label4->setStyleSheet(labelStyle);
-        QLabel *label5 = new QLabel(topRightWidget);
-        label5->setFixedSize(labelX, labelY);
-        label5->setStyleSheet(labelStyle);
-        QLabel *label6 = new QLabel(topRightWidget);
-        label6->setFixedSize(labelX, labelY);
-        label6->setStyleSheet(labelStyle);
+        // QLabel *label1 = new QLabel(topRightWidget);
+        // label1->setFixedSize(labelX, labelY);
+        // label1->setStyleSheet(labelStyle);
+        // QLabel *label2 = new QLabel(topRightWidget);
+        // label2->setFixedSize(labelX, labelY);
+        // label2->setStyleSheet(labelStyle);
+        // QLabel *label3 = new QLabel(topRightWidget);
+        // label3->setFixedSize(labelX, labelY);
+        // label3->setStyleSheet(labelStyle);
+        // QLabel *label4 = new QLabel(topRightWidget);
+        // label4->setFixedSize(labelX, labelY);
+        // label4->setStyleSheet(labelStyle);
+        // QLabel *label5 = new QLabel(topRightWidget);
+        // label5->setFixedSize(labelX, labelY);
+        // label5->setStyleSheet(labelStyle);
+        // QLabel *label6 = new QLabel(topRightWidget);
+        // label6->setFixedSize(labelX, labelY);
+        // label6->setStyleSheet(labelStyle);
 
-        layoutTopRight->addWidget(label1, 0, 0);
-        layoutTopRight->addWidget(label2, 0, 1);
-        layoutTopRight->addWidget(label3, 1, 0);
-        layoutTopRight->addWidget(label4, 1, 1);
-        layoutTopRight->addWidget(label5, 2, 0);
-        layoutTopRight->addWidget(label6, 2, 1);
+        // layoutTopRight->addWidget(label1, 0, 0);
+        // layoutTopRight->addWidget(label2, 0, 1);
+        // layoutTopRight->addWidget(label3, 1, 0);
+        // layoutTopRight->addWidget(label4, 1, 1);
+        // layoutTopRight->addWidget(label5, 2, 0);
+        // layoutTopRight->addWidget(label6, 2, 1);
     }
 
     void setupBottomWidget (QGridLayout *grid)
