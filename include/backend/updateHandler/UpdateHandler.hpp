@@ -55,24 +55,41 @@ class UpdateHandler
     {
         for(const auto& [channel, data] : database.channelData)
         {
-            LOG_DEBUG(lg) << "update() - Channel: " << channel << " translation!";
+            if(data.paths.installPath.empty())
+            {
+                LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Path is empty, skip!";
+                continue;
+            }
+
+            LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Path: " << data.paths.installPath;
+
             if(data.controls.buttonEng_Selected)
             {
-                // utils::copySingleFile(PATHS::LIVE::BACKUP_USER_CFG, PATHS::LIVE::ORIGIN_USER_CFG);
-                // if(!utils::checkDirectoryExist(PATHS::LIVE::ORIGIN_DIR / "data"))
-                //     std::filesystem::create_directories(PATHS::LIVE::ORIGIN_DIR / "data");
-                // utils::copySingleFile(PATHS::LIVE::BACKUP_GLOBAL_INI, PATHS::LIVE::ORIGIN_GLOBAL_INI);
+                LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Eng-selected";
 
-                std::ofstream file(data.paths.installPath / "user.cfg");
-                if(file.is_open())
+                if(std::filesystem::exists(data.paths.installPath / "user.cfg"))
                 {
-                    file << "g_language = english\n";
-                    file << "g_languageAudio = english\n";
-                    file.close();
+                    std::filesystem::remove(data.paths.installPath / "user.cfg");
+                    LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: user.cfg gelöscht";
+                }
+                else
+                {
+                    LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: user.cfg existiert nicht";
+                }
+
+                if(std::filesystem::exists(data.paths.installPath / "data"))
+                {
+                    std::filesystem::remove_all(data.paths.installPath / "data");
+                    LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: data/ gelöscht";
+                }
+                else
+                {
+                    LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: data/ existiert nicht";
                 }
             }
             else if(data.controls.buttonDe_Selected)
             {
+                LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: De-selected";
                 if(!utils::checkDirectoryExist(data.paths.installPath / "data")) std::filesystem::create_directories(data.paths.installPath / "data");
 
                 std::ofstream file(data.paths.installPath / "user.cfg");
@@ -86,6 +103,7 @@ class UpdateHandler
             }
             else if(data.controls.buttonDeFull_Selected)
             {
+                LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: DeVoll-selected";
                 if(!utils::checkDirectoryExist(data.paths.installPath / "data")) std::filesystem::create_directories(data.paths.installPath / "data");
 
                 std::ofstream file(data.paths.installPath / "user.cfg");
