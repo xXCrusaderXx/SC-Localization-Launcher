@@ -17,7 +17,6 @@ set(SC_LAUNCHER_FLATPAK "${PROJECT_NAME}-Flatpak")
 set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/release" CACHE PATH "Install path prefix." FORCE)
 
 find_package(Qt5 COMPONENTS Widgets REQUIRED)
-find_package(libgit2 REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(CURL REQUIRED)
 
@@ -49,7 +48,6 @@ add_executable(${SC_LAUNCHER_BINARY} ${SOURCES})
 
 target_link_libraries(${SC_LAUNCHER_BINARY}
   Qt5::Widgets
-  git2
   nlohmann_json
   CURL::libcurl
 )
@@ -127,7 +125,6 @@ install(FILES
 add_executable(${SC_LAUNCHER_APPIMAGE} ${SOURCES})
 target_link_libraries(${SC_LAUNCHER_APPIMAGE}
   Qt5::Widgets
-  git2
   nlohmann_json
   CURL::libcurl
 )
