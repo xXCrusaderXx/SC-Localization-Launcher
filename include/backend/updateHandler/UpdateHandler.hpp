@@ -90,7 +90,8 @@ class UpdateHandler
             else if(data.controls.buttonDe_Selected)
             {
                 LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: De-selected";
-                if(!utils::checkDirectoryExist(data.paths.installPath / "data")) std::filesystem::create_directories(data.paths.installPath / "data");
+                if(!utils::checkDirectoryExist(data.paths.installPath / "data" / "Localization" / "german_(germany)"))
+                    std::filesystem::create_directories(data.paths.installPath / "data" / "Localization" / "german_(germany)");
 
                 std::ofstream file(data.paths.installPath / "user.cfg");
                 if(file.is_open())
@@ -99,12 +100,13 @@ class UpdateHandler
                     file << "g_languageAudio = english\n";
                     file.close();
                 }
-                downloadAndWriteToFile(data.info.server1, data.paths.installPath / "data" / "global.ini");
+                downloadAndWriteToFile(data.info.server1, data.paths.installPath / "data" / "Localization" / "german_(germany)" / "global.ini");
             }
             else if(data.controls.buttonDeFull_Selected)
             {
                 LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: DeVoll-selected";
-                if(!utils::checkDirectoryExist(data.paths.installPath / "data")) std::filesystem::create_directories(data.paths.installPath / "data");
+                if(!utils::checkDirectoryExist(data.paths.installPath / "data" / "Localization" / "german_(germany)"))
+                    std::filesystem::create_directories(data.paths.installPath / "data" / "Localization" / "german_(germany)");
 
                 std::ofstream file(data.paths.installPath / "user.cfg");
                 if(file.is_open())
@@ -114,7 +116,7 @@ class UpdateHandler
                     file.close();
                 }
 
-                downloadAndWriteToFile(data.info.server1, data.paths.installPath / "data" / "global.ini");
+                downloadAndWriteToFile(data.info.server1, data.paths.installPath / "data" / "Localization" / "german_(germany)" / "global.ini");
             }
             else
             {

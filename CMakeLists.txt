@@ -113,10 +113,6 @@ install(FILES
   "${CMAKE_SOURCE_DIR}/misc/starcitizen-launcher.desktop"
   DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
 )
-install(FILES
-  "${CMAKE_SOURCE_DIR}/misc/create_desktop_file.sh"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)
 
 #############################################################
 # --- APPIMAGE ---
@@ -203,5 +199,20 @@ install(CODE "
 
 install(FILES
   "${CMAKE_SOURCE_DIR}/misc/AppImageIntegration.sh"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/appimage
+)
+
+install(FILES
+  "${CMAKE_SOURCE_DIR}/misc/install.sh"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/appimage
+)
+
+install(FILES
+  "${CMAKE_SOURCE_DIR}/misc/uninstall.sh"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/appimage
+)
+
+install(FILES
+  "${CMAKE_SOURCE_DIR}/resources/logo.png"
   DESTINATION ${CMAKE_INSTALL_PREFIX}/appimage
 )
