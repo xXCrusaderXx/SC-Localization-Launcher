@@ -13,6 +13,8 @@
 #include "backend/utils/utils.hpp"
 #include "frontend/styles.hpp"
 #include "logging/logging.h"
+#include "protocol/ChannelPayload.hpp"
+#include "protocol/Protocol.hpp"
 
 class ChannelBase : public QWidget
 {
@@ -23,13 +25,17 @@ class ChannelBase : public QWidget
    protected:
     std::string channel;
 
-    using Callback = std::function<void(const std::string key, const nlohmann::json &)>;
+    using Callback = std::function<void(const nlohmann::json &)>;
     Callback updateBackendCallback;
 
     QPushButton *buttonChannel = nullptr;
     QPushButton *buttonEng = nullptr;
     QPushButton *buttonDe = nullptr;
     QPushButton *buttonDeVoll = nullptr;
+
+    bool buttonEngSelected = false;
+    bool buttonDeSelected = false;
+    bool buttonDeVollSelected = false;
 
     void clicked_Channel ()
     {
@@ -41,9 +47,24 @@ class ChannelBase : public QWidget
 
         if(!selectedDir.empty())
         {
-            nlohmann::json msg;
-            msg["installPath"] = selectedDir;
-            QtConcurrent::run([msg, this] { updateBackendCallback(channel, msg); });
+            Protocol::Request request;
+            Protocol::ChannelPayload::Request channelRequest;
+
+            channelRequest.newInstallPath = std::filesystem::path(selectedDir);
+            channelRequest.buttonEng.enabled = buttonEng->isEnabled();
+            channelRequest.buttonDe.enabled = buttonDe->isEnabled();
+            channelRequest.buttonDeFull.enabled = buttonDeVoll->isEnabled();
+
+            channelRequest.buttonEng.selected = buttonEngSelected;
+            channelRequest.buttonDe.selected = buttonDeSelected;
+            channelRequest.buttonDeFull.selected = buttonDeVollSelected;
+
+            request.payload = channelRequest.to_json();
+            LOG_DEBUG(lg) << "clicked_Channel() - request:\n" << request.toJson().dump(4);
+
+            request.type = Protocol::payloadTypeFromString(channel);
+
+            QtConcurrent::run([request, this] { updateBackendCallback(request.toJson()); });
         }
     }
 
@@ -64,7 +85,7 @@ class ChannelBase : public QWidget
         msg["buttonEngSelected"] = true;
         msg["buttonDeSelected"] = false;
         msg["buttonDeFullSelected"] = false;
-        QtConcurrent::run([msg, this] { updateBackendCallback(channel, msg); });
+        QtConcurrent::run([msg, this] { updateBackendCallback(msg); });
     }
 
     void clicked_De ()
@@ -82,7 +103,7 @@ class ChannelBase : public QWidget
         msg["buttonEngSelected"] = false;
         msg["buttonDeSelected"] = true;
         msg["buttonDeFullSelected"] = false;
-        QtConcurrent::run([msg, this] { updateBackendCallback(channel, msg); });
+        QtConcurrent::run([msg, this] { updateBackendCallback(msg); });
     }
 
     void clicked_DeFull ()
@@ -100,7 +121,7 @@ class ChannelBase : public QWidget
         msg["buttonEngSelected"] = false;
         msg["buttonDeSelected"] = false;
         msg["buttonDeFullSelected"] = true;
-        QtConcurrent::run([msg, this] { updateBackendCallback(channel, msg); });
+        QtConcurrent::run([msg, this] { updateBackendCallback(msg); });
     }
 
    public:
@@ -141,6 +162,11 @@ class ChannelBase : public QWidget
 
     void updateStatus (const nlohmann::json &msg)
     {
+        Protocol::Response response;
+        response.fromJson(msg);
+        Protocol::ChannelPayload::Response channelResponse;
+        channelResponse.from_json(response.payload);
+
         if(QThread::currentThread() != this->thread())
         {
             QMetaObject::invokeMethod(this, [this, msg] () { updateStatus(msg); }, Qt::QueuedConnection);
@@ -148,24 +174,70 @@ class ChannelBase : public QWidget
         }
 
         LOG_DEBUG(lg) << "updateStatus() - msg:\n" << msg.dump(4);
-        if(msg.contains("buttonEngEnabled") && msg.at("buttonEngEnabled") == true)
+
+        buttonDeSelected = channelResponse.buttonDe.selected;
+        buttonEngSelected = channelResponse.buttonEng.selected;
+        buttonDeVollSelected = channelResponse.buttonDeFull.selected;
+
+        if(channelResponse.buttonChannel.enabled)
+        {
+            buttonChannel->setVisible(true);
+            buttonChannel->setDisabled(false);
+            if(channelResponse.buttonChannel.acitve)
+            {
+                buttonChannel->setStyleSheet(ButtonStyle::Info);
+            }
+            else
+            {
+                buttonChannel->setStyleSheet(ButtonStyle::Error);
+            }
+        }
+        else
+        {
+            buttonChannel->setVisible(false);
+            buttonChannel->setDisabled(true);
+        }
+
+        if(channelResponse.buttonEng.enabled)
         {
             buttonEng->setVisible(true);
+            if(channelResponse.buttonEng.selected)
+            {
+                clicked_Eng();
+            }
         }
-        if(msg.contains("buttonDeEnabled") && msg.at("buttonDeEnabled") == true)
+        else
         {
-            buttonDe->setVisible(true);
+            buttonEng->setVisible(false);
         }
-        if(msg.contains("buttonDeFullEnabled") && msg.at("buttonDeFullEnabled") == true)
+
+        if(channelResponse.buttonDe.enabled)
+        {
+            buttonEng->setVisible(true);
+            if(channelResponse.buttonDe.selected)
+            {
+                clicked_De();
+            }
+        }
+        else
+        {
+            buttonDe->setVisible(false);
+        }
+
+        if(channelResponse.buttonDeFull.enabled)
         {
             buttonDeVoll->setVisible(true);
+            if(channelResponse.buttonDeFull.selected)
+            {
+                clicked_DeFull();
+            }
+        }
+        else
+        {
+            buttonDeVoll->setVisible(false);
         }
 
-        if(msg.contains("buttonEngSelected") && msg.at("buttonEngSelected") == true) clicked_Eng();
-        if(msg.contains("buttonDeSelected") && msg.at("buttonDeSelected") == true) clicked_De();
-        if(msg.contains("buttonDeFullSelected") && msg.at("buttonDeFullSelected") == true) clicked_DeFull();
-
-        if(msg.contains("installPathIsSet") && msg.at("installPathIsSet") == true)
+        if(channelResponse.installPathIsSet)
         {
             buttonChannel->setStyleSheet(ButtonStyle::Info);
         }

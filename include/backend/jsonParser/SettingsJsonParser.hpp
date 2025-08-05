@@ -64,7 +64,7 @@ class SettingsJsonParser
         return true;
     }
 
-    void getChannelSettings (Database::DataBase& database)
+    void getChannelSettings (Database::BackendData& backendData)
     {
         loadJsonFile();
 
@@ -74,43 +74,48 @@ class SettingsJsonParser
             throw std::runtime_error("settings.json is empty");
         }
 
-        getChannels(database);
-        getSettings(database);
+        getChannels(backendData);
+        getSettings(backendData);
     }
 
-    void getChannels (Database::DataBase& database)
+    void getChannels (Database::BackendData& backendData)
     {
         if(!json.contains("channels"))
         {
             LOG_DEBUG(lg) << "getChannelSettings () - missing node: channels";
             throw std::runtime_error("missing node: channels");
         }
-        for(const auto& [key, value] : json.at("channels").items())
+        if(!json.at("channels").is_object())
         {
-            Database::Controls controls;
+            LOG_DEBUG(lg) << "getChannelSettings () - channels is not an object";
+            throw std::runtime_error("channels is not an object");
+        }
+        else
+        {
+            LOG_DEBUG(lg) << "getChannelSettings () - channels is an object";
 
-            if(!value.contains("selectedTrans"))
+            for(const auto& [key, channel] : json.at("channels").items())
             {
-                LOG_DEBUG(lg) << "getChannelSettings () - missing node: selectedTrans";
-                throw std::runtime_error("missing node: selectedTrans");
-            }
-            if(value.at("selectedTrans") == "eng" || value.at("selectedTrans") == "") controls.buttonEng_Selected = true;
-            if(value.at("selectedTrans") == "de") controls.buttonDe_Selected = true;
-            if(value.at("selectedTrans") == "deVoll") controls.buttonDeFull_Selected = true;
+                validateChannelNode(channel);
 
-            if(!value.contains("installPath"))
-            {
-                LOG_DEBUG(lg) << "getChannelSettings () - missing node: installPath";
-                throw std::runtime_error("missing node: installPath");
+                if(channel.at("selectedTrans").get<std::string>() == "eng" || channel.at("selectedTrans").get<std::string>() == "")
+                {
+                    backendData.channelData[key].buttonEng.selected = true;
+                }
+                else if(channel.at("selectedTrans").get<std::string>() == "de")
+                {
+                    backendData.channelData[key].buttonDe.selected = true;
+                }
+                else if(channel.at("selectedTrans").get<std::string>() == "deVoll")
+                {
+                    backendData.channelData[key].buttonDeFull.selected = true;
+                }
+                backendData.channelData[key].installPath = std::filesystem::path(channel.at("installPath").get<std::string>());
             }
-            Database::Paths paths;
-            paths.installPath = std::filesystem::path(value.at("installPath"));
-            database.channelData[key].controls = controls;
-            database.channelData[key].paths = paths;
         }
     }
 
-    void getSettings (Database::DataBase& database)
+    void getSettings (Database::BackendData& backendData)
     {
         if(!json.contains("settings"))
         {
@@ -231,46 +236,42 @@ class SettingsJsonParser
             }
         }
 
-        database.settings.autoTranslationAtStart = json["settings"]["autoTranslationAtStart"];
-        database.settings.autoNewTranslation = json["settings"]["autoNewTranslation"];
-        database.settings.minimizeScdAfterUpdate = json["settings"]["minimizeScdAfterUpdate"];
-        database.settings.LaunchScAfterTranslation = json["settings"]["LaunchScAfterTranslation"];
-        database.settings.startScdWithSystemStart = json["settings"]["startScdWithSystemStart"];
-        database.settings.showUpdateStatus = json["settings"]["showUpdateStatus"];
-        database.settings.rsiLauncherInstallPath = std::filesystem::path(json["settings"]["rsiLauncherInstallPath"]);
+        backendData.settings.checkboxes.autoTranslationAtStart = json["settings"]["autoTranslationAtStart"];
+        backendData.settings.checkboxes.autoNewTranslation = json["settings"]["autoNewTranslation"];
+        backendData.settings.checkboxes.minimizeScdAfterUpdate = json["settings"]["minimizeScdAfterUpdate"];
+        backendData.settings.checkboxes.LaunchScAfterTranslation = json["settings"]["LaunchScAfterTranslation"];
+        backendData.settings.checkboxes.startScdWithSystemStart = json["settings"]["startScdWithSystemStart"];
+        backendData.settings.checkboxes.showUpdateStatus = json["settings"]["showUpdateStatus"];
+        backendData.rsiLauncherInstallPath = std::filesystem::path(json["settings"]["rsiLauncherInstallPath"]);
     }
 
-    void saveChannelSettings (const Database::DataBase& database)
+    void saveChannelSettings (const Database::BackendData& backendData)
     {
-        nlohmann::json newChannelsJson;
+        nlohmann::json json;
 
-        for(const auto& [key, channel] : database.channelData)
+        for(const auto& [key, channelData] : backendData.channelData)
         {
-            nlohmann::json value;
-
-            if(channel.controls.buttonEng_Selected)
-                value["selectedTrans"] = "eng";
-            else if(channel.controls.buttonDe_Selected)
-                value["selectedTrans"] = "de";
-            else if(channel.controls.buttonDeFull_Selected)
-                value["selectedTrans"] = "deVoll";
+            nlohmann::json channelJson;
+            channelJson["installPath"] = channelData.installPath.string();
+            if(channelData.buttonEng.selected)
+                channelJson["selectedTrans"] = "eng";
+            else if(channelData.buttonDe.selected)
+                channelJson["selectedTrans"] = "de";
+            else if(channelData.buttonDeFull.selected)
+                channelJson["selectedTrans"] = "deVoll";
             else
-                value["selectedTrans"] = "";
+                channelJson["selectedTrans"] = "";
 
-            value["installPath"] = channel.paths.installPath.string();
-
-            newChannelsJson[key] = value;
+            json["channels"][key] = channelJson;
         }
 
-        json["channels"] = newChannelsJson;
-
-        json["settings"]["autoTranslationAtStart"] = database.settings.autoTranslationAtStart;
-        json["settings"]["autoNewTranslation"] = database.settings.autoNewTranslation;
-        json["settings"]["minimizeScdAfterUpdate"] = database.settings.minimizeScdAfterUpdate;
-        json["settings"]["LaunchScAfterTranslation"] = database.settings.LaunchScAfterTranslation;
-        json["settings"]["startScdWithSystemStart"] = database.settings.startScdWithSystemStart;
-        json["settings"]["showUpdateStatus"] = database.settings.showUpdateStatus;
-        json["settings"]["rsiLauncherInstallPath"] = database.settings.rsiLauncherInstallPath;
+        json["settings"]["autoTranslationAtStart"] = backendData.settings.checkboxes.autoTranslationAtStart;
+        json["settings"]["autoNewTranslation"] = backendData.settings.checkboxes.autoNewTranslation;
+        json["settings"]["minimizeScdAfterUpdate"] = backendData.settings.checkboxes.minimizeScdAfterUpdate;
+        json["settings"]["LaunchScAfterTranslation"] = backendData.settings.checkboxes.LaunchScAfterTranslation;
+        json["settings"]["startScdWithSystemStart"] = backendData.settings.checkboxes.startScdWithSystemStart;
+        json["settings"]["showUpdateStatus"] = backendData.settings.checkboxes.showUpdateStatus;
+        json["settings"]["rsiLauncherInstallPath"] = backendData.rsiLauncherInstallPath;
 
         if(!std::filesystem::exists(PATHS::JSON_FILES::SETTINGS_USER))
         {

@@ -8,7 +8,7 @@
 namespace Database
 {
 
-struct Info
+struct WebInfo
 {
     std::string description;
     std::string folder;
@@ -19,18 +19,23 @@ struct Info
     std::string server2_fallback;
 };
 
-struct Controls
+struct TranslationTargetButton
 {
-    bool installPathIsSet = false;
-    bool buttonEng_Enabled = false;
-    bool buttonDe_Enabled = false;
-    bool buttonDeFull_Enabled = false;
-    bool buttonEng_Selected = false;
-    bool buttonDe_Selected = false;
-    bool buttonDeFull_Selected = false;
+    bool enabled = false;
+    bool selected = false;
 };
 
-struct Settings
+struct ChannelData
+{
+    WebInfo info;
+    std::filesystem::path installPath = "";
+    TranslationTargetButton buttonChannel;
+    TranslationTargetButton buttonEng;
+    TranslationTargetButton buttonDe;
+    TranslationTargetButton buttonDeFull;
+};
+
+struct Checkboxes
 {
     bool autoTranslationAtStart = false;
     bool autoNewTranslation = false;
@@ -38,25 +43,18 @@ struct Settings
     bool LaunchScAfterTranslation = false;
     bool startScdWithSystemStart = false;
     bool showUpdateStatus = false;
-    std::filesystem::path rsiLauncherInstallPath = "";
 };
 
-struct Paths
+struct Settings
 {
-    std::filesystem::path installPath = "";
-    std::filesystem::path backupPath = "";
+    Checkboxes checkboxes;
 };
 
-struct ChannelData
-{
-    Info info;
-    Controls controls;
-    Paths paths;
-};
-
-struct DataBase
+struct BackendData
 {
     std::map<std::string, ChannelData> channelData;
     Settings settings;
+    std::filesystem::path rsiLauncherInstallPath = "";
 };
+
 }  // namespace Database

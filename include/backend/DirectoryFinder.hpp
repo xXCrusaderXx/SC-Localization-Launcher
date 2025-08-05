@@ -14,7 +14,7 @@ class DirectoryFinder
    private:
     LoggerFramework::LogEx lg;
     nlohmann::json json;
-    Database::DataBase& database;
+    Database::BackendData& backendData;
 
     std::string rootTarget = "/Roberts Space Industries/RSI Launcher";
 
@@ -25,9 +25,9 @@ class DirectoryFinder
                                                {"TECH-PREVIEW", "StarCitizen/TECH-PREVIEW"}};
 
    public:
-    DirectoryFinder (Database::DataBase& database)
+    DirectoryFinder (Database::BackendData& backendData)
         : lg("DirectoryFinder")
-        , database(database)
+        , backendData(backendData)
     {
         LOG_DEBUG(lg) << "instanziated";
     };
@@ -37,14 +37,7 @@ class DirectoryFinder
     void findRsiInstallation ()
     {
         LOG_DEBUG(lg) << "findRsiInstallation()";
-
-        bool anyPathInstallPath = false;
-        for(const auto& [key, data] : database.channelData)
-        {
-            // if(!data.paths.installPath.empty()) anyPathInstallPath = true;
-        }
-
-        if(anyPathInstallPath == false) find(rootTarget);
+        find(rootTarget);
     }
 
     void find (std::string target)
@@ -107,7 +100,7 @@ class DirectoryFinder
                         LOG_DEBUG(lg) << "[FOUND] " << path;
                     }
 
-                    database.settings.rsiLauncherInstallPath = path;
+                    backendData.rsiLauncherInstallPath = path;
 
                     for(const auto& [key, suffix] : targets)
                     {
@@ -119,8 +112,7 @@ class DirectoryFinder
                         if(std::filesystem::exists(targetPath))
                         {
                             LOG_DEBUG(lg) << "[set] " << key << " → " << targetPath;
-                            database.channelData[key].paths.installPath = targetPath.string();
-                            database.channelData[key].controls.installPathIsSet = true;
+                            backendData.channelData[key].installPath = targetPath;
                         }
                     }
 

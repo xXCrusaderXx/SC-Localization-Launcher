@@ -66,21 +66,37 @@ class ChannelsJsonParser
     };
     ~ChannelsJsonParser () { LOG_DEBUG(lg) << "destructed"; };
 
-    void getChannels (Database::DataBase& database)
+    void getChannels (Database::BackendData& backendData)
     {
         loadJsonFromWeb();
-        for(const auto& [key, value] : newJson.at("channels").items())
+        if(newJson.is_null())
         {
-            Database::Info info;
-            info.description = value.at("description");
-            info.folder = value.at("folder");
-            info.active = value.at("active");
-            info.server1 = value.at("server1");
-            info.server2 = value.at("server2");
-            info.server1_fallback = value.at("server1_fallback");
-            info.server2_fallback = value.at("server2_fallback");
+            LOG_DEBUG(lg) << "getChannels() - JSON is null, skipping";
+            return;
+        }
 
-            database.channelData[info.description].info = info;
+        if(newJson.contains("channels"))
+        {
+            LOG_DEBUG(lg) << "getChannels() - channels found, processing";
+
+            for(const auto& channel : newJson.at("channels"))
+            {
+                Database::ChannelData channelData;
+                channelData.info.description = channel["description"].get<std::string>();
+                channelData.info.folder = channel["folder"].get<std::string>();
+                channelData.info.active = channel["active"].get<int>();
+                channelData.info.server1 = channel["server1"].get<std::string>();
+                channelData.info.server2 = channel["server2"].get<std::string>();
+                channelData.info.server1_fallback = channel["server1_fallback"].get<std::string>();
+                channelData.info.server2_fallback = channel["server2_fallback"].get<std::string>();
+
+                backendData.channelData[channelData.info.description] = channelData;
+            }
+        }
+        else
+        {
+            LOG_DEBUG(lg) << "getChannels() - channels not found in JSON";
+            throw std::runtime_error("Channels not found in JSON");
         }
     }
 

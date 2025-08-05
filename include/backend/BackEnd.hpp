@@ -3,195 +3,141 @@
 #include <nlohmann/json.hpp>
 #include <thread>
 
-#include "backend/DirectoryFinder.hpp"
 #include "backend/utils/paths.hpp"
 #include "database/DataBase.hpp"
 #include "jsonParser/ChannelsJsonParser.hpp"
 #include "jsonParser/SettingsJsonParser.hpp"
 #include "logging/logging.h"
-#include "updateHandler/UpdateHandler.hpp"
+#include "managers/ChannelManager.hpp"
+#include "managers/SettingsManager.hpp"
+#include "managers/UpdateManager.hpp"
+#include "protocol/Protocol.hpp"
+#include "protocol/UpdateButtonPayload.hpp"
 
 class BackEnd
 {
    private:
     LoggerFramework::LogEx lg;
-    Database::DataBase database;
+    Database::BackendData backendData;
     ChannelsJsonParser channelsJsonParser;
     SettingsJsonParser settingsJsonParser;
-    UpdateHandler updateHandler;
-    DirectoryFinder dirFinder;
+    ChannelManager channelManager;
+    UpdateManager updateHandler;
+    SettingsManager settingsManager;
 
     using Callback = std::function<void(const nlohmann::json&)>;
     std::map<std::string, Callback> guiCallbacks;
-
-    void updateControlsByDataBase ()
-    {
-        for(auto& [channel, data] : database.channelData)
-        {
-            data.controls.buttonEng_Enabled = true;
-
-            if(data.info.active)
-            {
-                if(!data.info.server1.empty()) data.controls.buttonDe_Enabled = true;
-                if(!data.info.server2.empty()) data.controls.buttonDeFull_Enabled = true;
-            }
-            if(!data.paths.installPath.empty()) data.controls.installPathIsSet = true;
-        }
-    }
 
    public:
     BackEnd ()
         : settingsJsonParser(PATHS::JSON_FILES::SETTINGS_USER)
         , lg("BackEnd")
-        , dirFinder(database)
+        , settingsManager(backendData)
     {
-        settingsJsonParser.getChannelSettings(database);
-        channelsJsonParser.getChannels(database);
+        settingsJsonParser.getChannelSettings(backendData);
+        channelsJsonParser.getChannels(backendData);
 
-        updateControlsByDataBase();
+        channelManager.initialSetup(backendData);
 
         LOG_DEBUG(lg) << "instanziated";
     }
     virtual ~BackEnd ()
     {
-        settingsJsonParser.saveChannelSettings(database);
+        settingsJsonParser.saveChannelSettings(backendData);
         LOG_DEBUG(lg) << "destructed";
     }
 
     void setGuiCallback (const std::string& key, Callback cb) { guiCallbacks[key] = cb; };
 
-    void processMassage (const std::string& key, const nlohmann::json& msg)
+    void processMassage (const nlohmann::json& msg)
     {
-        LOG_DEBUG(lg) << "processMassage() - >" << key << "< - msg:\n" << msg.dump(4);
+        LOG_DEBUG(lg) << "processMassage() - msg:\n" << msg.dump(4);
 
-        if(key == "LIVE" || key == "PTU" || key == "EPTU" || key == "HOTFIX" || key == "TECH-PREVIEW")
+        Protocol::Request request;
+        request.fromJson(msg);
+
+        if(request.type == Protocol::PayloadType::ChannelLive || request.type == Protocol::PayloadType::ChannelPTU ||
+           request.type == Protocol::PayloadType::ChannelEPTU || request.type == Protocol::PayloadType::ChannelHotfix ||
+           request.type == Protocol::PayloadType::ChannelTechPeview)
         {
-            if(msg.contains("buttonEngSelected")) database.channelData[key].controls.buttonEng_Selected = msg["buttonEngSelected"];
-            if(msg.contains("buttonDeSelected")) database.channelData[key].controls.buttonDe_Selected = msg["buttonDeSelected"];
-            if(msg.contains("buttonDeFullSelected")) database.channelData[key].controls.buttonDeFull_Selected = msg["buttonDeFullSelected"];
-            if(msg.contains("installPath"))
+            auto response = channelManager.processRequest(backendData, request);
+
+            std::string key = "";
+            if(request.type == Protocol::PayloadType::ChannelLive)
             {
-                database.channelData[key].paths.installPath = std::filesystem::path(msg["installPath"]);
-                nlohmann::json responseMsg;
-                updateControlsByDataBase();
-                responseMsg["installPathIsSet"] = true;
-                responseMsg["buttonEngSelected"] = true;
-                responseMsg["buttonDeEnabled"] = database.channelData[key].controls.buttonDe_Enabled;
-                responseMsg["buttonDeFullEnabled"] = database.channelData[key].controls.buttonDeFull_Enabled;
-                guiCallbacks[key](responseMsg);
-
-                nlohmann::json updateButtonMassage;
-                updateButtonMassage["buttonEnabled"] = true;
-                updateButtonMassage["buttonReady"] = true;
-                if(guiCallbacks["UPDATE"]) guiCallbacks["UPDATE"](updateButtonMassage);
+                key = "LIVE";
             }
-        }
-        if(key == "UPDATE")
-        {
-            if(msg.contains("start"))
+            else if(request.type == Protocol::PayloadType::ChannelPTU)
             {
-                nlohmann::json responseMsg;
-                responseMsg["buttonBusy"] = true;
-                guiCallbacks[key](responseMsg);
-
-                updateHandler.update(database);
-
-                nlohmann::json responseMsg2;
-                responseMsg2["buttonReady"] = true;
-                guiCallbacks[key](responseMsg2);
-
-                if(database.settings.LaunchScAfterTranslation)
-                {
-                    bool lutris_installation = true;
-                    bool lug_installation = true;
-
-                    if(lutris_installation)
-                    {
-                        chdir(database.settings.rsiLauncherInstallPath.string().c_str());
-                        LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << database.settings.rsiLauncherInstallPath.string().c_str();
-                        std::string command = "/usr/bin/lutris lutris:rungame/star-citizen";
-                        std::system(command.c_str());
-                        chdir(PATHS::ROOT.c_str());
-                    }
-
-                    if(lug_installation)
-                    {
-                        std::string bashPath =
-                            database.settings.rsiLauncherInstallPath.parent_path().parent_path().parent_path().parent_path().string();
-                        chdir(bashPath.c_str());
-                        LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << bashPath << "/sc-launch.sh";
-                        std::string command = "sh " + bashPath + "/sc-launch.sh";
-                        std::system(command.c_str());
-                        chdir(PATHS::ROOT.c_str());
-                    }
-
-                    LOG_DEBUG(lg) << "processMassage() - SC_LAUNCH - FINISHED!";
-                }
+                key = "PTU";
             }
+            else if(request.type == Protocol::PayloadType::ChannelEPTU)
+            {
+                key = "EPTU";
+            }
+            else if(request.type == Protocol::PayloadType::ChannelHotfix)
+            {
+                key = "HOTFIX";
+            }
+            else if(request.type == Protocol::PayloadType::ChannelTechPeview)
+            {
+                key = "TECH-PREVIEW";
+            }
+            if(guiCallbacks[key]) guiCallbacks[key](response->toJson());
         }
 
-        if(key == "SETTINGS")
+        if(request.type == Protocol::PayloadType::Settings)
         {
-            if(msg.contains("autoTranslationAtStart"))
-            {
-                database.settings.autoTranslationAtStart = msg["autoTranslationAtStart"];
-            }
-            if(msg.contains("autoNewTranslation"))
-            {
-                database.settings.autoNewTranslation = msg["autoNewTranslation"];
-            }
-            if(msg.contains("minimizeScdAfterUpdate"))
-            {
-                database.settings.minimizeScdAfterUpdate = msg["minimizeScdAfterUpdate"];
-            }
-            if(msg.contains("LaunchScAfterTranslation"))
-            {
-                database.settings.LaunchScAfterTranslation = msg["LaunchScAfterTranslation"];
-                nlohmann::json responseMsg2;
-                responseMsg2["LaunchScAfterTranslation"] = msg["LaunchScAfterTranslation"];
-                guiCallbacks["UPDATE"](responseMsg2);
-            }
-            if(msg.contains("startScdWithSystemStart"))
-            {
-                database.settings.startScdWithSystemStart = msg["startScdWithSystemStart"];
-            }
-            if(msg.contains("showUpdateStatus"))
-            {
-                database.settings.showUpdateStatus = msg["showUpdateStatus"];
-            }
-            if(msg.contains("autoSearch"))
-            {
-                if(msg["autoSearch"] == "start")
-                {
-                    nlohmann::json re;
-                    re["autoSearch"] = "running";
-                    guiCallbacks[key](re);
-
-                    std::thread(
-                        [this, key] ()
-                        {
-                            dirFinder.findRsiInstallation();
-
-                            nlohmann::json finMsg;
-                            finMsg["autoSearch"] = "finished";
-
-                            QMetaObject::invokeMethod(qApp, [this, finMsg] () { processMassage("SETTINGS", finMsg); }, Qt::QueuedConnection);
-                        })
-                        .detach();
-                }
-                if(msg["autoSearch"] == "finished")
-                {
-                    updateControlsByDataBase();
-                    initGui();
-                    nlohmann::json re;
-                    re["autoSearch"] = "ready";
-                    guiCallbacks[key](re);
-                }
-            }
-            LOG_DEBUG(lg) << "processMassage() - finished";
+            settingsManager.processRequest(request);
         }
 
-        settingsJsonParser.saveChannelSettings(database);
+        if(request.type == Protocol::PayloadType::UpdateButton)
+        {
+            Protocol::Response response;
+            Protocol::UpdateButtonPayload::Response updateButtonResponse;
+
+            updateButtonResponse.updateButton.busy = true;
+            updateButtonResponse.updateButton.enabled = true;
+            updateButtonResponse.updateButton.LaunchScAfterTranslation = backendData.settings.checkboxes.LaunchScAfterTranslation;
+
+            response.payload = updateButtonResponse.to_json();
+            response.type = Protocol::PayloadType::UpdateButton;
+            guiCallbacks["UPDATE"](response.toJson());
+
+            updateHandler.processRequest(backendData, request);
+
+            updateButtonResponse.updateButton.busy = false;
+            updateButtonResponse.updateButton.enabled = true;
+            response.payload = updateButtonResponse.to_json();
+            guiCallbacks["UPDATE"](response.toJson());
+
+            if(backendData.settings.checkboxes.LaunchScAfterTranslation)
+            {
+                bool lutris_installation = true;
+                bool lug_installation = true;
+
+                if(lutris_installation)
+                {
+                    chdir(backendData.rsiLauncherInstallPath.string().c_str());
+                    LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << backendData.rsiLauncherInstallPath.string().c_str();
+                    std::string command = "/usr/bin/lutris lutris:rungame/star-citizen";
+                    std::system(command.c_str());
+                    chdir(PATHS::ROOT.c_str());
+                }
+
+                if(lug_installation)
+                {
+                    std::string bashPath = backendData.rsiLauncherInstallPath.parent_path().parent_path().parent_path().parent_path().string();
+                    chdir(bashPath.c_str());
+                    LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << bashPath << "/sc-launch.sh";
+                    std::string command = "sh " + bashPath + "/sc-launch.sh";
+                    std::system(command.c_str());
+                    chdir(PATHS::ROOT.c_str());
+                }
+
+                LOG_DEBUG(lg) << "processMassage() - SC_LAUNCH - FINISHED!";
+            }
+        }
     }
 
     void initGui ()
@@ -202,47 +148,65 @@ class BackEnd
         nlohmann::json updateButtonInit;
         nlohmann::json updateSettingsInit;
 
-        for(const auto& [channel, data] : database.channelData)
+        for(const auto& [channel, data] : backendData.channelData)
         {
-            nlohmann::json channelsInit;
+            Protocol::Response response;
+            Protocol::ChannelPayload::Response channelResponse;
 
-            if(database.channelData[channel].controls.installPathIsSet == true)
+            if(!backendData.channelData[channel].installPath.empty())
             {
                 readyForUpdate = true;
-                channelsInit["buttonEngEnabled"] = database.channelData[channel].controls.buttonDe_Enabled;
-                channelsInit["buttonDeEnabled"] = database.channelData[channel].controls.buttonDe_Enabled;
-                channelsInit["buttonDeFullEnabled"] = database.channelData[channel].controls.buttonDeFull_Enabled;
-                channelsInit["buttonEngSelected"] = database.channelData[channel].controls.buttonEng_Selected;
-                channelsInit["buttonDeSelected"] = database.channelData[channel].controls.buttonDe_Selected;
-                channelsInit["buttonDeFullSelected"] = database.channelData[channel].controls.buttonDeFull_Selected;
-                updateSettingsInit[channel] = database.channelData[channel].paths.installPath;
+                channelResponse.buttonChannel.enabled = true;
+                channelResponse.buttonChannel.acitve = false;
+                channelResponse.buttonEng.enabled = true;
+                channelResponse.buttonEng.selected = true;
+                channelResponse.buttonDe.enabled = backendData.channelData[channel].buttonDe.enabled;
+                channelResponse.buttonDe.selected = backendData.channelData[channel].buttonDe.selected;
+                channelResponse.buttonDeFull.enabled = backendData.channelData[channel].buttonDeFull.enabled;
+                channelResponse.buttonDeFull.selected = backendData.channelData[channel].buttonDeFull.selected;
             }
             else
             {
-                channelsInit["buttonEngEnabled"] = database.channelData[channel].controls.buttonEng_Enabled;
+                channelResponse.buttonChannel.enabled = backendData.channelData[channel].buttonChannel.enabled;
             }
-            channelsInit["installPathIsSet"] = database.channelData[channel].controls.installPathIsSet;
 
-            if(guiCallbacks[channel]) guiCallbacks[channel](channelsInit);
+            channelResponse.installPathIsSet = !backendData.channelData[channel].installPath.empty();
+            response.payload = channelResponse.to_json();
+            response.type = Protocol::payloadTypeFromString(channel);
+            if(guiCallbacks[channel]) guiCallbacks[channel](response.toJson());
         }
 
         if(readyForUpdate)
         {
-            updateButtonInit["LaunchScAfterTranslation"] = database.settings.LaunchScAfterTranslation;
-            updateButtonInit["buttonEnabled"] = true;
-            updateButtonInit["buttonReady"] = true;
-            if(guiCallbacks["UPDATE"]) guiCallbacks["UPDATE"](updateButtonInit);
+            Protocol::Response response;
+            Protocol::UpdateButtonPayload::Response updateButtonResponse;
+            updateButtonResponse.updateButton.enabled = true;
+            updateButtonResponse.updateButton.busy = false;
+            updateButtonResponse.updateButton.LaunchScAfterTranslation = backendData.settings.checkboxes.LaunchScAfterTranslation;
+            if(guiCallbacks["UPDATE"]) guiCallbacks["UPDATE"](updateButtonResponse.to_json());
         }
 
-        updateSettingsInit["autoTranslationAtStart"] = database.settings.autoTranslationAtStart;
-        updateSettingsInit["autoNewTranslation"] = database.settings.autoNewTranslation;
-        updateSettingsInit["minimizeScdAfterUpdate"] = database.settings.minimizeScdAfterUpdate;
-        updateSettingsInit["LaunchScAfterTranslation"] = database.settings.LaunchScAfterTranslation;
-        updateSettingsInit["startScdWithSystemStart"] = database.settings.startScdWithSystemStart;
-        updateSettingsInit["showUpdateStatus"] = database.settings.showUpdateStatus;
-        updateSettingsInit["autoSearch"] = "ready";
-        updateSettingsInit["rsiLauncherInstallPath"] = database.settings.rsiLauncherInstallPath;
-        if(guiCallbacks["SETTINGS"]) guiCallbacks["SETTINGS"](updateSettingsInit);
+        Protocol::Response response;
+        Protocol::SettingsPayload::Response settingsResponse;
+        settingsResponse.autoSearchButton.enabled = true;
+        settingsResponse.autoSearchButton.busy = false;
+        settingsResponse.paths.liveInstallPath = backendData.channelData["LIVE"].installPath;
+        settingsResponse.paths.ptuInstallPath = backendData.channelData["PTU"].installPath;
+        settingsResponse.paths.eptuInstallPath = backendData.channelData["EPTU"].installPath;
+        settingsResponse.paths.hotfixInstallPath = backendData.channelData["HOTFIX"].installPath;
+        settingsResponse.paths.techprevieInstallPath = backendData.channelData["TECH-PREVIEW"].installPath;
+        settingsResponse.paths.rsiLauncherInstallPath = backendData.rsiLauncherInstallPath;
+
+        settingsResponse.settings.autoTranslationAtStart = backendData.settings.checkboxes.autoTranslationAtStart;
+        settingsResponse.settings.autoNewTranslation = backendData.settings.checkboxes.autoNewTranslation;
+        settingsResponse.settings.minimizeScdAfterUpdate = backendData.settings.checkboxes.minimizeScdAfterUpdate;
+        settingsResponse.settings.LaunchScAfterTranslation = backendData.settings.checkboxes.LaunchScAfterTranslation;
+        settingsResponse.settings.startScdWithSystemStart = backendData.settings.checkboxes.startScdWithSystemStart;
+        settingsResponse.settings.showUpdateStatus = backendData.settings.checkboxes.showUpdateStatus;
+        response.payload = settingsResponse.to_json();
+        response.type = Protocol::PayloadType::Settings;
+
+        if(guiCallbacks["SETTINGS"]) guiCallbacks["SETTINGS"](response.toJson());
 
         LOG_DEBUG(lg) << "initGui() - finished";
     }

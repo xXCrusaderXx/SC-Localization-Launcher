@@ -15,7 +15,7 @@ class UpdateButton : public QWidget
 
    private:
     std::string channel = "UPDATE";
-    using Callback = std::function<void(const std::string key, const nlohmann::json &)>;
+    using Callback = std::function<void(const nlohmann::json &)>;
     Callback updateBackendCallback;
 
     QPushButton *buttonUpdate = nullptr;
@@ -24,7 +24,7 @@ class UpdateButton : public QWidget
     {
         nlohmann::json msg;
         msg["start"] = true;
-        QtConcurrent::run([this, msg] { updateBackendCallback(channel, msg); });
+        QtConcurrent::run([this, msg] { updateBackendCallback(msg); });
     }
 
    public:

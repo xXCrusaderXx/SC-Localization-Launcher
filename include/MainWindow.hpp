@@ -147,7 +147,7 @@ class MainWindow : public QMainWindow
         grid->addWidget(labelTitel, 0, 0, 1, 2);
 
         settings = new Settings(this, grid);
-        settings->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
+        settings->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(msg); });
         backEnd.setGuiCallback(settings->getName(), [this] (const nlohmann::json &msg) { settings->updateStatus(msg); });
     };
 
@@ -178,12 +178,12 @@ class MainWindow : public QMainWindow
         techPreview = new TechPreviewChannel(this, grid);
         update = new UpdateButton(this, grid);
 
-        live->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
-        ptu->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
-        eptu->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
-        hotfix->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
-        techPreview->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
-        update->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
+        live->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
+        ptu->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
+        eptu->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
+        hotfix->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
+        techPreview->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
+        update->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
 
         backEnd.setGuiCallback(live->getName(), [this] (const nlohmann::json &msg) { live->updateStatus(msg); });
         backEnd.setGuiCallback(ptu->getName(), [this] (const nlohmann::json &msg) { ptu->updateStatus(msg); });
