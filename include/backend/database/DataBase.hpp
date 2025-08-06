@@ -19,6 +19,12 @@ struct WebInfo
     std::string server2_fallback;
 };
 
+struct ChannelButton
+{
+    std::optional<bool> enabled;
+    std::optional<bool> active;
+};
+
 struct TranslationTargetButton
 {
     bool enabled = false;
@@ -29,7 +35,7 @@ struct ChannelData
 {
     WebInfo info;
     std::filesystem::path installPath = "";
-    TranslationTargetButton buttonChannel;
+    ChannelButton buttonChannel;
     TranslationTargetButton buttonEng;
     TranslationTargetButton buttonDe;
     TranslationTargetButton buttonDeFull;
@@ -55,6 +61,7 @@ struct BackendData
     std::map<std::string, ChannelData> channelData;
     Settings settings;
     std::filesystem::path rsiLauncherInstallPath = "";
+    bool anyChannelPathSet = false;
 };
 
 }  // namespace Database

@@ -1,50 +1,46 @@
 #pragma once
 #include <filesystem>
 #include <nlohmann/json.hpp>
+#include <optional>
 
 namespace Protocol
 {
-namespace UpdateButtonPayload
-{
 struct UpdateButton
 {
-    bool enabled = false;
-    bool busy = false;
-    bool LaunchScAfterTranslation = false;
+    std::optional<bool> enabled = false;
+    std::optional<bool> busy = false;
+    std::optional<bool> updateButtonClicked = false;
+    std::optional<bool> LaunchScAfterTranslation = false;
 };
 
-struct Request
-{
-    bool updateButtonClicked = false;
-
-    nlohmann::json to_json () const
-    {
-        nlohmann::json j;
-        j["updateButtonClicked"] = updateButtonClicked;
-        return j;
-    }
-    void from_json (const nlohmann::json& j) { updateButtonClicked = j.at("updateButtonClicked").get<bool>(); }
-};
-
-struct Response
+struct UpdateButtonPayload
 {
     UpdateButton updateButton;
 
-    nlohmann::json to_json () const
+    UpdateButtonPayload () = default;
+
+    UpdateButtonPayload (const nlohmann::json& j)
     {
-        nlohmann::json j;
-        j["UpdateButton"] = {
-            {"enabled", updateButton.enabled}, {"busy", updateButton.busy}, {"LaunchScAfterTranslation", updateButton.LaunchScAfterTranslation}};
-        return j;
+        if(j.contains("updateButton"))
+        {
+            if(j.at("updateButton").contains("enabled")) updateButton.enabled = j.at("updateButton").at("enabled").get<bool>();
+            if(j.at("updateButton").contains("busy")) updateButton.busy = j.at("updateButton").at("busy").get<bool>();
+            if(j.at("updateButton").contains("LaunchScAfterTranslation"))
+                updateButton.LaunchScAfterTranslation = j.at("updateButton").at("LaunchScAfterTranslation").get<bool>();
+            if(j.at("updateButton").contains("updateButtonClicked"))
+                updateButton.updateButtonClicked = j.at("updateButton").at("updateButtonClicked").get<bool>();
+        }
     }
 
-    void from_json (const nlohmann::json& j)
+    nlohmann::json toJson () const
     {
-        updateButton.enabled = j.at("button").at("enabled").get<bool>();
-        updateButton.busy = j.at("button").at("busy").get<bool>();
-        updateButton.LaunchScAfterTranslation = j.at("button").at("LaunchScAfterTranslation").get<bool>();
+        nlohmann::json j;
+        if(updateButton.enabled) j["updateButton"]["enabled"] = updateButton.enabled.value();
+        if(updateButton.busy) j["updateButton"]["busy"] = updateButton.busy.value();
+        if(updateButton.LaunchScAfterTranslation) j["updateButton"]["LaunchScAfterTranslation"] = updateButton.LaunchScAfterTranslation.value();
+        if(updateButton.updateButtonClicked) j["updateButton"]["updateButtonClicked"] = updateButton.updateButtonClicked.value();
+        return j;
     }
 };
 
-}  // namespace UpdateButtonPayload
 }  // namespace Protocol

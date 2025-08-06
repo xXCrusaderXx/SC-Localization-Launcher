@@ -10,16 +10,18 @@ class ChannelManager
 {
    private:
     LoggerFramework::LogEx lg;
+    Database::BackendData& backendData;
 
    public:
-    ChannelManager ()
+    ChannelManager (Database::BackendData& backendData)
         : lg("ChannelManager")
+        , backendData(backendData)
     {
         LOG_DEBUG(lg) << "instanziated";
     };
     ~ChannelManager () { LOG_DEBUG(lg) << "destructed"; }
 
-    void initialSetup (Database::BackendData& backendData)
+    void initialSetup ()
     {
         LOG_DEBUG(lg) << "initialSetup() - Start";
 
@@ -28,6 +30,12 @@ class ChannelManager
             data.buttonEng.enabled = true;
             data.buttonEng.selected = true;
             data.buttonChannel.enabled = true;
+            if(data.installPath.empty())
+            {
+                data.buttonChannel.active = false;
+            }
+            else
+                data.buttonChannel.active = true;
 
             if(data.info.active)
             {
@@ -39,55 +47,68 @@ class ChannelManager
         LOG_DEBUG(lg) << "initialSetup() - Finished";
     }
 
-    std::optional<Protocol::Response> processRequest (Database::BackendData& backendData, const Protocol::Request& msg)
+    void processRequest (const Protocol::Massage& request, Protocol::Massage& response)
     {
-        LOG_DEBUG(lg) << "processRequest() - Start";
-
-        std::string key = Protocol::toString(msg.type);
-
-        if(key.empty())
+        LOG_DEBUG(lg) << "processRequest() - START";
+        for(const auto& [channel, data] : backendData.channelData)
         {
-            LOG_ERROR(lg) << "processRequest() - Unknown channel type: " << key;
-            return std::nullopt;
+            if(!request.moduleExist(channel))
+            {
+                continue;
+            }
+            Protocol::ChannelPayload channelReq(request.getModuleNode(channel));
+            LOG_DEBUG(lg) << "processRequest() - [" << channel << "] request:\n" << channelReq.toJson().dump(4);
+            if(channelReq.buttonDe.selected) backendData.channelData[channel].buttonDe.selected = channelReq.buttonDe.selected.value();
+            if(channelReq.buttonDe.enabled) backendData.channelData[channel].buttonDe.enabled = channelReq.buttonDe.enabled.value();
+            if(channelReq.buttonEng.selected) backendData.channelData[channel].buttonEng.selected = channelReq.buttonEng.selected.value();
+            if(channelReq.buttonEng.enabled) backendData.channelData[channel].buttonEng.enabled = channelReq.buttonEng.enabled.value();
+            if(channelReq.buttonDeFull.selected) backendData.channelData[channel].buttonDeFull.selected = channelReq.buttonDeFull.selected.value();
+            if(channelReq.buttonDeFull.enabled) backendData.channelData[channel].buttonDeFull.enabled = channelReq.buttonDeFull.enabled.value();
+            if(channelReq.newInstallPath) backendData.channelData[channel].installPath = channelReq.newInstallPath.value();
+
+            Protocol::ChannelPayload channelResponse;
+            channelResponse.installPathIsSet = !channelReq.newInstallPath.value().empty();
+            if(channelResponse.installPathIsSet)
+            {
+                channelResponse.buttonChannel.active = channelResponse.installPathIsSet;
+            }
+            channelResponse.buttonChannel.enabled = true;
+            channelResponse.buttonEng.enabled = backendData.channelData[channel].buttonEng.enabled;
+            channelResponse.buttonEng.selected = backendData.channelData[channel].buttonEng.selected;
+            channelResponse.buttonDe.enabled = backendData.channelData[channel].buttonDe.enabled;
+            channelResponse.buttonDe.selected = backendData.channelData[channel].buttonDe.selected;
+            channelResponse.buttonDeFull.enabled = backendData.channelData[channel].buttonDeFull.enabled;
+            channelResponse.buttonDeFull.selected = backendData.channelData[channel].buttonDeFull.selected;
+
+            if(!backendData.channelData[channel].installPath.empty())
+            {
+                channelResponse.buttonEng.enabled = true;
+                channelResponse.buttonDe.enabled = true;
+                channelResponse.buttonDeFull.enabled = true;
+            }
+
+            response.AddModuleNode(channel, channelResponse.toJson());
         }
+        LOG_DEBUG(lg) << "processRequest() - FINISHED";
+    }
 
-        Protocol::ChannelPayload::Request req;
-        req.from_json(msg.payload);
-
-        backendData.channelData[key].buttonDe.selected = req.buttonDe.selected;
-        backendData.channelData[key].buttonDe.enabled = req.buttonDe.enabled;
-        backendData.channelData[key].buttonEng.selected = req.buttonEng.selected;
-        backendData.channelData[key].buttonEng.enabled = req.buttonEng.enabled;
-        backendData.channelData[key].buttonDeFull.selected = req.buttonDeFull.selected;
-        backendData.channelData[key].buttonDeFull.enabled = req.buttonDeFull.enabled;
-        backendData.channelData[key].installPath = req.newInstallPath;
-
-        LOG_DEBUG(lg) << "processRequest() - Finished";
-
-        Protocol::Response response;
-        Protocol::ChannelPayload::Response channelResponse;
-        channelResponse.installPathIsSet = !req.newInstallPath.empty();
-        if(channelResponse.installPathIsSet)
+    void updateChannelResponse (Protocol::Massage& response)
+    {
+        for(const auto& [channel, data] : backendData.channelData)
         {
-            channelResponse.buttonChannel.acitve = true;
-        }
-        channelResponse.buttonChannel.enabled = true;
-        channelResponse.buttonEng.enabled = backendData.channelData[key].buttonEng.enabled;
-        channelResponse.buttonEng.selected = backendData.channelData[key].buttonEng.selected;
-        channelResponse.buttonDe.enabled = backendData.channelData[key].buttonDe.enabled;
-        channelResponse.buttonDe.selected = backendData.channelData[key].buttonDe.selected;
-        channelResponse.buttonDeFull.enabled = backendData.channelData[key].buttonDeFull.enabled;
-        channelResponse.buttonDeFull.selected = backendData.channelData[key].buttonDeFull.selected;
+            Protocol::ChannelPayload channelResponse;
 
-        if(!backendData.channelData[key].installPath.empty())
-        {
-            channelResponse.buttonEng.enabled = true;
-            channelResponse.buttonDe.enabled = true;
-            channelResponse.buttonDeFull.enabled = true;
+            channelResponse.buttonChannel.enabled = backendData.channelData[channel].buttonChannel.enabled;
+            channelResponse.buttonChannel.active = backendData.channelData[channel].buttonChannel.active;
+            channelResponse.buttonEng.enabled = backendData.channelData[channel].buttonEng.enabled;
+            channelResponse.buttonEng.selected = backendData.channelData[channel].buttonEng.selected;
+            channelResponse.buttonDe.enabled = backendData.channelData[channel].buttonDe.enabled;
+            channelResponse.buttonDe.selected = backendData.channelData[channel].buttonDe.selected;
+            channelResponse.buttonDeFull.enabled = backendData.channelData[channel].buttonDeFull.enabled;
+            channelResponse.buttonDeFull.selected = backendData.channelData[channel].buttonDeFull.selected;
+            channelResponse.installPathIsSet = !backendData.channelData[channel].installPath.empty();
+            if(!backendData.channelData[channel].installPath.empty()) backendData.anyChannelPathSet = true;
+            response.AddModuleNode(channel, channelResponse.toJson());
         }
-
-        response.payload = channelResponse.to_json();
-        response.type = msg.type;
-        return response;
     }
 };

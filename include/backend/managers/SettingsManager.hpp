@@ -27,95 +27,98 @@ class SettingsManager
 
     ~SettingsManager () { LOG_DEBUG(lg) << "destructed"; }
 
-    std::vector<std::optional<Protocol::Response>> processRequest (const Protocol::Request& msg)
+    void processRequest (const Protocol::Massage& request, Protocol::Massage& response)
     {
         LOG_DEBUG(lg) << "processRequest() - Start";
+        LOG_DEBUG(lg) << "processRequest() - msg:\n" << request.getJson().dump(4);
 
-        Protocol::SettingsPayload::Request request;
-        request.from_json(msg.payload);
-
-        std::vector<std::optional<Protocol::Response>> responses;
-
-        if(backendData.settings.checkboxes.LaunchScAfterTranslation != request.settings.LaunchScAfterTranslation)
+        if(request.moduleExist("Settings"))
         {
-            backendData.settings.checkboxes.LaunchScAfterTranslation = request.settings.LaunchScAfterTranslation;
-            auto response = processLauchAfterUpdate();
-            if(response) responses.push_back(response);
+            LOG_DEBUG(lg) << "processRequest() - Settings module found";
+        }
+        else
+        {
+            LOG_DEBUG(lg) << "processRequest() - Settings module not found";
+            return;
+        }
+        Protocol::SettingsPayload settingsRequest(request.getModuleNode("Settings"));
+
+        if(settingsRequest.settings.LaunchScAfterTranslation)
+        {
+            backendData.settings.checkboxes.LaunchScAfterTranslation = settingsRequest.settings.LaunchScAfterTranslation.value();
+            processLaunchAfterUpdate(settingsRequest, response);
         }
 
-        if(backendData.settings.checkboxes.autoTranslationAtStart != request.settings.autoTranslationAtStart)
+        if(settingsRequest.settings.autoTranslationAtStart)
         {
-            backendData.settings.checkboxes.autoTranslationAtStart = request.settings.autoTranslationAtStart;
-            auto response = processAutoTranslationAtStart();
-            if(response) responses.push_back(response);
+            backendData.settings.checkboxes.autoTranslationAtStart = settingsRequest.settings.autoTranslationAtStart.value();
+            processAutoTranslationAtStart(settingsRequest, response);
         }
-        if(backendData.settings.checkboxes.autoNewTranslation != request.settings.autoNewTranslation)
+        if(settingsRequest.settings.autoNewTranslation)
         {
-            backendData.settings.checkboxes.autoNewTranslation = request.settings.autoNewTranslation;
-            auto response = processAutoNewTranslation();
-            if(response) responses.push_back(response);
+            backendData.settings.checkboxes.autoNewTranslation = settingsRequest.settings.autoNewTranslation.value();
+            processAutoNewTranslation(settingsRequest, response);
         }
-        if(backendData.settings.checkboxes.minimizeScdAfterUpdate != request.settings.minimizeScdAfterUpdate)
+        if(backendData.settings.checkboxes.minimizeScdAfterUpdate != settingsRequest.settings.minimizeScdAfterUpdate)
         {
-            backendData.settings.checkboxes.minimizeScdAfterUpdate = request.settings.minimizeScdAfterUpdate;
-            auto response = processMinimizeScdAfterUpdate();
-            if(response) responses.push_back(response);
+            backendData.settings.checkboxes.minimizeScdAfterUpdate = settingsRequest.settings.minimizeScdAfterUpdate.value();
+            processMinimizeScdAfterUpdate(settingsRequest, response);
         }
-        if(backendData.settings.checkboxes.startScdWithSystemStart != request.settings.startScdWithSystemStart)
+        if(backendData.settings.checkboxes.startScdWithSystemStart != settingsRequest.settings.startScdWithSystemStart)
         {
-            backendData.settings.checkboxes.startScdWithSystemStart = request.settings.startScdWithSystemStart;
-            auto response = processStartScdWithSystemStart();
-            if(response) responses.push_back(response);
+            backendData.settings.checkboxes.startScdWithSystemStart = settingsRequest.settings.startScdWithSystemStart.value();
+            processStartScdWithSystemStart(settingsRequest, response);
         }
-        if(backendData.settings.checkboxes.showUpdateStatus != request.settings.showUpdateStatus)
+        if(backendData.settings.checkboxes.showUpdateStatus != settingsRequest.settings.showUpdateStatus)
         {
-            backendData.settings.checkboxes.showUpdateStatus = request.settings.showUpdateStatus;
-            auto response = processShowUpdateStatus();
-            if(response) responses.push_back(response);
+            backendData.settings.checkboxes.showUpdateStatus = settingsRequest.settings.showUpdateStatus.value();
+            processShowUpdateStatus(settingsRequest, response);
         }
 
-        if(request.autoSearch)
+        if(settingsRequest.autoSearchButton.autoSearchStart)
         {
-            auto response = processAutoSearch();
-            if(response) responses.push_back(response);
+            processAutoSearch(response);
+
+            LOG_DEBUG(lg) << "processRequest() - finished";
         }
-
-        LOG_DEBUG(lg) << "processRequest() - finished";
-
-        return responses;
     }
 
-    std::optional<Protocol::Response> processLauchAfterUpdate ()
+    void processLaunchAfterUpdate (Protocol::SettingsPayload& settingsRequest, Protocol::Massage& response)
     {
-        Protocol::Response response;
-        Protocol::UpdateButtonPayload::Response updateButtonRequest;
-        LOG_DEBUG(lg) << "processLauchAfterUpdate() - LaunchScAfterTranslation enabled";
-        updateButtonRequest.updateButton.LaunchScAfterTranslation = true;
-        response.payload = updateButtonRequest.to_json();
-        response.type = Protocol::PayloadType::UpdateButton;
-        return response;
+        if(!settingsRequest.settings.LaunchScAfterTranslation)
+        {
+            LOG_DEBUG(lg) << "processLaunchAfterUpdate() - Skipping LaunchScAfterTranslation";
+            return;
+        }
+
+        LOG_DEBUG(lg) << "processLaunchAfterUpdate() - LaunchScAfterTranslation is "
+                      << (settingsRequest.settings.LaunchScAfterTranslation ? "enabled" : "disabled");
+
+        Protocol::UpdateButtonPayload updateButtonResponse;
+        updateButtonResponse.updateButton.LaunchScAfterTranslation = settingsRequest.settings.LaunchScAfterTranslation.value();
+
+        response.AddModuleNode("UPDATE", updateButtonResponse.toJson());
     }
 
-    std::optional<Protocol::Response> processAutoTranslationAtStart () { return std::nullopt; }
-    std::optional<Protocol::Response> processAutoNewTranslation () { return std::nullopt; }
-    std::optional<Protocol::Response> processMinimizeScdAfterUpdate () { return std::nullopt; }
-    std::optional<Protocol::Response> processStartScdWithSystemStart () { return std::nullopt; }
-    std::optional<Protocol::Response> processShowUpdateStatus () { return std::nullopt; }
+    void processAutoTranslationAtStart (Protocol::SettingsPayload& settingsRequest, Protocol::Massage& response) {}
+    void processAutoNewTranslation (Protocol::SettingsPayload& settingsRequest, Protocol::Massage& response) {}
+    void processMinimizeScdAfterUpdate (Protocol::SettingsPayload& settingsRequest, Protocol::Massage& response) {}
+    void processStartScdWithSystemStart (Protocol::SettingsPayload& settingsRequest, Protocol::Massage& response) {}
+    void processShowUpdateStatus (Protocol::SettingsPayload& settingsRequest, Protocol::Massage& response) {}
 
-    std::optional<Protocol::Response> processAutoSearch (std::string cmd = "START")
+    void processAutoSearch (Protocol::Massage& response, std::string cmd = "START")
     {
-        Protocol::Response response;
-        Protocol::SettingsPayload::Response settingsResponse;
+        Protocol::SettingsPayload settingsResponse;
 
         if(cmd == "START")
         {
             LOG_DEBUG(lg) << "processAutoSearch() - Start";
             std::thread(
-                [this] ()
+                [&response, this] ()
                 {
                     dirFinder.findRsiInstallation();
 
-                    processAutoSearch("FINISHED");
+                    processAutoSearch(response, "FINISHED");
                 })
                 .detach();
             settingsResponse.autoSearchButton.busy = true;
@@ -123,29 +126,43 @@ class SettingsManager
             settingsResponse.paths.ptuInstallPath = backendData.channelData["PTU"].installPath;
             settingsResponse.paths.eptuInstallPath = backendData.channelData["EPTU"].installPath;
             settingsResponse.paths.hotfixInstallPath = backendData.channelData["HOTIX"].installPath;
-            settingsResponse.paths.techprevieInstallPath = backendData.channelData["TECH-PREVIEW"].installPath;
+            settingsResponse.paths.techPrevieInstallPath = backendData.channelData["TECH-PREVIEW"].installPath;
             settingsResponse.paths.rsiLauncherInstallPath = backendData.rsiLauncherInstallPath;
-            response.payload = settingsResponse.to_json();
-            response.type = Protocol::PayloadType::Settings;
-            return response;
+            response.AddModuleNode("SETTINGS", settingsResponse.toJson());
         }
         else if(cmd == "FINISHED")
         {
             LOG_DEBUG(lg) << "processAutoSearch() - Finished";
-            // initGui();
             settingsResponse.autoSearchButton.busy = false;
             settingsResponse.paths.liveInstallPath = backendData.channelData["LIVE"].installPath;
             settingsResponse.paths.ptuInstallPath = backendData.channelData["PTU"].installPath;
             settingsResponse.paths.eptuInstallPath = backendData.channelData["EPTU"].installPath;
             settingsResponse.paths.hotfixInstallPath = backendData.channelData["HOTIX"].installPath;
-            settingsResponse.paths.techprevieInstallPath = backendData.channelData["TECH-PREVIEW"].installPath;
+            settingsResponse.paths.techPrevieInstallPath = backendData.channelData["TECH-PREVIEW"].installPath;
             settingsResponse.paths.rsiLauncherInstallPath = backendData.rsiLauncherInstallPath;
-            response.payload = settingsResponse.to_json();
-            response.type = Protocol::PayloadType::Settings;
-            return response;
+            response.AddModuleNode("SETTINGS", settingsResponse.toJson());
         }
-        LOG_DEBUG(lg) << "processAutoSearch() - Finished";
+    }
 
-        return std::nullopt;
+    void updateSettingsResponse (Protocol::Massage& response)
+    {
+        Protocol::SettingsPayload settingsResponse;
+        settingsResponse.autoSearchButton.enabled = true;
+        settingsResponse.autoSearchButton.busy = false;
+        settingsResponse.paths.liveInstallPath = backendData.channelData["LIVE"].installPath;
+        settingsResponse.paths.ptuInstallPath = backendData.channelData["PTU"].installPath;
+        settingsResponse.paths.eptuInstallPath = backendData.channelData["EPTU"].installPath;
+        settingsResponse.paths.hotfixInstallPath = backendData.channelData["HOTFIX"].installPath;
+        settingsResponse.paths.techPrevieInstallPath = backendData.channelData["TECH-PREVIEW"].installPath;
+        settingsResponse.paths.rsiLauncherInstallPath = backendData.rsiLauncherInstallPath;
+
+        settingsResponse.settings.autoTranslationAtStart = backendData.settings.checkboxes.autoTranslationAtStart;
+        settingsResponse.settings.autoNewTranslation = backendData.settings.checkboxes.autoNewTranslation;
+        settingsResponse.settings.minimizeScdAfterUpdate = backendData.settings.checkboxes.minimizeScdAfterUpdate;
+        settingsResponse.settings.LaunchScAfterTranslation = backendData.settings.checkboxes.LaunchScAfterTranslation;
+        settingsResponse.settings.startScdWithSystemStart = backendData.settings.checkboxes.startScdWithSystemStart;
+        settingsResponse.settings.showUpdateStatus = backendData.settings.checkboxes.showUpdateStatus;
+
+        response.AddModuleNode("SETTINGS", settingsResponse.toJson());
     }
 };

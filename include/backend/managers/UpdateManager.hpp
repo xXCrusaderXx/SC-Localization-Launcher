@@ -15,6 +15,7 @@ class UpdateManager
 {
    private:
     LoggerFramework::LogEx lg;
+    Database::BackendData backendData;
     static size_t writeToFileCallback (void* contents, size_t size, size_t nmemb, void* userp)
     {
         std::ofstream* outFile = static_cast<std::ofstream*>(userp);
@@ -47,87 +48,145 @@ class UpdateManager
     }
 
    public:
-    UpdateManager ()
+    UpdateManager (const Database::BackendData& backendData)
         : lg("UpdateManager")
+        , backendData(backendData)
     {
         LOG_DEBUG(lg) << "instanziated";
     };
     ~UpdateManager () { LOG_DEBUG(lg) << "destructed"; }
 
-    std::vector<std::optional<Protocol::Response>> processRequest (const Database::BackendData& backendData, const Protocol::Request& msg)
+    void processRequest (Protocol::Massage& request, const Protocol::Massage& response)
     {
-        LOG_DEBUG(lg) << "processRequest() - Start";
+        if(!request.moduleExist("UPDATE"))
         {
-            for(const auto& [channel, data] : backendData.channelData)
+            LOG_DEBUG(lg) << "processRequest() - UPDATE module not found";
+            return;
+        }
+
+        Protocol::UpdateButtonPayload updateButtonRequest(request.getModuleNode("UPDATE"));
+
+        if(updateButtonRequest.updateButton.updateButtonClicked)
+        {
+            LOG_DEBUG(lg) << "processRequest() - Start";
             {
-                if(data.installPath.empty())
+                for(const auto& [channel, data] : backendData.channelData)
                 {
-                    LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Path is empty, skip!";
-                    continue;
-                }
-
-                LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Path: " << data.installPath;
-
-                if(data.buttonEng.selected)
-                {
-                    LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Eng-selected";
-
-                    if(std::filesystem::exists(data.installPath / "user.cfg"))
+                    if(data.installPath.empty())
                     {
-                        std::filesystem::remove(data.installPath / "user.cfg");
-                        LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: user.cfg gelöscht";
+                        LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Path is empty, skip!";
+                        continue;
+                    }
+
+                    LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Path: " << data.installPath;
+
+                    if(data.buttonEng.selected)
+                    {
+                        LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Eng-selected";
+
+                        if(std::filesystem::exists(data.installPath / "user.cfg"))
+                        {
+                            std::filesystem::remove(data.installPath / "user.cfg");
+                            LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: user.cfg gelöscht";
+                        }
+                        else
+                        {
+                            LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: user.cfg existiert nicht";
+                        }
+
+                        if(std::filesystem::exists(data.installPath / "data"))
+                        {
+                            std::filesystem::remove_all(data.installPath / "data");
+                            LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: data/ gelöscht";
+                        }
+                        else
+                        {
+                            LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: data/ existiert nicht";
+                        }
+                    }
+                    else if(data.buttonDe.selected)
+                    {
+                        LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: De-selected";
+                        if(!utils::checkDirectoryExist(data.installPath / "data" / "Localization" / "german_(germany)"))
+                            std::filesystem::create_directories(data.installPath / "data" / "Localization" / "german_(germany)");
+
+                        std::ofstream file(data.installPath / "user.cfg");
+                        if(file.is_open())
+                        {
+                            file << "g_language = german_(germany)\n";
+                            file << "g_languageAudio = english\n";
+                            file.close();
+                        }
+                        downloadAndWriteToFile(data.info.server1, data.installPath / "data" / "Localization" / "german_(germany)" / "global.ini");
+                    }
+                    else if(data.buttonDeFull.selected)
+                    {
+                        LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: DeVoll-selected";
+                        if(!utils::checkDirectoryExist(data.installPath / "data" / "Localization" / "german_(germany)"))
+                            std::filesystem::create_directories(data.installPath / "data" / "Localization" / "german_(germany)");
+
+                        std::ofstream file(data.installPath / "user.cfg");
+                        if(file.is_open())
+                        {
+                            file << "g_language = german_(germany)\n";
+                            file << "g_languageAudio = english\n";
+                            file.close();
+                        }
+
+                        downloadAndWriteToFile(data.info.server1, data.installPath / "data" / "Localization" / "german_(germany)" / "global.ini");
                     }
                     else
                     {
-                        LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: user.cfg existiert nicht";
                     }
-
-                    if(std::filesystem::exists(data.installPath / "data"))
-                    {
-                        std::filesystem::remove_all(data.installPath / "data");
-                        LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: data/ gelöscht";
-                    }
-                    else
-                    {
-                        LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: data/ existiert nicht";
-                    }
-                }
-                else if(data.buttonDe.selected)
-                {
-                    LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: De-selected";
-                    if(!utils::checkDirectoryExist(data.installPath / "data" / "Localization" / "german_(germany)"))
-                        std::filesystem::create_directories(data.installPath / "data" / "Localization" / "german_(germany)");
-
-                    std::ofstream file(data.installPath / "user.cfg");
-                    if(file.is_open())
-                    {
-                        file << "g_language = german_(germany)\n";
-                        file << "g_languageAudio = english\n";
-                        file.close();
-                    }
-                    downloadAndWriteToFile(data.info.server1, data.installPath / "data" / "Localization" / "german_(germany)" / "global.ini");
-                }
-                else if(data.buttonDeFull.selected)
-                {
-                    LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: DeVoll-selected";
-                    if(!utils::checkDirectoryExist(data.installPath / "data" / "Localization" / "german_(germany)"))
-                        std::filesystem::create_directories(data.installPath / "data" / "Localization" / "german_(germany)");
-
-                    std::ofstream file(data.installPath / "user.cfg");
-                    if(file.is_open())
-                    {
-                        file << "g_language = german_(germany)\n";
-                        file << "g_languageAudio = english\n";
-                        file.close();
-                    }
-
-                    downloadAndWriteToFile(data.info.server1, data.installPath / "data" / "Localization" / "german_(germany)" / "global.ini");
-                }
-                else
-                {
                 }
             }
         }
-        return std::vector<std::optional<Protocol::Response>>{};
+
+        if(backendData.settings.checkboxes.LaunchScAfterTranslation)
+        {
+            startAutoStartAfterUpdate();
+        }
+    }
+
+    void startAutoStartAfterUpdate ()
+    {
+        LOG_DEBUG(lg) << "startAutoStartAfterUpdate() - Start";
+
+        bool lutris_installation = true;
+        bool lug_installation = true;
+
+        if(lutris_installation)
+        {
+            chdir(backendData.rsiLauncherInstallPath.string().c_str());
+            LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << backendData.rsiLauncherInstallPath.string().c_str();
+            std::string command = "/usr/bin/lutris lutris:rungame/star-citizen";
+            std::system(command.c_str());
+            chdir(PATHS::ROOT.c_str());
+        }
+
+        if(lug_installation)
+        {
+            std::string bashPath = backendData.rsiLauncherInstallPath.parent_path().parent_path().parent_path().parent_path().string();
+            chdir(bashPath.c_str());
+            LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << bashPath << "/sc-launch.sh";
+            std::string command = "sh " + bashPath + "/sc-launch.sh";
+            std::system(command.c_str());
+            chdir(PATHS::ROOT.c_str());
+        }
+
+        LOG_DEBUG(lg) << "startAutoStartAfterUpdate() - FINISHED";
+    }
+
+    void updateUpdateResponse (Protocol::Massage& response)
+    {
+        if(backendData.anyChannelPathSet)
+        {
+            Protocol::UpdateButtonPayload updateButtonResponse;
+            updateButtonResponse.updateButton.enabled = true;
+            updateButtonResponse.updateButton.busy = false;
+            updateButtonResponse.updateButton.LaunchScAfterTranslation = backendData.settings.checkboxes.LaunchScAfterTranslation;
+
+            response.AddModuleNode("UPDATE", updateButtonResponse.toJson());
+        }
     }
 };

@@ -5,71 +5,59 @@
 namespace Protocol
 {
 
-enum class PayloadType
+enum class MassageType
 {
-    ChannelLive,
-    ChannelPTU,
-    ChannelEPTU,
-    ChannelHotfix,
-    ChannelTechPeview,
-    Settings,
-    UpdateButton
+    Request,
+    Response
 };
 
-inline std::string toString (PayloadType type)
+class Massage
 {
-    switch(type)
+   private:
+    nlohmann::json j;
+    std::string sMassageType;
+
+    std::string MassageTypeToString (const MassageType& massageType)
     {
-        case PayloadType::ChannelLive:
-            return "LIVE";
-        case PayloadType::ChannelPTU:
-            return "PTU";
-        case PayloadType::ChannelEPTU:
-            return "EPTU";
-        case PayloadType::ChannelHotfix:
-            return "HOTFIX";
-        case PayloadType::ChannelTechPeview:
-            return "TECH-PREVIEW";
-        case PayloadType::Settings:
-            return "Settings";
-        case PayloadType::UpdateButton:
-            return "UpdateButton";
+        if(massageType == MassageType::Request) return "Request";
+        if(massageType == MassageType::Response) return "Response";
+
+        return "Unknown";
     }
-    return "unknown";
-}
 
-inline PayloadType payloadTypeFromString (const std::string& typeStr)
-{
-    if(typeStr == "LIVE") return PayloadType::ChannelLive;
-    if(typeStr == "PTU") return PayloadType::ChannelPTU;
-    if(typeStr == "EPTU") return PayloadType::ChannelEPTU;
-    if(typeStr == "HOTFIX") return PayloadType::ChannelHotfix;
-    if(typeStr == "TECH-PREVIEW") return PayloadType::ChannelTechPeview;
-    if(typeStr == "Settings") return PayloadType::Settings;
-    if(typeStr == "UpdateButton") return PayloadType::UpdateButton;
-    throw std::runtime_error("Unknown message type: " + typeStr);
-}
-
-struct MessageBase
-{
-    PayloadType type;
-    nlohmann::json payload;
-
-    nlohmann::json toJson () const { return nlohmann::json{{"type", toString(type)}, {"payload", payload}}; }
-
-    void fromJson (const nlohmann::json& j)
+    std::string MassageTypeFromJson (const nlohmann::json& json)
     {
-        if(!j.contains("type") || !j.contains("payload")) throw std::runtime_error("Missing fields in message");
-        type = payloadTypeFromString(j.at("type").get<std::string>());
-        payload = j.at("payload");
+        if(json.contains("Request")) return "Request";
+        if(json.contains("Response")) return "Response";
+        return "Unknown";
     }
-};
 
-struct Request : public MessageBase
-{
-};
-struct Response : public MessageBase
-{
+   public:
+    Massage (const MassageType& massageType) {}
+
+    Massage (const nlohmann::json& msg)
+        : j(msg)
+        , sMassageType(MassageTypeFromJson(msg))
+    {
+    }
+
+    virtual ~Massage () {};
+
+    void AddModuleNode (const std::string& moduleNodeName, const nlohmann::json& targetNode) { j[moduleNodeName] = targetNode; }
+
+    bool moduleExist (const std::string& moduleNodeName) const
+    {
+        if(j.contains(moduleNodeName)) return true;
+        return false;
+    }
+
+    nlohmann::json getModuleNode (const std::string& moduleNodeName) const
+    {
+        if(j.contains(moduleNodeName)) return j.at(moduleNodeName);
+        throw std::runtime_error("Module node not found: " + moduleNodeName);
+    }
+
+    nlohmann::json getJson () const { return j; }
 };
 
 }  // namespace Protocol
