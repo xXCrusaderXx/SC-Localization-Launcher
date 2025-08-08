@@ -151,7 +151,6 @@ class MainWindow : public QMainWindow
 
         settings = new Settings(this, grid);
         settings->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(msg); });
-        backEnd.setGuiCallbacks(settings->getName(), [this] (const nlohmann::json &msg) { settings->updateStatus(msg); });
     };
 
     void setupLogoWidged (QWidget *widged, QGridLayout *grid)
@@ -187,13 +186,6 @@ class MainWindow : public QMainWindow
         hotfix->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
         techPreview->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
         update->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
-
-        backEnd.setGuiCallbacks(live->getName(), [this] (const nlohmann::json &msg) { live->updateStatus(msg); });
-        backEnd.setGuiCallbacks(ptu->getName(), [this] (const nlohmann::json &msg) { ptu->updateStatus(msg); });
-        backEnd.setGuiCallbacks(eptu->getName(), [this] (const nlohmann::json &msg) { eptu->updateStatus(msg); });
-        backEnd.setGuiCallbacks(hotfix->getName(), [this] (const nlohmann::json &msg) { hotfix->updateStatus(msg); });
-        backEnd.setGuiCallbacks(techPreview->getName(), [this] (const nlohmann::json &msg) { techPreview->updateStatus(msg); });
-        backEnd.setGuiCallbacks(update->getName(), [this] (const nlohmann::json &msg) { update->updateStatus(msg); });
     }
 
     void ProcessResponse (const nlohmann::json &msg)

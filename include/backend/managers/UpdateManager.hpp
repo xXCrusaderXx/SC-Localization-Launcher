@@ -15,7 +15,10 @@ class UpdateManager
 {
    private:
     LoggerFramework::LogEx lg;
-    Database::BackendData backendData;
+    Database::BackendData& backendData;
+    using Callback = std::function<void(const nlohmann::json&)>;
+    Callback guiCallback;
+
     static size_t writeToFileCallback (void* contents, size_t size, size_t nmemb, void* userp)
     {
         std::ofstream* outFile = static_cast<std::ofstream*>(userp);
@@ -48,7 +51,7 @@ class UpdateManager
     }
 
    public:
-    UpdateManager (const Database::BackendData& backendData)
+    UpdateManager (Database::BackendData& backendData)
         : lg("UpdateManager")
         , backendData(backendData)
     {
@@ -56,19 +59,74 @@ class UpdateManager
     };
     ~UpdateManager () { LOG_DEBUG(lg) << "destructed"; }
 
+    void setGuiCallback (Callback cb)
+    {
+        LOG_DEBUG(lg) << "setGuiCallback()";
+        if(!guiCallback)
+        {
+            LOG_DEBUG(lg) << "Setting new gui callback.";
+            guiCallback = cb;
+        }
+    }
+
+    void initialSetup ()
+    {
+        LOG_DEBUG(lg) << "initialSetup() - Start";
+        LOG_DEBUG(lg) << "initialSetup() - Finished";
+    }
+
     void processRequest (Protocol::Massage& request, const Protocol::Massage& response)
     {
-        if(!request.moduleExist("UPDATE"))
-        {
-            LOG_DEBUG(lg) << "processRequest() - UPDATE module not found";
-            return;
-        }
-
+        LOG_DEBUG(lg) << "processRequest() - START";
         Protocol::UpdateButtonPayload updateButtonRequest(request.getModuleNode("UPDATE"));
+        Protocol::UpdateButtonPayload updateButtonResponse;
 
         if(updateButtonRequest.updateButton.updateButtonClicked)
         {
-            LOG_DEBUG(lg) << "processRequest() - Start";
+            makeUpdate(updateButtonResponse);
+        }
+
+        if(backendData.settings.checkboxes.LaunchScAfterTranslation)
+        {
+            startAutoStartAfterUpdate();
+        }
+        LOG_DEBUG(lg) << "processRequest() - FINISHED";
+    }
+
+    void startAutoStartAfterUpdate ()
+    {
+        LOG_DEBUG(lg) << "startAutoStartAfterUpdate() - START";
+
+        bool lutris_installation = true;
+        bool lug_installation = true;
+
+        if(lutris_installation)
+        {
+            chdir(backendData.rsiLauncherInstallPath.string().c_str());
+            LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << backendData.rsiLauncherInstallPath.string().c_str();
+            std::string command = "/usr/bin/lutris lutris:rungame/star-citizen";
+            std::system(command.c_str());
+            chdir(PATHS::ROOT.c_str());
+        }
+
+        if(lug_installation)
+        {
+            std::string bashPath = backendData.rsiLauncherInstallPath.parent_path().parent_path().parent_path().parent_path().string();
+            chdir(bashPath.c_str());
+            LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << bashPath << "/sc-launch.sh";
+            std::string command = "sh " + bashPath + "/sc-launch.sh";
+            std::system(command.c_str());
+            chdir(PATHS::ROOT.c_str());
+        }
+
+        LOG_DEBUG(lg) << "startAutoStartAfterUpdate() - FINISHED";
+    }
+
+    void makeUpdate (Protocol::UpdateButtonPayload& response)
+    {
+        LOG_DEBUG(lg) << "makeUpdate() - Start";
+        std::thread(
+            [this] ()
             {
                 for(const auto& [channel, data] : backendData.channelData)
                 {
@@ -139,54 +197,34 @@ class UpdateManager
                     {
                     }
                 }
-            }
-        }
+                Protocol::UpdateButtonPayload updateUpdateResponse;
+                updateUpdateResponse.updateButton.busy = false;
+                Protocol::Massage response(Protocol::MassageType::Response);
+                response.AddModuleNode("UPDATE", updateUpdateResponse.toJson());
 
-        if(backendData.settings.checkboxes.LaunchScAfterTranslation)
-        {
-            startAutoStartAfterUpdate();
-        }
-    }
+                LOG_DEBUG(lg) << "makeUpdate() - FINISHED";
+                if(guiCallback)
+                    guiCallback(response.getJson());
+                else
+                    LOG_DEBUG(lg) << "makeUpdate() - GuiCallBack nullptr";
+            })
+            .detach();
 
-    void startAutoStartAfterUpdate ()
-    {
-        LOG_DEBUG(lg) << "startAutoStartAfterUpdate() - Start";
-
-        bool lutris_installation = true;
-        bool lug_installation = true;
-
-        if(lutris_installation)
-        {
-            chdir(backendData.rsiLauncherInstallPath.string().c_str());
-            LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << backendData.rsiLauncherInstallPath.string().c_str();
-            std::string command = "/usr/bin/lutris lutris:rungame/star-citizen";
-            std::system(command.c_str());
-            chdir(PATHS::ROOT.c_str());
-        }
-
-        if(lug_installation)
-        {
-            std::string bashPath = backendData.rsiLauncherInstallPath.parent_path().parent_path().parent_path().parent_path().string();
-            chdir(bashPath.c_str());
-            LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << bashPath << "/sc-launch.sh";
-            std::string command = "sh " + bashPath + "/sc-launch.sh";
-            std::system(command.c_str());
-            chdir(PATHS::ROOT.c_str());
-        }
-
-        LOG_DEBUG(lg) << "startAutoStartAfterUpdate() - FINISHED";
+        LOG_DEBUG(lg) << "processAutoSearch() - RUNNING";
+        response.updateButton.busy = true;
     }
 
     void updateUpdateResponse (Protocol::Massage& response)
     {
-        if(backendData.anyChannelPathSet)
-        {
-            Protocol::UpdateButtonPayload updateButtonResponse;
-            updateButtonResponse.updateButton.enabled = true;
-            updateButtonResponse.updateButton.busy = false;
-            updateButtonResponse.updateButton.LaunchScAfterTranslation = backendData.settings.checkboxes.LaunchScAfterTranslation;
+        Protocol::UpdateButtonPayload updateButtonResponse;
 
-            response.AddModuleNode("UPDATE", updateButtonResponse.toJson());
+        if(true)
+        {
+            updateButtonResponse.updateButton.enabled = true;
         }
+        updateButtonResponse.updateButton.active = backendData.anyChannelPathSet;
+        updateButtonResponse.updateButton.LaunchScAfterTranslation = backendData.settings.checkboxes.LaunchScAfterTranslation;
+
+        response.AddModuleNode("UPDATE", updateButtonResponse.toJson());
     }
 };

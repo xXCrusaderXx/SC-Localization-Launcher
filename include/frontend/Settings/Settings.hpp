@@ -1,16 +1,15 @@
 #pragma once
 
-// #include <QDialog>
-//  #include <QEvent>
 #include <QGridLayout>
 #include <QPushButton>
 #include <QWidget>
-// #include <QVBoxLayout>
-// #include <QWindow>
-
 #include <nlohmann/json.hpp>
+
+#include "SettingsData.hpp"
 #include "SettingsWindow.hpp"
 #include "logging/logging.h"
+#include "protocol/Protocol.hpp"
+#include "protocol/SettingsPayload.hpp"
 
 class Settings : public QWidget
 {
@@ -20,7 +19,7 @@ class Settings : public QWidget
     LoggerFramework::LogEx lg;
     std::string channel;
     std::unique_ptr<SettingsWindow> settingsWindow;
-    nlohmann::json settingsStatus;
+    SettingsData settingsData;
 
     using Callback = std::function<void(const std::string key, const nlohmann::json &)>;
     Callback updateBackendCallback;
@@ -43,12 +42,13 @@ class Settings : public QWidget
         LOG_DEBUG(lg) << "clicked_Settings()";
         if(!settingsWindow || !settingsWindow->isVisible())
         {
-            settingsWindow = std::make_unique<SettingsWindow>(this, settingsStatus);
+            settingsWindow = std::make_unique<SettingsWindow>(this, settingsData);
             settingsWindow->setSettingsCallback(
                 [this] (const nlohmann::json &msg)
                 {
-                    updateBackendCallback(channel, msg);
-                    settingsStatus = msg;
+                    Protocol::Massage request(Protocol::MassageType::Request);
+                    request.AddModuleNode(channel, msg);
+                    updateBackendCallback(channel, request.getJson());
                 });
             settingsWindow->show();
         }
@@ -101,33 +101,20 @@ class Settings : public QWidget
 
     void updateStatus (const nlohmann::json &msg)
     {
-        LOG_DEBUG(lg) << "updateStatus() - msg:\n" << msg.dump(4);
-
-        const std::vector<std::string> keys = {"autoSearch",
-                                               "autoTranslationAtStart",
-                                               "autoNewTranslation",
-                                               "minimizeScdAfterUpdate",
-                                               "LaunchScAfterTranslation",
-                                               "startScdWithSystemStart",
-                                               "showUpdateStatus",
-                                               "LIVE",
-                                               "PTU",
-                                               "EPTU",
-                                               "HOTFIX",
-                                               "TECH-PREVIEW",
-                                               "rsiLauncherInstallPath"};
-
-        for(const auto &key : keys)
+        if(QThread::currentThread() != this->thread())
         {
-            if(msg.contains(key))
-            {
-                settingsStatus[key] = msg[key];
-            }
+            QMetaObject::invokeMethod(this, [this, msg] () { updateStatus(msg); }, Qt::QueuedConnection);
+            return;
         }
+        Protocol::SettingsPayload settingsResponse(msg);
+        LOG_DEBUG(lg) << "updateStatus() - START";
+        LOG_DEBUG(lg) << "updateStatus() - msg:\n" << settingsResponse.toJson().dump(4);
+
+        settingsData.updateSettingsData(settingsResponse);
 
         if(settingsWindow)
         {
-            settingsWindow->updateWindow(settingsStatus);
+            settingsWindow->updateSettingsWindow(settingsData);
         }
         LOG_DEBUG(lg) << "Settings-Status: update-finished";
     }

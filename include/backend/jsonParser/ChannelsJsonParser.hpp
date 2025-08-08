@@ -81,16 +81,14 @@ class ChannelsJsonParser
 
             for(const auto& channel : newJson.at("channels"))
             {
-                Database::ChannelData channelData;
-                channelData.info.description = channel["description"].get<std::string>();
-                channelData.info.folder = channel["folder"].get<std::string>();
-                channelData.info.active = channel["active"].get<int>();
-                channelData.info.server1 = channel["server1"].get<std::string>();
-                channelData.info.server2 = channel["server2"].get<std::string>();
-                channelData.info.server1_fallback = channel["server1_fallback"].get<std::string>();
-                channelData.info.server2_fallback = channel["server2_fallback"].get<std::string>();
-
-                backendData.channelData[channelData.info.description] = channelData;
+                std::string channelName = channel["description"].get<std::string>();
+                backendData.channelData[channelName].info.description = channel["description"].get<std::string>();
+                backendData.channelData[channelName].info.folder = channel["folder"].get<std::string>();
+                backendData.channelData[channelName].info.active = channel["active"].get<int>();
+                backendData.channelData[channelName].info.server1 = channel["server1"].get<std::string>();
+                backendData.channelData[channelName].info.server2 = channel["server2"].get<std::string>();
+                backendData.channelData[channelName].info.server1_fallback = channel["server1_fallback"].get<std::string>();
+                backendData.channelData[channelName].info.server2_fallback = channel["server2_fallback"].get<std::string>();
             }
         }
         else

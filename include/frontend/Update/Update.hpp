@@ -8,6 +8,9 @@
 #include <nlohmann/json.hpp>
 
 #include "frontend/styles.hpp"
+#include "logging/logging.h"
+#include "protocol/Protocol.hpp"
+#include "protocol/UpdateButtonPayload.hpp"
 
 class UpdateButton : public QWidget
 {
@@ -17,19 +20,24 @@ class UpdateButton : public QWidget
     std::string channel = "UPDATE";
     using Callback = std::function<void(const nlohmann::json &)>;
     Callback updateBackendCallback;
+    LoggerFramework::LogEx lg;
 
     QPushButton *buttonUpdate = nullptr;
 
     void clicked_start ()
     {
-        nlohmann::json msg;
-        msg["start"] = true;
-        QtConcurrent::run([this, msg] { updateBackendCallback(msg); });
+        Protocol::UpdateButtonPayload updateButtonRequest;
+        updateButtonRequest.updateButton.updateButtonClicked = true;
+
+        Protocol::Massage request(Protocol::MassageType::Request);
+        request.AddModuleNode("UPDATE", updateButtonRequest.toJson());
+        QtConcurrent::run([this, request] { updateBackendCallback(request.getJson()); });
     }
 
    public:
     UpdateButton (QWidget *parent = nullptr, QGridLayout *grid = nullptr, int row = 0)
         : QWidget(parent)
+        , lg("UpdateButton")
     {
         buttonUpdate = new QPushButton("Nicht Bereit", this);
         connect(buttonUpdate, &QPushButton::clicked, this, &UpdateButton::clicked_start);
@@ -42,39 +50,72 @@ class UpdateButton : public QWidget
 
     std::string getName () { return channel; }
 
-    void updateStatus (const nlohmann::json &msg)
+    void updateStatus (const nlohmann::json &response)
     {
-        std::cout << msg.dump(4) << std::endl;
-        if(msg.contains("buttonEnabled") && msg.at("buttonEnabled") == true)
+        if(QThread::currentThread() != this->thread())
         {
-            buttonUpdate->setDisabled(false);
-            buttonUpdate->setStyleSheet(ButtonStyle::Inactive);
+            QMetaObject::invokeMethod(this, [this, response] () { updateStatus(response); }, Qt::QueuedConnection);
+            return;
         }
-        if(msg.contains("buttonReady") && msg.at("buttonReady") == true)
+        LOG_DEBUG(lg) << "updateStatus() - START";
+        Protocol::UpdateButtonPayload updateButtonResponse(response);
+        LOG_DEBUG(lg) << "updateStatus() - msg: " << updateButtonResponse.toJson().dump(4);
+
+        if(updateButtonResponse.updateButton.enabled)
         {
-            buttonUpdate->setDisabled(false);
-            buttonUpdate->setStyleSheet(ButtonStyle::Info);
-            buttonUpdate->setText("Update Übersetzung");
-        }
-        if(msg.contains("buttonBusy") && msg.at("buttonBusy") == true)
-        {
-            buttonUpdate->setStyleSheet(ButtonStyle::Active);
-            buttonUpdate->setText("Aktualisiere...");
-            buttonUpdate->setDisabled(true);
-        }
-        if(msg.contains("buttonDisabled") && msg.at("buttonDisabled") == true)
-        {
-            buttonUpdate->setDisabled(true);
-            buttonUpdate->setStyleSheet(ButtonStyle::Disabled);
-            buttonUpdate->setText("Nicht Bereit");
-        }
-        if(msg.contains("LaunchScAfterTranslation"))
-        {
-            if(msg["LaunchScAfterTranslation"] == true)
-                buttonUpdate->setText("Update und Start");
+            if(updateButtonResponse.updateButton.enabled.value())
+            {
+                buttonUpdate->setVisible(true);
+            }
             else
-                buttonUpdate->setText("Update Übersetzung");
+            {
+                buttonUpdate->setVisible(false);
+            }
         }
+        if(updateButtonResponse.updateButton.busy)
+        {
+            if(updateButtonResponse.updateButton.busy.value())
+            {
+                buttonUpdate->setDisabled(true);
+                buttonUpdate->setStyleSheet(ButtonStyle::Active);
+                buttonUpdate->setText("Aktualisiere...");
+            }
+            else
+            {
+                buttonUpdate->setDisabled(false);
+                buttonUpdate->setStyleSheet(ButtonStyle::Info);
+                buttonUpdate->setText("Update Übersetzung");
+            }
+        }
+
+        if(updateButtonResponse.updateButton.active)
+        {
+            if(updateButtonResponse.updateButton.active.value())
+            {
+                buttonUpdate->setDisabled(false);
+                buttonUpdate->setStyleSheet(ButtonStyle::Info);
+                buttonUpdate->setText("Update Übersetzung");
+            }
+            else
+            {
+                buttonUpdate->setDisabled(true);
+                buttonUpdate->setStyleSheet(ButtonStyle::Disabled);
+                buttonUpdate->setText("Nicht Bereit");
+            }
+        }
+        if(updateButtonResponse.updateButton.LaunchScAfterTranslation)
+        {
+            if(updateButtonResponse.updateButton.LaunchScAfterTranslation.value())
+            {
+                buttonUpdate->setText("Update und Start");
+            }
+            else
+            {
+                buttonUpdate->setText("Update Übersetzung");
+            }
+        }
+
+        LOG_DEBUG(lg) << "updateStatus() - FINISHED";
     }
 
     void setUpdateBackendCallback (Callback cb) { updateBackendCallback = cb; }

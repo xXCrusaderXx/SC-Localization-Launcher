@@ -14,9 +14,11 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QWindow>
-
 #include <nlohmann/json.hpp>
+
+#include "SettingsData.hpp"
 #include "logging/logging.h"
+#include "protocol/SettingsPayload.hpp"
 
 class SettingsWindow : public QWidget
 {
@@ -26,7 +28,7 @@ class SettingsWindow : public QWidget
     LoggerFramework::LogEx lg;
     using Callback = std::function<void(const nlohmann::json &)>;
     Callback settingsCallback;
-    nlohmann::json msg;
+    SettingsData &settingsData;
 
     QCheckBox *checkbox1 = nullptr;
     QCheckBox *checkbox2 = nullptr;
@@ -93,9 +95,9 @@ QCheckBox::indicator:checked {
     {
         LOG_DEBUG(lg) << "clicked_autoSearch()";
 
-        nlohmann::json newMsg;
-        newMsg["autoSearch"] = "start";
-        settingsCallback(newMsg);
+        Protocol::SettingsPayload request;
+        request.autoSearchButton.autoSearchStart = true;
+        settingsCallback(request.toJson());
     }
 
     void clicked_Close ()
@@ -105,49 +107,60 @@ QCheckBox::indicator:checked {
         {
             this->close();
         }
-        msg["LIVE"] = pathBox1->text().toStdString();
-        msg["PTU"] = pathBox2->text().toStdString();
-        msg["EPTU"] = pathBox3->text().toStdString();
-        msg["HOTFIX"] = pathBox4->text().toStdString();
-        msg["TECH-PREVIEW"] = pathBox5->text().toStdString();
-        msg["rsiLauncherInstallPath"] = pathBox6->text().toStdString();
-        settingsCallback(msg);
+
+        Protocol::SettingsPayload request;
+        request.paths.liveInstallPath = settingsData.liveInstallPath;
+        request.paths.ptuInstallPath = settingsData.ptuInstallPath;
+        request.paths.eptuInstallPath = settingsData.eptuInstallPath;
+        request.paths.hotfixInstallPath = settingsData.hotfixInstallPath;
+        request.paths.techPrevieInstallPath = settingsData.techPrevieInstallPath;
+        request.paths.rsiLauncherInstallPath = settingsData.rsiLauncherInstallPath;
+        request.settings.autoNewTranslation = settingsData.autoNewTranslation;
+        request.settings.autoTranslationAtStart = settingsData.autoTranslationAtStart;
+        request.settings.LaunchScAfterTranslation = settingsData.LaunchScAfterTranslation;
+        request.settings.minimizeScdAfterUpdate = settingsData.minimizeScdAfterUpdate;
+        request.settings.showUpdateStatus = settingsData.showUpdateStatus;
+        request.settings.startScdWithSystemStart = settingsData.startScdWithSystemStart;
+        request.autoSearchButton.busy = settingsData.autoSearchButtonBusy;
+        request.autoSearchButton.enabled = settingsData.autoSearchButtonEnabled;
+
+        settingsCallback(request.toJson());
     }
 
     void onCheckbox1StateChanged (int state)
     {
         LOG_DEBUG(lg) << "onCheckbox1StateChanged()";
-        msg["autoTranslationAtStart"] = checkbox1->isChecked();
+        settingsData.autoTranslationAtStart = checkbox1->isChecked();
     }
 
     void onCheckbox2StateChanged (int state)
     {
         LOG_DEBUG(lg) << "onCheckbox2StateChanged()";
-        msg["autoNewTranslation"] = checkbox2->isChecked();
+        settingsData.autoNewTranslation = checkbox2->isChecked();
     }
 
     void onCheckbox3StateChanged (int state)
     {
         LOG_DEBUG(lg) << "onCheckbox3StateChanged()";
-        msg["minimizeScdAfterUpdate"] = checkbox3->isChecked();
+        settingsData.minimizeScdAfterUpdate = checkbox3->isChecked();
     }
 
     void onCheckbox4StateChanged (int state)
     {
         LOG_DEBUG(lg) << "onCheckbox4StateChanged()";
-        msg["LaunchScAfterTranslation"] = checkbox4->isChecked();
+        settingsData.LaunchScAfterTranslation = checkbox4->isChecked();
     }
 
     void onCheckbox5StateChanged (int state)
     {
         LOG_DEBUG(lg) << "onCheckbox5StateChanged()";
-        msg["startScdWithSystemStart"] = checkbox5->isChecked();
+        settingsData.startScdWithSystemStart = checkbox5->isChecked();
     }
 
     void onCheckbox6StateChanged (int state)
     {
         LOG_DEBUG(lg) << "onCheckbox6StateChanged()";
-        msg["showUpdateStatus"] = checkbox6->isChecked();
+        settingsData.showUpdateStatus = checkbox6->isChecked();
     }
 
     void clicked_folderButton1 ()
@@ -185,9 +198,9 @@ QCheckBox::indicator:checked {
     bool eventFilter (QObject *obj, QEvent *event) override;
 
    public:
-    explicit SettingsWindow (QWidget *parent, nlohmann::json settings)
+    explicit SettingsWindow (QWidget *parent, SettingsData &settingsData)
         : QWidget(parent)
-        , msg(settings)
+        , settingsData(settingsData)
         , lg("SettingsWindow")
     {
         this->setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
@@ -214,7 +227,7 @@ QCheckBox::indicator:checked {
         setupTopRightWidget(mainLayout);
         setupBottomWidget(mainLayout);
 
-        updateWindow(settings);
+        updateSettingsWindow(settingsData);
 
         LOG_DEBUG(lg) << "instanziated";
     }
@@ -432,64 +445,51 @@ QCheckBox::indicator:checked {
         layoutBottom->setRowStretch(7, 1);
     }
 
-    void updateWindow (nlohmann::json settings)
+    void updateSettingsWindow (const SettingsData &settingsData)
     {
+        LOG_DEBUG(lg) << "updateSettingsWindow() - START";
         if(QThread::currentThread() != this->thread())
         {
-            QMetaObject::invokeMethod(this, [this, settings] () { updateWindow(msg); }, Qt::QueuedConnection);
+            QMetaObject::invokeMethod(this, [this, settingsData] () { updateSettingsWindow(settingsData); }, Qt::QueuedConnection);
             return;
         }
 
-        LOG_DEBUG(lg) << "Settings-Status: " << settings.dump(4);
-        if(settings.contains("autoSearch"))
-        {
-            if(settings["autoSearch"] == "running")
-            {
-                buttonFindGame->setText("Suche...");
-                buttonFindGame->setDisabled(true);
-            }
-            if(settings["autoSearch"] == "ready")
-            {
-                buttonFindGame->setText("Auto-Suche");
-                buttonFindGame->setDisabled(false);
-            }
-        }
-        checkbox1->setChecked(settings["autoTranslationAtStart"]);
-        checkbox2->setChecked(settings["autoNewTranslation"]);
-        checkbox3->setChecked(settings["minimizeScdAfterUpdate"]);
-        checkbox4->setChecked(settings["LaunchScAfterTranslation"]);
-        checkbox5->setChecked(settings["startScdWithSystemStart"]);
-        checkbox6->setChecked(settings["showUpdateStatus"]);
+        // SETTINGS
+        checkbox1->setChecked(settingsData.autoTranslationAtStart);
+        checkbox2->setChecked(settingsData.autoNewTranslation);
+        checkbox3->setChecked(settingsData.minimizeScdAfterUpdate);
+        checkbox4->setChecked(settingsData.LaunchScAfterTranslation);
+        checkbox5->setChecked(settingsData.startScdWithSystemStart);
+        checkbox6->setChecked(settingsData.showUpdateStatus);
 
-        if(settings.contains("LIVE"))
-        {
-            pathBox1->setText(QString::fromStdString(settings["LIVE"]));
-        }
+        // PATHS
+        pathBox1->setText(QString::fromStdString(settingsData.liveInstallPath));
+        pathBox2->setText(QString::fromStdString(settingsData.ptuInstallPath));
+        pathBox3->setText(QString::fromStdString(settingsData.eptuInstallPath));
+        pathBox4->setText(QString::fromStdString(settingsData.hotfixInstallPath));
+        pathBox5->setText(QString::fromStdString(settingsData.techPrevieInstallPath));
+        pathBox6->setText(QString::fromStdString(settingsData.rsiLauncherInstallPath));
 
-        if(settings.contains("PTU"))
+        // AUTO-SEARCH-BUTTON
+        if(settingsData.autoSearchButtonBusy)
         {
-            pathBox2->setText(QString::fromStdString(settings["PTU"]));
+            buttonFindGame->setText("Suche...");
+            buttonFindGame->setDisabled(true);
+        }
+        else
+        {
+            buttonFindGame->setText("Auto-Suche");
+            buttonFindGame->setDisabled(false);
         }
 
-        if(settings.contains("EPTU"))
+        if(settingsData.autoSearchButtonEnabled)
         {
-            pathBox3->setText(QString::fromStdString(settings["EPTU"]));
+            buttonFindGame->setVisible(true);
         }
-
-        if(settings.contains("HOTFIX"))
+        else
         {
-            pathBox4->setText(QString::fromStdString(settings["HOTFIX"]));
+            buttonFindGame->setVisible(false);
         }
-
-        if(settings.contains("TECH-PREVIEW"))
-        {
-            pathBox5->setText(QString::fromStdString(settings["TECH-PREVIEW"]));
-        }
-
-        if(settings.contains("rsiLauncherInstallPath"))
-        {
-            pathBox6->setText(QString::fromStdString(settings["rsiLauncherInstallPath"]));
-        }
-        LOG_DEBUG(lg) << "Settings-Status: update-finished";
+        LOG_DEBUG(lg) << "updateSettingsWindow() - FINISHED";
     }
 };

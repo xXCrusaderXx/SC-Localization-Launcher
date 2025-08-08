@@ -26,7 +26,6 @@ class BackEnd
     SettingsManager settingsManager;
 
     using Callback = std::function<void(const nlohmann::json&)>;
-    std::map<std::string, Callback> guiCallbacks;
     Callback guiCallback;
 
    public:
@@ -37,6 +36,19 @@ class BackEnd
         , settingsManager(backendData)
         , updateManager(backendData)
     {
+        settingsManager.setGuiCallback(
+            [this] (const nlohmann::json& msg)
+            {
+                this->guiCallback(msg);
+                this->initGui();
+            });
+        updateManager.setGuiCallback(
+            [this] (const nlohmann::json& msg)
+            {
+                this->guiCallback(msg);
+                this->initGui();
+            });
+
         settingsJsonParser.getChannelSettings(backendData);
         channelsJsonParser.getChannels(backendData);
 
@@ -49,21 +61,6 @@ class BackEnd
         settingsJsonParser.saveChannelSettings(backendData);
         LOG_DEBUG(lg) << "destructed";
     }
-
-    void setGuiCallbacks (const std::string& key, Callback cb)
-    {
-        LOG_DEBUG(lg) << "setGuiCallback() - key: " << key;
-        if(guiCallbacks.find(key) != guiCallbacks.end())
-        {
-            LOG_DEBUG(lg) << "Callback for key: " << key << " already exists, replacing it.";
-            guiCallbacks[key] = cb;
-        }
-        else
-        {
-            LOG_DEBUG(lg) << "Callback for key: " << key << " does not exist, adding it.";
-            guiCallbacks[key] = cb;
-        }
-    };
 
     void setGuiCallback (Callback cb)
     {
@@ -90,6 +87,8 @@ class BackEnd
 
         if(request.moduleExist("SETTINGS")) settingsManager.processRequest(request, response);
         if(request.moduleExist("UPDATE")) updateManager.processRequest(request, response);
+
+        guiCallback(response.getJson());
     }
     void initGui ()
     {
@@ -98,8 +97,8 @@ class BackEnd
         Protocol::Massage response(Protocol::MassageType::Response);
 
         channelManager.updateChannelResponse(response);
-        updateManager.updateUpdateResponse(response);
         settingsManager.updateSettingsResponse(response);
+        updateManager.updateUpdateResponse(response);
 
         if(guiCallback) guiCallback(response.getJson());
 

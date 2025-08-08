@@ -43,7 +43,41 @@ class Massage
 
     virtual ~Massage () {};
 
-    void AddModuleNode (const std::string& moduleNodeName, const nlohmann::json& targetNode) { j[moduleNodeName] = targetNode; }
+    void mergeRecursive (nlohmann::json& dest, const nlohmann::json& src)
+    {
+        if(!src.is_object() || !dest.is_object())
+        {
+            dest = src;
+            return;
+        }
+
+        for(auto it = src.begin(); it != src.end(); ++it)
+        {
+            const std::string& key = it.key();
+            const nlohmann::json& value = it.value();
+
+            if(dest.contains(key) && dest[key].is_object() && value.is_object())
+            {
+                mergeRecursive(dest[key], value);
+            }
+            else
+            {
+                dest[key] = value;
+            }
+        }
+    }
+
+    void AddModuleNode (const std::string& moduleNodeName, const nlohmann::json& targetNode)
+    {
+        if(!j.contains(moduleNodeName))
+        {
+            j[moduleNodeName] = targetNode;
+        }
+        else
+        {
+            mergeRecursive(j[moduleNodeName], targetNode);
+        }
+    }
 
     bool moduleExist (const std::string& moduleNodeName) const
     {

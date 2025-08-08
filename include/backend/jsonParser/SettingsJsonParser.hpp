@@ -286,6 +286,8 @@ class SettingsJsonParser
             }
         }
 
+        LOG_DEBUG(lg) << "SETTINGSFILE:" << json.dump(4);
+
         std::ofstream file(PATHS::JSON_FILES::SETTINGS_USER);
         if(file.is_open())
         {

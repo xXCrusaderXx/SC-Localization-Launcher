@@ -8,9 +8,9 @@ namespace Protocol
 
 struct AutoSearchButton
 {
-    std::optional<bool> enabled = false;
-    std::optional<bool> busy = false;
-    std::optional<bool> autoSearchStart = false;
+    std::optional<bool> enabled;
+    std::optional<bool> busy;
+    std::optional<bool> autoSearchStart;
 };
 
 struct Paths
@@ -25,12 +25,12 @@ struct Paths
 
 struct Settings
 {
-    std::optional<bool> autoTranslationAtStart = false;
-    std::optional<bool> autoNewTranslation = false;
-    std::optional<bool> minimizeScdAfterUpdate = false;
-    std::optional<bool> LaunchScAfterTranslation = false;
-    std::optional<bool> startScdWithSystemStart = false;
-    std::optional<bool> showUpdateStatus = false;
+    std::optional<bool> autoTranslationAtStart;
+    std::optional<bool> autoNewTranslation;
+    std::optional<bool> minimizeScdAfterUpdate;
+    std::optional<bool> LaunchScAfterTranslation;
+    std::optional<bool> startScdWithSystemStart;
+    std::optional<bool> showUpdateStatus;
 };
 
 struct SettingsPayload
@@ -86,11 +86,11 @@ struct SettingsPayload
         if(paths.hotfixInstallPath) j["paths"]["hotfixInstallPath"] = paths.hotfixInstallPath->string();
         if(paths.techPrevieInstallPath) j["paths"]["techPrevieInstallPath"] = paths.techPrevieInstallPath->string();
         if(paths.rsiLauncherInstallPath) j["paths"]["rsiLauncherInstallPath"] = paths.rsiLauncherInstallPath->string();
-        if(settings.autoTranslationAtStart) j["autoTranslationAtStart"] = settings.autoTranslationAtStart.value();
-        if(settings.autoNewTranslation) j["autoNewTranslation"] = settings.autoNewTranslation.value();
-        if(settings.minimizeScdAfterUpdate) j["minimizeScdAfterUpdate"] = settings.minimizeScdAfterUpdate.value();
-        if(settings.LaunchScAfterTranslation) j["LaunchScAfterTranslation"] = settings.LaunchScAfterTranslation.value();
-        if(settings.startScdWithSystemStart) j["startScdWithSystemStart"] = settings.startScdWithSystemStart.value();
+        if(settings.autoTranslationAtStart) j["settings"]["autoTranslationAtStart"] = settings.autoTranslationAtStart.value();
+        if(settings.autoNewTranslation) j["settings"]["autoNewTranslation"] = settings.autoNewTranslation.value();
+        if(settings.minimizeScdAfterUpdate) j["settings"]["minimizeScdAfterUpdate"] = settings.minimizeScdAfterUpdate.value();
+        if(settings.LaunchScAfterTranslation) j["settings"]["LaunchScAfterTranslation"] = settings.LaunchScAfterTranslation.value();
+        if(settings.startScdWithSystemStart) j["settings"]["startScdWithSystemStart"] = settings.startScdWithSystemStart.value();
         if(settings.showUpdateStatus) j["showUpdateStatus"] = settings.showUpdateStatus.value();
         if(autoSearchButton.enabled) j["autoSearchButton"]["enabled"] = autoSearchButton.enabled.value();
         if(autoSearchButton.busy) j["autoSearchButton"]["busy"] = autoSearchButton.busy.value();

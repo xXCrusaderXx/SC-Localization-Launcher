@@ -24,6 +24,8 @@ class DirectoryFinder
                                                {"HOTFIX", "StarCitizen/HOTFIX"},
                                                {"TECH-PREVIEW", "StarCitizen/TECH-PREVIEW"}};
 
+    std::vector<std::string> executables{"RSI Launcher.exe", "StarCitizen_Launcher.exe"};
+
    public:
     DirectoryFinder (Database::BackendData& backendData)
         : lg("DirectoryFinder")
@@ -100,7 +102,13 @@ class DirectoryFinder
                         LOG_DEBUG(lg) << "[FOUND] " << path;
                     }
 
-                    backendData.rsiLauncherInstallPath = path;
+                    for(const auto& exe : executables)
+                    {
+                        if(std::filesystem::is_regular_file(path + "/" + exe))
+                        {
+                            backendData.rsiLauncherInstallPath = path;
+                        }
+                    }
 
                     for(const auto& [key, suffix] : targets)
                     {
@@ -111,8 +119,14 @@ class DirectoryFinder
 
                         if(std::filesystem::exists(targetPath))
                         {
-                            LOG_DEBUG(lg) << "[set] " << key << " → " << targetPath;
-                            backendData.channelData[key].installPath = targetPath;
+                            for(const auto& exe : executables)
+                            {
+                                if(std::filesystem::is_regular_file(path + "/" + exe))
+                                {
+                                    LOG_DEBUG(lg) << "[set] " << key << " → " << targetPath;
+                                    backendData.channelData[key].installPath = targetPath;
+                                }
+                            }
                         }
                     }
 

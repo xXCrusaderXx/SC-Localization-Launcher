@@ -28,8 +28,11 @@ class ChannelManager
         for(auto& [channel, data] : backendData.channelData)
         {
             data.buttonEng.enabled = true;
-            data.buttonEng.selected = true;
             data.buttonChannel.enabled = true;
+            if(!data.buttonDe.selected && !data.buttonDeFull.selected)
+            {
+                data.buttonEng.selected = true;
+            }
             if(data.installPath.empty())
             {
                 data.buttonChannel.active = false;
@@ -42,6 +45,11 @@ class ChannelManager
                 if(!data.info.server1.empty()) data.buttonDe.enabled = true;
                 if(!data.info.server2.empty()) data.buttonDeFull.enabled = true;
             }
+        }
+        for(const auto& [channel, data] : backendData.channelData)
+        {
+            if(!backendData.channelData[channel].installPath.empty()) backendData.anyChannelPathSet = true;
+            break;
         }
 
         LOG_DEBUG(lg) << "initialSetup() - Finished";
@@ -107,7 +115,7 @@ class ChannelManager
             channelResponse.buttonDeFull.enabled = backendData.channelData[channel].buttonDeFull.enabled;
             channelResponse.buttonDeFull.selected = backendData.channelData[channel].buttonDeFull.selected;
             channelResponse.installPathIsSet = !backendData.channelData[channel].installPath.empty();
-            if(!backendData.channelData[channel].installPath.empty()) backendData.anyChannelPathSet = true;
+            if(channelResponse.installPathIsSet) backendData.anyChannelPathSet = true;
             response.AddModuleNode(channel, channelResponse.toJson());
         }
     }
