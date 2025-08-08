@@ -13,6 +13,8 @@
 #include "backend/utils/utils.hpp"
 #include "frontend/styles.hpp"
 #include "logging/logging.h"
+#include "protocol/ChannelPayload.hpp"
+#include "protocol/Protocol.hpp"
 
 class ChannelBase : public QWidget
 {
@@ -23,7 +25,7 @@ class ChannelBase : public QWidget
    protected:
     std::string channel;
 
-    using Callback = std::function<void(const std::string key, const nlohmann::json &)>;
+    using Callback = std::function<void(const nlohmann::json &)>;
     Callback updateBackendCallback;
 
     QPushButton *buttonChannel = nullptr;
@@ -41,9 +43,15 @@ class ChannelBase : public QWidget
 
         if(!selectedDir.empty())
         {
-            nlohmann::json msg;
-            msg["installPath"] = selectedDir;
-            QtConcurrent::run([msg, this] { updateBackendCallback(channel, msg); });
+            Protocol::ChannelPayload channelRequest;
+
+            channelRequest.newInstallPath = std::filesystem::path(selectedDir);
+
+            Protocol::Massage request(Protocol::MassageType::Request);
+            request.AddModuleNode(channel, channelRequest.toJson());
+            LOG_DEBUG(lg) << "clicked_Channel() - request:\n" << request.getJson().dump(4);
+
+            QtConcurrent::run([request, this] { updateBackendCallback(request.getJson()); });
         }
     }
 
@@ -60,11 +68,14 @@ class ChannelBase : public QWidget
         buttonDe->setDisabled(false);
         buttonDeVoll->setDisabled(false);
 
-        nlohmann::json msg;
-        msg["buttonEngSelected"] = true;
-        msg["buttonDeSelected"] = false;
-        msg["buttonDeFullSelected"] = false;
-        QtConcurrent::run([msg, this] { updateBackendCallback(channel, msg); });
+        Protocol::ChannelPayload channelRequest;
+        channelRequest.buttonEng.selected = true;
+        channelRequest.buttonDe.selected = false;
+        channelRequest.buttonDeFull.selected = false;
+
+        Protocol::Massage request(Protocol::MassageType::Request);
+        request.AddModuleNode(channel, channelRequest.toJson());
+        QtConcurrent::run([request, this] { updateBackendCallback(request.getJson()); });
     }
 
     void clicked_De ()
@@ -78,11 +89,14 @@ class ChannelBase : public QWidget
         buttonDe->setDisabled(true);
         buttonDeVoll->setDisabled(false);
 
-        nlohmann::json msg;
-        msg["buttonEngSelected"] = false;
-        msg["buttonDeSelected"] = true;
-        msg["buttonDeFullSelected"] = false;
-        QtConcurrent::run([msg, this] { updateBackendCallback(channel, msg); });
+        Protocol::ChannelPayload channelRequest;
+        channelRequest.buttonEng.selected = false;
+        channelRequest.buttonDe.selected = true;
+        channelRequest.buttonDeFull.selected = false;
+
+        Protocol::Massage request(Protocol::MassageType::Request);
+        request.AddModuleNode(channel, channelRequest.toJson());
+        QtConcurrent::run([request, this] { updateBackendCallback(request.getJson()); });
     }
 
     void clicked_DeFull ()
@@ -96,11 +110,14 @@ class ChannelBase : public QWidget
         buttonDe->setDisabled(false);
         buttonDeVoll->setDisabled(true);
 
-        nlohmann::json msg;
-        msg["buttonEngSelected"] = false;
-        msg["buttonDeSelected"] = false;
-        msg["buttonDeFullSelected"] = true;
-        QtConcurrent::run([msg, this] { updateBackendCallback(channel, msg); });
+        Protocol::ChannelPayload channelRequest;
+        channelRequest.buttonEng.selected = false;
+        channelRequest.buttonDe.selected = false;
+        channelRequest.buttonDeFull.selected = true;
+
+        Protocol::Massage request(Protocol::MassageType::Request);
+        request.AddModuleNode(channel, channelRequest.toJson());
+        QtConcurrent::run([request, this] { updateBackendCallback(request.getJson()); });
     }
 
    public:
@@ -141,34 +158,109 @@ class ChannelBase : public QWidget
 
     void updateStatus (const nlohmann::json &msg)
     {
+        LOG_DEBUG(lg) << "updateStatus() - [" << channel << "] - START";
+        LOG_DEBUG(lg) << "updateStatus() - msg:\n" << msg.dump(4);
+        Protocol::ChannelPayload channelResponse(msg);
+
         if(QThread::currentThread() != this->thread())
         {
             QMetaObject::invokeMethod(this, [this, msg] () { updateStatus(msg); }, Qt::QueuedConnection);
             return;
         }
 
-        LOG_DEBUG(lg) << "updateStatus() - msg:\n" << msg.dump(4);
-        if(msg.contains("buttonEngEnabled") && msg.at("buttonEngEnabled") == true)
+        if(channelResponse.buttonChannel.enabled)
         {
-            buttonEng->setVisible(true);
-        }
-        if(msg.contains("buttonDeEnabled") && msg.at("buttonDeEnabled") == true)
-        {
-            buttonDe->setVisible(true);
-        }
-        if(msg.contains("buttonDeFullEnabled") && msg.at("buttonDeFullEnabled") == true)
-        {
-            buttonDeVoll->setVisible(true);
+            if(channelResponse.buttonChannel.enabled.value())
+            {
+                buttonChannel->setVisible(true);
+                buttonChannel->setDisabled(false);
+            }
+            else
+            {
+                buttonChannel->setVisible(false);
+                buttonChannel->setDisabled(true);
+            }
         }
 
-        if(msg.contains("buttonEngSelected") && msg.at("buttonEngSelected") == true) clicked_Eng();
-        if(msg.contains("buttonDeSelected") && msg.at("buttonDeSelected") == true) clicked_De();
-        if(msg.contains("buttonDeFullSelected") && msg.at("buttonDeFullSelected") == true) clicked_DeFull();
-
-        if(msg.contains("installPathIsSet") && msg.at("installPathIsSet") == true)
+        if(channelResponse.buttonChannel.active)
         {
-            buttonChannel->setStyleSheet(ButtonStyle::Info);
+            if(channelResponse.buttonChannel.active.value())
+            {
+                buttonChannel->setStyleSheet(ButtonStyle::Info);
+            }
+            else
+            {
+                buttonChannel->setStyleSheet(ButtonStyle::Error);
+            }
         }
+
+        if(channelResponse.buttonEng.enabled)
+        {
+            if(channelResponse.buttonEng.enabled.value())
+            {
+                buttonEng->setVisible(true);
+            }
+            else
+            {
+                buttonEng->setVisible(false);
+            }
+        }
+
+        if(channelResponse.buttonEng.selected)
+        {
+            if(channelResponse.buttonEng.selected.value())
+            {
+                clicked_Eng();
+            }
+        }
+
+        if(channelResponse.buttonDe.enabled)
+        {
+            if(channelResponse.buttonDe.enabled.value())
+            {
+                buttonDe->setVisible(true);
+            }
+            else
+            {
+                buttonDe->setVisible(false);
+            }
+        }
+
+        if(channelResponse.buttonDe.selected)
+        {
+            if(channelResponse.buttonDe.selected.value())
+            {
+                clicked_De();
+            }
+        }
+        if(channelResponse.buttonDeFull.enabled)
+        {
+            if(channelResponse.buttonDeFull.enabled.value())
+            {
+                buttonDeVoll->setVisible(true);
+            }
+            else
+            {
+                buttonDeVoll->setVisible(false);
+            }
+        }
+
+        if(channelResponse.buttonDeFull.selected)
+        {
+            if(channelResponse.buttonDeFull.selected.value())
+            {
+                clicked_DeFull();
+            }
+        }
+
+        if(channelResponse.installPathIsSet)
+        {
+            if(channelResponse.installPathIsSet.value())
+            {
+                buttonChannel->setStyleSheet(ButtonStyle::Info);
+            }
+        }
+        LOG_DEBUG(lg) << "updateStatus() - [" << channel << "] - FINISHED";
     }
 
     void setUpdateBackendCallback (Callback cb) { updateBackendCallback = cb; }

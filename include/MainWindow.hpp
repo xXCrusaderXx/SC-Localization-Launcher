@@ -22,6 +22,8 @@
 #include "backend/BackEnd.hpp"
 #include "logging/logging.h"
 
+#include "protocol/Protocol.hpp"
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -117,6 +119,7 @@ class MainWindow : public QMainWindow
 
         layoutBottom->setRowStretch(1, 1);
 
+        backEnd.setGuiCallback([this] (const nlohmann::json &msg) { this->ProcessResponse(msg); });
         backEnd.initGui();
     }
 
@@ -147,8 +150,7 @@ class MainWindow : public QMainWindow
         grid->addWidget(labelTitel, 0, 0, 1, 2);
 
         settings = new Settings(this, grid);
-        settings->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
-        backEnd.setGuiCallback(settings->getName(), [this] (const nlohmann::json &msg) { settings->updateStatus(msg); });
+        settings->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(msg); });
     };
 
     void setupLogoWidged (QWidget *widged, QGridLayout *grid)
@@ -178,18 +180,28 @@ class MainWindow : public QMainWindow
         techPreview = new TechPreviewChannel(this, grid);
         update = new UpdateButton(this, grid);
 
-        live->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
-        ptu->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
-        eptu->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
-        hotfix->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
-        techPreview->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
-        update->setUpdateBackendCallback([this] (const std::string &key, const nlohmann::json &msg) { backEnd.processMassage(key, msg); });
+        live->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
+        ptu->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
+        eptu->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
+        hotfix->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
+        techPreview->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
+        update->setUpdateBackendCallback([this] (const nlohmann::json &msg) { backEnd.processMassage(msg); });
+    }
 
-        backEnd.setGuiCallback(live->getName(), [this] (const nlohmann::json &msg) { live->updateStatus(msg); });
-        backEnd.setGuiCallback(ptu->getName(), [this] (const nlohmann::json &msg) { ptu->updateStatus(msg); });
-        backEnd.setGuiCallback(eptu->getName(), [this] (const nlohmann::json &msg) { eptu->updateStatus(msg); });
-        backEnd.setGuiCallback(hotfix->getName(), [this] (const nlohmann::json &msg) { hotfix->updateStatus(msg); });
-        backEnd.setGuiCallback(techPreview->getName(), [this] (const nlohmann::json &msg) { techPreview->updateStatus(msg); });
-        backEnd.setGuiCallback(update->getName(), [this] (const nlohmann::json &msg) { update->updateStatus(msg); });
+    void ProcessResponse (const nlohmann::json &msg)
+    {
+        LOG_DEBUG(lg) << "ProcessResponse() - START";
+        LOG_DEBUG(lg) << "ProcessResponse() - RESPONSE: " << msg.dump(4);
+
+        Protocol::Massage response(msg);
+        if(response.moduleExist("LIVE")) live->updateStatus(response.getModuleNode("LIVE"));
+        if(response.moduleExist("PTU")) ptu->updateStatus(response.getModuleNode("PTU"));
+        if(response.moduleExist("EPTU")) eptu->updateStatus(response.getModuleNode("EPTU"));
+        if(response.moduleExist("HOTFIX")) hotfix->updateStatus(response.getModuleNode("HOTFIX"));
+        if(response.moduleExist("TECH-PREVIEW")) techPreview->updateStatus(response.getModuleNode("TECH-PREVIEW"));
+        if(response.moduleExist("UPDATE")) update->updateStatus(response.getModuleNode("UPDATE"));
+        if(response.moduleExist("SETTINGS")) settings->updateStatus(response.getModuleNode("SETTINGS"));
+
+        LOG_DEBUG(lg) << "ProcessResponse() - FINISHED";
     }
 };
