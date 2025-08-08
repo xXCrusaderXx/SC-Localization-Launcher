@@ -95,18 +95,15 @@ class SettingsManager
 
     void processLaunchAfterUpdate (Protocol::SettingsPayload& settingsRequest, Protocol::SettingsPayload& response)
     {
-        if(!settingsRequest.settings.LaunchScAfterTranslation)
-        {
-            LOG_DEBUG(lg) << "processLaunchAfterUpdate() - Skipping LaunchScAfterTranslation";
-            return;
-        }
-
         LOG_DEBUG(lg) << "processLaunchAfterUpdate() - LaunchScAfterTranslation is "
                       << (settingsRequest.settings.LaunchScAfterTranslation ? "enabled" : "disabled");
 
-        // Protocol::UpdateButtonPayload updateButtonResponse;
-        // updateButtonResponse.updateButton.LaunchScAfterTranslation = settingsRequest.settings.LaunchScAfterTranslation.value();
-        // response.AddModuleNode("UPDATE", updateButtonResponse.toJson());
+        Protocol::UpdateButtonPayload updateButtonResponse;
+        updateButtonResponse.updateButton.LaunchScAfterTranslation = backendData.settings.checkboxes.LaunchScAfterTranslation;
+
+        Protocol::Massage updateResponse(Protocol::MassageType::Response);
+        updateResponse.AddModuleNode("UPDATE", updateButtonResponse.toJson());
+        guiCallback(updateResponse.getJson());
     }
 
     void processAutoTranslationAtStart (Protocol::SettingsPayload& settingsRequest, Protocol::SettingsPayload& response) {}
