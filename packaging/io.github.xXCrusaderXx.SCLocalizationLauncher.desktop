@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=SC Localization Launcher
+GenericName=Star Citizen Translation
+GenericName[de]=Star Citizen Übersetzung
+Comment=Installs and updates community translations for Star Citizen
+Comment[de]=Installiert und aktualisiert Community-Übersetzungen für Star Citizen
+Exec=sc-localization-launcher
+Icon=io.github.xXCrusaderXx.SCLocalizationLauncher
+Terminal=false
+StartupNotify=true
+StartupWMClass=sc-localization-launcher
+Categories=Game;
+Keywords=Star Citizen;Translation;Localization;Übersetzung;Lokalisierung;Deutsch;German;

@@ -3,8 +3,9 @@
 # Runs as root inside an archlinux container.
 #
 # Usage: test.sh <source tarball> <output dir>
-#   The tarball must contain StarCitizenDeutschLinux-<pkgver>/, e.g. from:
-#   git archive --prefix=StarCitizenDeutschLinux-0.1.0/ -o src.tar.gz HEAD
+#   PKGVER (optional): package version to build instead of the one in the PKGBUILD, "-" replaced by "_"
+#   The tarball must contain SC-Localization-Launcher-<pkgver>/, e.g. from:
+#   git archive --prefix=SC-Localization-Launcher-0.1.0/ -o src.tar.gz HEAD
 set -euo pipefail
 
 TARBALL="$(realpath "$1")"
@@ -22,10 +23,13 @@ rm -rf "$WORK" && mkdir -p "$WORK"
 cp "$PKGBUILD_DIR/PKGBUILD" "$WORK/"
 cp "$TARBALL" "$WORK/local-source.tar.gz"
 sed -i 's#^source=.*#source=("local-source.tar.gz")#' "$WORK/PKGBUILD"
+if [ -n "${PKGVER:-}" ]; then
+    sed -i "s#^pkgver=.*#pkgver=$PKGVER#" "$WORK/PKGBUILD"
+fi
 chown -R builder "$WORK"
 
 su builder -c "cd $WORK && makepkg -s --noconfirm"
 
 mkdir -p "$OUT"
-cp "$WORK"/sc-deutsch-launcher-[0-9]*.pkg.tar.zst "$OUT"/
+cp "$WORK"/sc-localization-launcher-[0-9]*.pkg.tar.zst "$OUT"/
 ls -la "$OUT"
