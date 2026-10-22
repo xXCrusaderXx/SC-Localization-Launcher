@@ -73,7 +73,8 @@ class BackendTest : public QObject
             {
                 std::lock_guard lock(mutex);
                 states.push_back(state);
-            });
+            },
+            "0.6.0");
         // The language list is loaded in the background, a later state carries it
         return waitForState([] (const auto& s) { return s.languages.size() > 1; }).has_value();
     }
@@ -114,6 +115,7 @@ class BackendTest : public QObject
     void init ()
     {
         qputenv("SC_LANGUAGES_URL", server.url("/languages.json").toUtf8());
+        qputenv("SC_RELEASES_URL", server.url("/releases/latest").toUtf8());
         server.setFile("/de.ini", TRANSLATION);
         resetUserDir();
         std::lock_guard lock(mutex);
@@ -344,6 +346,46 @@ class BackendTest : public QObject
 
         QVERIFY(start());
         QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::UpdateAvailable);
+    }
+
+    void comparesLauncherVersions ()
+    {
+        QVERIFY(SelfUpdateManager::isNewer("v0.10.0", "0.9.9"));
+        QVERIFY(SelfUpdateManager::isNewer("1.0.0", "0.99.99"));
+        QVERIFY(!SelfUpdateManager::isNewer("v0.6.0", "0.6.0"));
+        QVERIFY(!SelfUpdateManager::isNewer("0.5.9", "0.6.0"));
+        QVERIFY(!SelfUpdateManager::isNewer("nightly", "0.6.0"));
+    }
+
+    void findsNewerLauncherRelease ()
+    {
+        QVERIFY(start());
+        QVERIFY(latest().selfUpdate.status == Protocol::SelfUpdateStatus::Idle);
+        QCOMPARE(latest().selfUpdate.currentVersion, std::string("0.6.0"));
+
+        backEnd->execute(Protocol::CheckForUpdate{});
+        QVERIFY(waitForState([] (const auto& s) { return s.selfUpdate.status == Protocol::SelfUpdateStatus::Available; }));
+        auto update = latest().selfUpdate;
+        QCOMPARE(update.latestVersion, std::string("9.9.9"));
+        QCOMPARE(update.notes, std::string("- New feature"));
+        // Not the example.org link from the answer: only GitHub pages are opened
+        QCOMPARE(update.url, std::string("https://github.com/xXCrusaderXx/SC-Localization-Launcher/releases/latest"));
+    }
+
+    void launcherWithoutNewerReleaseIsUpToDate ()
+    {
+        nlohmann::json release = {{"tag_name", "v0.6.0"}, {"body", ""}, {"html_url", "https://github.com/x/y/releases/tag/v0.6.0"}};
+        server.setFile("/releases/latest", QByteArray::fromStdString(release.dump()));
+        QVERIFY(start());
+        backEnd->execute(Protocol::CheckForUpdate{});
+        QVERIFY(waitForState([] (const auto& s) { return s.selfUpdate.status == Protocol::SelfUpdateStatus::UpToDate; }));
+
+        // No release published at all
+        qputenv("SC_RELEASES_URL", server.url("/no-release").toUtf8());
+        backEnd->execute(Protocol::CheckForUpdate{});
+        QVERIFY(waitForState([] (const auto& s) { return s.selfUpdate.status == Protocol::SelfUpdateStatus::Checking; }));
+        QVERIFY(waitForState([] (const auto& s) { return s.selfUpdate.status == Protocol::SelfUpdateStatus::UpToDate; }, published() - 1));
+        server.setFile("/releases/latest", fixtureFiles().value("/releases/latest"));
     }
 };
 

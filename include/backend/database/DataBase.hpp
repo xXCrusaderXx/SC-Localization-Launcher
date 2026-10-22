@@ -84,6 +84,7 @@ struct BackendData
     Protocol::Options options;
     Protocol::UpdateStatus update = Protocol::UpdateStatus::Idle;
     bool searching = false;
+    Protocol::SelfUpdate selfUpdate;
 
     // Set when the app closes; background jobs read it to stop early
     std::atomic<bool> shuttingDown{false};
