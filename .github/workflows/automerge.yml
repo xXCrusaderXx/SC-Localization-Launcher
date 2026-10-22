@@ -36,7 +36,7 @@ jobs:
       - name: Fetch Dependabot metadata
         id: meta
         if: env.IS_DEPENDABOT == 'true'
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@v3
 
       - name: Enable squash auto-merge for trusted PRs
         env:
