@@ -63,6 +63,22 @@ struct Options
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Options, launchGameAfterUpdate, updateAtStart, installNewTranslations, minimizeAfterUpdate,
                                                 startWithSystem, showUpdateProgress)
 
+enum class ChannelStatus
+{
+    NoPath,
+    // The chosen translation is not in the game folder yet
+    NotInstalled,
+    // The chosen translation is installed and no newer version is known
+    Installed,
+    // A newer version exists, or the installed language differs from the chosen one
+    UpdateAvailable
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(ChannelStatus, {{ChannelStatus::NoPath, "noPath"},
+                                             {ChannelStatus::NotInstalled, "notInstalled"},
+                                             {ChannelStatus::Installed, "installed"},
+                                             {ChannelStatus::UpdateAvailable, "updateAvailable"}})
+
 struct Channel
 {
     std::string name;
@@ -71,9 +87,10 @@ struct Channel
     // Codes the translation sources currently offer for this channel, always including ENGLISH,
     // independent of the install path
     std::vector<std::string> availableLanguages;
+    ChannelStatus status = ChannelStatus::NoPath;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status)
 
 struct State
 {
