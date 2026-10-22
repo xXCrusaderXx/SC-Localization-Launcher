@@ -4,17 +4,32 @@
 <context>
     <name>ChannelRow</name>
     <message>
-        <location filename="../qml/ChannelRow.qml" line="77"/>
+        <location filename="../qml/ChannelRow.qml" line="79"/>
         <source>No install path set</source>
         <translation>Kein Installationspfad gesetzt</translation>
     </message>
     <message>
-        <location filename="../qml/ChannelRow.qml" line="77"/>
+        <location filename="../qml/ChannelRow.qml" line="81"/>
         <source>%1 is currently not available for this channel</source>
         <translation>%1 ist für diesen Kanal derzeit nicht verfügbar</translation>
     </message>
     <message>
-        <location filename="../qml/ChannelRow.qml" line="104"/>
+        <location filename="../qml/ChannelRow.qml" line="83"/>
+        <source>%1 is not installed yet</source>
+        <translation>%1 ist noch nicht installiert</translation>
+    </message>
+    <message>
+        <location filename="../qml/ChannelRow.qml" line="85"/>
+        <source>The translation is removed with the next update</source>
+        <translation>Die Übersetzung wird beim nächsten Update entfernt</translation>
+    </message>
+    <message>
+        <location filename="../qml/ChannelRow.qml" line="85"/>
+        <source>Update available for %1</source>
+        <translation>Update für %1 verfügbar</translation>
+    </message>
+    <message>
+        <location filename="../qml/ChannelRow.qml" line="114"/>
         <source>Choose folder</source>
         <translation>Ordner wählen</translation>
     </message>
@@ -30,87 +45,95 @@
 <context>
     <name>Main</name>
     <message>
-        <location filename="../qml/Main.qml" line="104"/>
+        <location filename="../qml/Main.qml" line="106"/>
         <source>COMMUNITY TRANSLATIONS FOR LINUX</source>
         <translation>COMMUNITY-ÜBERSETZUNGEN FÜR LINUX</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="148"/>
+        <location filename="../qml/Main.qml" line="150"/>
         <source>GAME CHANNELS</source>
         <translation>SPIELVERSIONEN</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="160"/>
+        <location filename="../qml/Main.qml" line="162"/>
         <source>Searching …</source>
         <translation>Suche läuft …</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="160"/>
+        <location filename="../qml/Main.qml" line="162"/>
         <source>Search automatically</source>
         <translation>Automatisch suchen</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="213"/>
+        <location filename="../qml/Main.qml" line="215"/>
         <source>Start Star Citizen afterwards</source>
         <translation>Star Citizen danach starten</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="243"/>
+        <location filename="../qml/Main.qml" line="245"/>
         <source>Downloading translations …</source>
         <translation>Übersetzungen werden heruntergeladen …</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="243"/>
+        <location filename="../qml/Main.qml" line="245"/>
         <source>Searching for Star Citizen installations …</source>
         <translation>Suche nach Star-Citizen-Installationen …</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="243"/>
+        <location filename="../qml/Main.qml" line="245"/>
         <source>Update failed, see the log for details</source>
         <translation>Update fehlgeschlagen, Details im Log</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="243"/>
+        <location filename="../qml/Main.qml" line="245"/>
         <source>Translations updated</source>
         <translation>Übersetzungen aktualisiert</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="243"/>
+        <location filename="../qml/Main.qml" line="245"/>
         <source>Ready</source>
         <translation>Bereit</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="243"/>
+        <location filename="../qml/Main.qml" line="245"/>
         <source>Choose a game folder or use the automatic search</source>
         <translation>Wähle einen Spielordner oder nutze die automatische Suche</translation>
     </message>
+    <message numerus="yes">
+        <location filename="../qml/Main.qml" line="245"/>
+        <source>%n channel(s) need an update</source>
+        <translation>
+            <numerusform>%n Kanal braucht ein Update</numerusform>
+            <numerusform>%n Kanäle brauchen ein Update</numerusform>
+        </translation>
+    </message>
     <message>
-        <location filename="../qml/Main.qml" line="302"/>
+        <location filename="../qml/Main.qml" line="304"/>
         <source>Updating …</source>
         <translation>Aktualisiere …</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="302"/>
+        <location filename="../qml/Main.qml" line="304"/>
         <source>No game folder set</source>
         <translation>Kein Spielordner gesetzt</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="302"/>
+        <location filename="../qml/Main.qml" line="304"/>
         <source>Update &amp; start</source>
         <translation>Aktualisieren &amp; starten</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="302"/>
+        <location filename="../qml/Main.qml" line="304"/>
         <source>Update translations</source>
         <translation>Übersetzungen aktualisieren</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="349"/>
+        <location filename="../qml/Main.qml" line="351"/>
         <source>RSI Launcher folder</source>
         <translation>Ordner des RSI Launchers</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="349"/>
+        <location filename="../qml/Main.qml" line="351"/>
         <source>Install folder for %1</source>
         <translation>Installationsordner für %1</translation>
     </message>

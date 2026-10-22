@@ -1,6 +1,8 @@
 #pragma once
 
+#include <QCryptographicHash>
 #include <QHash>
+#include <QMutex>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QThread>
@@ -8,6 +10,7 @@
 #include <fstream>
 #include <future>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <string>
 
 #include "backend/utils/paths.hpp"
@@ -21,17 +24,51 @@ inline const QByteArray TRANSLATION_FR = "test_key=Texte de test\n";
 class TestServer : public QThread
 {
    private:
+    QMutex mutex;
     QHash<QByteArray, QByteArray> files;
+    // "GET /de.ini 200" -> number of requests
+    QHash<QByteArray, int> requestCounts;
     std::promise<quint16> portPromise;
     std::shared_future<quint16> portFuture = portPromise.get_future().share();
 
     void answer (QTcpSocket* socket, const QByteArray& request)
     {
-        QByteArray path = request.split(' ').value(1);
-        bool found = files.contains(path);
-        QByteArray body = found ? QByteArray(files.value(path)).replace("{base}", url("").toUtf8()) : QByteArray();
-        socket->write("HTTP/1.1 " + QByteArray(found ? "200 OK" : "404 Not Found") + "\r\nContent-Length: " + QByteArray::number(body.size()) +
-                      "\r\nConnection: close\r\n\r\n" + body);
+        const QList<QByteArray> lines = request.split('\n');
+        const QList<QByteArray> requestLine = lines.value(0).split(' ');
+        const QByteArray method = requestLine.value(0);
+        const QByteArray path = requestLine.value(1);
+        QByteArray ifNoneMatch;
+        for(const auto& line : lines)
+            if(line.toLower().startsWith("if-none-match:")) ifNoneMatch = line.mid(14).trimmed();
+
+        std::optional<QByteArray> file;
+        {
+            QMutexLocker lock(&mutex);
+            if(files.contains(path)) file = files.value(path);
+        }
+
+        QByteArray status = "404 Not Found";
+        QByteArray headers;
+        QByteArray body;
+        if(file)
+        {
+            body = QByteArray(*file).replace("{base}", url("").toUtf8());
+            QByteArray etag = "\"" + QCryptographicHash::hash(body, QCryptographicHash::Sha1).toHex() + "\"";
+            headers = "ETag: " + etag + "\r\n";
+            status = "200 OK";
+            if(ifNoneMatch == etag)
+            {
+                status = "304 Not Modified";
+                body.clear();
+            }
+        }
+        {
+            QMutexLocker lock(&mutex);
+            ++requestCounts[method + " " + path + " " + status.left(3)];
+        }
+        QByteArray length = QByteArray::number(body.size());
+        if(method == "HEAD") body.clear();
+        socket->write("HTTP/1.1 " + status + "\r\n" + headers + "Content-Length: " + length + "\r\nConnection: close\r\n\r\n" + body);
         socket->disconnectFromHost();
     }
 
@@ -73,6 +110,20 @@ class TestServer : public QThread
     }
 
     QString url (const QString& path) { return QString("http://127.0.0.1:%1%2").arg(portFuture.get()).arg(path); }
+
+    // Changes a served file, e.g. to publish a new translation version
+    void setFile (const QByteArray& path, const QByteArray& content)
+    {
+        QMutexLocker lock(&mutex);
+        files[path] = content;
+    }
+
+    // e.g. requestCount("GET /de.ini 200")
+    int requestCount (const QByteArray& request)
+    {
+        QMutexLocker lock(&mutex);
+        return requestCounts.value(request);
+    }
 };
 
 inline nlohmann::json testCredit ()
