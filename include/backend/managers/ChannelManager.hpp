@@ -12,6 +12,55 @@ class ChannelManager
     LoggerFramework::LogEx lg;
     Database::BackendData& backendData;
 
+    // Enables the translation buttons depending on the install path and the servers the channel offers
+    void updateAvailability (Database::ChannelData& data)
+    {
+        bool pathSet = !data.installPath.empty();
+        bool serverActive = data.info.active != 0;
+
+        data.buttonChannel.enabled = true;
+        data.buttonChannel.active = pathSet;
+        data.buttonEng.enabled = pathSet;
+        data.buttonDe.enabled = pathSet && serverActive && !data.info.server1.empty();
+        data.buttonDeFull.enabled = pathSet && serverActive && !data.info.server3.empty();
+
+        // A selection the server no longer offers falls back to English
+        if((data.buttonDe.selected && !data.buttonDe.enabled) || (data.buttonDeFull.selected && !data.buttonDeFull.enabled))
+        {
+            data.buttonDe.selected = false;
+            data.buttonDeFull.selected = false;
+        }
+        if(!data.buttonDe.selected && !data.buttonDeFull.selected) data.buttonEng.selected = true;
+    }
+
+    void updateAnyChannelPathSet ()
+    {
+        backendData.anyChannelPathSet = false;
+        for(const auto& [channel, data] : backendData.channelData)
+        {
+            if(!data.installPath.empty())
+            {
+                backendData.anyChannelPathSet = true;
+                break;
+            }
+        }
+    }
+
+    Protocol::ChannelPayload toPayload (const Database::ChannelData& data)
+    {
+        Protocol::ChannelPayload channelResponse;
+        channelResponse.installPathIsSet = !data.installPath.empty();
+        channelResponse.buttonChannel.enabled = data.buttonChannel.enabled;
+        channelResponse.buttonChannel.active = data.buttonChannel.active;
+        channelResponse.buttonEng.enabled = data.buttonEng.enabled;
+        channelResponse.buttonEng.selected = data.buttonEng.selected;
+        channelResponse.buttonDe.enabled = data.buttonDe.enabled;
+        channelResponse.buttonDe.selected = data.buttonDe.selected;
+        channelResponse.buttonDeFull.enabled = data.buttonDeFull.enabled;
+        channelResponse.buttonDeFull.selected = data.buttonDeFull.selected;
+        return channelResponse;
+    }
+
    public:
     ChannelManager (Database::BackendData& backendData)
         : lg("ChannelManager")
@@ -25,32 +74,8 @@ class ChannelManager
     {
         LOG_DEBUG(lg) << "initialSetup() - Start";
 
-        for(auto& [channel, data] : backendData.channelData)
-        {
-            data.buttonEng.enabled = true;
-            data.buttonChannel.enabled = true;
-            if(!data.buttonDe.selected && !data.buttonDeFull.selected)
-            {
-                data.buttonEng.selected = true;
-            }
-            if(data.installPath.empty())
-            {
-                data.buttonChannel.active = false;
-            }
-            else
-                data.buttonChannel.active = true;
-
-            if(data.info.active)
-            {
-                if(!data.info.server1.empty()) data.buttonDe.enabled = true;
-                if(!data.info.server2.empty()) data.buttonDeFull.enabled = true;
-            }
-        }
-        for(const auto& [channel, data] : backendData.channelData)
-        {
-            if(!backendData.channelData[channel].installPath.empty()) backendData.anyChannelPathSet = true;
-            break;
-        }
+        for(auto& [channel, data] : backendData.channelData) updateAvailability(data);
+        updateAnyChannelPathSet();
 
         LOG_DEBUG(lg) << "initialSetup() - Finished";
     }
@@ -58,7 +83,7 @@ class ChannelManager
     void processRequest (const Protocol::Massage& request, Protocol::Massage& response)
     {
         LOG_DEBUG(lg) << "processRequest() - START";
-        for(const auto& [channel, data] : backendData.channelData)
+        for(auto& [channel, data] : backendData.channelData)
         {
             if(!request.moduleExist(channel))
             {
@@ -66,57 +91,20 @@ class ChannelManager
             }
             Protocol::ChannelPayload channelReq(request.getModuleNode(channel));
             LOG_DEBUG(lg) << "processRequest() - [" << channel << "] request:\n" << channelReq.toJson().dump(4);
-            if(channelReq.buttonDe.selected) backendData.channelData[channel].buttonDe.selected = channelReq.buttonDe.selected.value();
-            if(channelReq.buttonDe.enabled) backendData.channelData[channel].buttonDe.enabled = channelReq.buttonDe.enabled.value();
-            if(channelReq.buttonEng.selected) backendData.channelData[channel].buttonEng.selected = channelReq.buttonEng.selected.value();
-            if(channelReq.buttonEng.enabled) backendData.channelData[channel].buttonEng.enabled = channelReq.buttonEng.enabled.value();
-            if(channelReq.buttonDeFull.selected) backendData.channelData[channel].buttonDeFull.selected = channelReq.buttonDeFull.selected.value();
-            if(channelReq.buttonDeFull.enabled) backendData.channelData[channel].buttonDeFull.enabled = channelReq.buttonDeFull.enabled.value();
-            if(channelReq.newInstallPath) backendData.channelData[channel].installPath = channelReq.newInstallPath.value();
+            if(channelReq.buttonDe.selected) data.buttonDe.selected = channelReq.buttonDe.selected.value();
+            if(channelReq.buttonEng.selected) data.buttonEng.selected = channelReq.buttonEng.selected.value();
+            if(channelReq.buttonDeFull.selected) data.buttonDeFull.selected = channelReq.buttonDeFull.selected.value();
+            if(channelReq.newInstallPath) data.installPath = channelReq.newInstallPath.value();
 
-            Protocol::ChannelPayload channelResponse;
-            channelResponse.installPathIsSet = !channelReq.newInstallPath.value().empty();
-            if(channelResponse.installPathIsSet)
-            {
-                channelResponse.buttonChannel.active = channelResponse.installPathIsSet;
-            }
-            channelResponse.buttonChannel.enabled = true;
-            channelResponse.buttonEng.enabled = backendData.channelData[channel].buttonEng.enabled;
-            channelResponse.buttonEng.selected = backendData.channelData[channel].buttonEng.selected;
-            channelResponse.buttonDe.enabled = backendData.channelData[channel].buttonDe.enabled;
-            channelResponse.buttonDe.selected = backendData.channelData[channel].buttonDe.selected;
-            channelResponse.buttonDeFull.enabled = backendData.channelData[channel].buttonDeFull.enabled;
-            channelResponse.buttonDeFull.selected = backendData.channelData[channel].buttonDeFull.selected;
-
-            if(!backendData.channelData[channel].installPath.empty())
-            {
-                channelResponse.buttonEng.enabled = true;
-                channelResponse.buttonDe.enabled = true;
-                channelResponse.buttonDeFull.enabled = true;
-            }
-
-            response.AddModuleNode(channel, channelResponse.toJson());
+            updateAvailability(data);
+            response.AddModuleNode(channel, toPayload(data).toJson());
         }
+        updateAnyChannelPathSet();
         LOG_DEBUG(lg) << "processRequest() - FINISHED";
     }
 
     void updateChannelResponse (Protocol::Massage& response)
     {
-        for(const auto& [channel, data] : backendData.channelData)
-        {
-            Protocol::ChannelPayload channelResponse;
-
-            channelResponse.buttonChannel.enabled = backendData.channelData[channel].buttonChannel.enabled;
-            channelResponse.buttonChannel.active = backendData.channelData[channel].buttonChannel.active;
-            channelResponse.buttonEng.enabled = backendData.channelData[channel].buttonEng.enabled;
-            channelResponse.buttonEng.selected = backendData.channelData[channel].buttonEng.selected;
-            channelResponse.buttonDe.enabled = backendData.channelData[channel].buttonDe.enabled;
-            channelResponse.buttonDe.selected = backendData.channelData[channel].buttonDe.selected;
-            channelResponse.buttonDeFull.enabled = backendData.channelData[channel].buttonDeFull.enabled;
-            channelResponse.buttonDeFull.selected = backendData.channelData[channel].buttonDeFull.selected;
-            channelResponse.installPathIsSet = !backendData.channelData[channel].installPath.empty();
-            if(channelResponse.installPathIsSet) backendData.anyChannelPathSet = true;
-            response.AddModuleNode(channel, channelResponse.toJson());
-        }
+        for(const auto& [channel, data] : backendData.channelData) response.AddModuleNode(channel, toPayload(data).toJson());
     }
 };

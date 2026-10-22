@@ -1,9 +1,16 @@
 #pragma once
 
 #include <curl/curl.h>
+#include <QProcess>
+#include <QStandardPaths>
+#include <QStringList>
+#include <algorithm>
+#include <atomic>
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <thread>
+#include <vector>
 
 #include "backend/database/DataBase.hpp"
 #include "backend/utils/utils.hpp"
@@ -18,6 +25,9 @@ class UpdateManager
     Database::BackendData& backendData;
     using Callback = std::function<void(const nlohmann::json&)>;
     Callback guiCallback;
+    std::atomic<bool> updateRunning{false};
+
+    inline static const std::string GERMAN_LOCALIZATION = "german_(germany)";
 
     static size_t writeToFileCallback (void* contents, size_t size, size_t nmemb, void* userp)
     {
@@ -32,7 +42,11 @@ class UpdateManager
         CURL* curl = curl_easy_init();
         if(!curl) return false;
 
-        std::ofstream file(outputFile, std::ios::binary);
+        // Download into a temp file first, so a failed download never destroys a working global.ini
+        std::filesystem::path tmpFile = outputFile;
+        tmpFile += ".download";
+
+        std::ofstream file(tmpFile, std::ios::binary);
         if(!file.is_open())
         {
             curl_easy_cleanup(curl);
@@ -43,11 +57,150 @@ class UpdateManager
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeToFileCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &file);
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);  // Redirects erlauben
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 120L);
 
         CURLcode res = curl_easy_perform(curl);
+        long httpCode = 0;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
         curl_easy_cleanup(curl);
         file.close();
-        return res == CURLE_OK;
+
+        std::error_code ec;
+        if(res != CURLE_OK || httpCode != 200 || std::filesystem::file_size(tmpFile, ec) == 0)
+        {
+            LOG_ERROR(lg) << "download failed: " << url << " :: " << curl_easy_strerror(res) << " (HTTP " << httpCode << ")";
+            std::filesystem::remove(tmpFile, ec);
+            return false;
+        }
+
+        std::filesystem::rename(tmpFile, outputFile, ec);
+        if(ec)
+        {
+            LOG_ERROR(lg) << "rename failed: " << tmpFile << " -> " << outputFile << " :: " << ec.message();
+            std::filesystem::remove(tmpFile, ec);
+            return false;
+        }
+        return true;
+    }
+
+    bool downloadWithFallback (const std::vector<std::string>& urls, const std::filesystem::path& outputFile)
+    {
+        for(const auto& url : urls)
+        {
+            if(url.empty()) continue;
+            LOG_DEBUG(lg) << "download: " << url;
+            if(downloadAndWriteToFile(url, outputFile)) return true;
+        }
+        return false;
+    }
+
+    static bool isLanguageLine (const std::string& line)
+    {
+        auto start = line.find_first_not_of(" \t");
+        if(start == std::string::npos) return false;
+        std::string key = line.substr(start, line.find_first_of(" \t=", start) - start);
+        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+        return key == "g_language" || key == "g_languageaudio";
+    }
+
+    // Only touches the language lines, all other user.cfg settings of the user are kept
+    void patchUserCfg (const std::filesystem::path& userCfg, bool german)
+    {
+        std::vector<std::string> lines;
+        {
+            std::ifstream in(userCfg);
+            std::string line;
+            while(std::getline(in, line))
+            {
+                if(!line.empty() && line.back() == '\r') line.pop_back();
+                if(!isLanguageLine(line)) lines.push_back(line);
+            }
+        }
+
+        if(german)
+        {
+            lines.push_back("g_language = " + GERMAN_LOCALIZATION);
+            lines.push_back("g_languageAudio = english");
+        }
+
+        bool onlyBlank = std::all_of(lines.begin(), lines.end(), [] (const std::string& l) { return l.find_first_not_of(" \t") == std::string::npos; });
+        std::error_code ec;
+        if(onlyBlank)
+        {
+            std::filesystem::remove(userCfg, ec);
+            return;
+        }
+
+        std::ofstream out(userCfg, std::ios::trunc);
+        for(const auto& l : lines) out << l << "\n";
+    }
+
+    void removeGermanTranslation (const std::filesystem::path& installPath)
+    {
+        std::error_code ec;
+        std::filesystem::path localization = installPath / "data" / "Localization";
+        std::filesystem::remove_all(localization / GERMAN_LOCALIZATION, ec);
+
+        // Clean up the folders we created, but only if nothing else lives in them
+        if(std::filesystem::is_empty(localization, ec)) std::filesystem::remove(localization, ec);
+        if(std::filesystem::is_empty(installPath / "data", ec)) std::filesystem::remove(installPath / "data", ec);
+
+        patchUserCfg(installPath / "user.cfg", false);
+    }
+
+    bool installGermanTranslation (const std::filesystem::path& installPath, const std::vector<std::string>& urls)
+    {
+        std::filesystem::path targetDir = installPath / "data" / "Localization" / GERMAN_LOCALIZATION;
+        std::error_code ec;
+        std::filesystem::create_directories(targetDir, ec);
+        if(ec)
+        {
+            LOG_ERROR(lg) << "cannot create " << targetDir << " :: " << ec.message();
+            return false;
+        }
+
+        if(!downloadWithFallback(urls, targetDir / "global.ini")) return false;
+
+        patchUserCfg(installPath / "user.cfg", true);
+        return true;
+    }
+
+    // The wine prefix is the folder that contains drive_c
+    static std::optional<std::filesystem::path> findWinePrefix (std::filesystem::path path)
+    {
+        while(!path.empty() && path != path.root_path())
+        {
+            if(std::filesystem::is_directory(path / "drive_c")) return path;
+            path = path.parent_path();
+        }
+        return std::nullopt;
+    }
+
+    void startGame (const std::filesystem::path& rsiLauncherInstallPath)
+    {
+        LOG_DEBUG(lg) << "startGame() - START";
+
+        auto prefix = findWinePrefix(rsiLauncherInstallPath);
+        if(prefix && std::filesystem::exists(*prefix / "sc-launch.sh"))
+        {
+            // LUG helper installation
+            std::filesystem::path script = *prefix / "sc-launch.sh";
+            LOG_DEBUG(lg) << "startGame() - LUG: " << script;
+            if(!QProcess::startDetached("bash", {QString::fromStdString(script.string())}, QString::fromStdString(prefix->string())))
+                LOG_ERROR(lg) << "startGame() - failed to start " << script;
+            return;
+        }
+
+        QString lutris = QStandardPaths::findExecutable("lutris");
+        if(!lutris.isEmpty())
+        {
+            LOG_DEBUG(lg) << "startGame() - Lutris: " << lutris.toStdString();
+            if(!QProcess::startDetached(lutris, {"lutris:rungame/star-citizen"})) LOG_ERROR(lg) << "startGame() - failed to start lutris";
+            return;
+        }
+
+        LOG_ERROR(lg) << "startGame() - neither sc-launch.sh nor lutris found (RSI Launcher path: " << rsiLauncherInstallPath << ")";
     }
 
    public:
@@ -75,60 +228,40 @@ class UpdateManager
         LOG_DEBUG(lg) << "initialSetup() - Finished";
     }
 
-    void processRequest (Protocol::Massage& request, const Protocol::Massage& response)
+    void processRequest (Protocol::Massage& request, Protocol::Massage& response)
     {
         LOG_DEBUG(lg) << "processRequest() - START";
         Protocol::UpdateButtonPayload updateButtonRequest(request.getModuleNode("UPDATE"));
         Protocol::UpdateButtonPayload updateButtonResponse;
 
-        if(updateButtonRequest.updateButton.updateButtonClicked)
+        if(updateButtonRequest.updateButton.updateButtonClicked.value_or(false))
         {
             makeUpdate(updateButtonResponse);
-        }
-
-        if(backendData.settings.checkboxes.LaunchScAfterTranslation)
-        {
-            startAutoStartAfterUpdate();
+            response.AddModuleNode("UPDATE", updateButtonResponse.toJson());
         }
         LOG_DEBUG(lg) << "processRequest() - FINISHED";
-    }
-
-    void startAutoStartAfterUpdate ()
-    {
-        LOG_DEBUG(lg) << "startAutoStartAfterUpdate() - START";
-
-        bool lutris_installation = true;
-        bool lug_installation = true;
-
-        if(lutris_installation)
-        {
-            chdir(backendData.rsiLauncherInstallPath.string().c_str());
-            LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << backendData.rsiLauncherInstallPath.string().c_str();
-            std::string command = "/usr/bin/lutris lutris:rungame/star-citizen";
-            std::system(command.c_str());
-            chdir(PATHS::ROOT.c_str());
-        }
-
-        if(lug_installation)
-        {
-            std::string bashPath = backendData.rsiLauncherInstallPath.parent_path().parent_path().parent_path().parent_path().string();
-            chdir(bashPath.c_str());
-            LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << bashPath << "/sc-launch.sh";
-            std::string command = "sh " + bashPath + "/sc-launch.sh";
-            std::system(command.c_str());
-            chdir(PATHS::ROOT.c_str());
-        }
-
-        LOG_DEBUG(lg) << "startAutoStartAfterUpdate() - FINISHED";
     }
 
     void makeUpdate (Protocol::UpdateButtonPayload& response)
     {
         LOG_DEBUG(lg) << "makeUpdate() - Start";
+        if(updateRunning.exchange(true))
+        {
+            LOG_DEBUG(lg) << "makeUpdate() - update already running";
+            response.updateButton.busy = true;
+            return;
+        }
+
+        // Work on a copy, the GUI may change backendData while the download is running
+        auto channelData = backendData.channelData;
+        bool launchAfterUpdate = backendData.settings.checkboxes.LaunchScAfterTranslation;
+        auto rsiLauncherInstallPath = backendData.rsiLauncherInstallPath;
+
         std::thread(
-            [this] ()
+            [this, channelData, launchAfterUpdate, rsiLauncherInstallPath] ()
             {
-                for(const auto& [channel, data] : backendData.channelData)
+                bool success = true;
+                for(const auto& [channel, data] : channelData)
                 {
                     if(data.installPath.empty())
                     {
@@ -138,79 +271,42 @@ class UpdateManager
 
                     LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Path: " << data.installPath;
 
-                    if(data.buttonEng.selected)
-                    {
-                        LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Eng-selected";
-
-                        if(std::filesystem::exists(data.installPath / "user.cfg"))
-                        {
-                            std::filesystem::remove(data.installPath / "user.cfg");
-                            LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: user.cfg gelöscht";
-                        }
-                        else
-                        {
-                            LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: user.cfg existiert nicht";
-                        }
-
-                        if(std::filesystem::exists(data.installPath / "data"))
-                        {
-                            std::filesystem::remove_all(data.installPath / "data");
-                            LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: data/ gelöscht";
-                        }
-                        else
-                        {
-                            LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: data/ existiert nicht";
-                        }
-                    }
-                    else if(data.buttonDe.selected)
+                    if(data.buttonDe.selected)
                     {
                         LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: De-selected";
-                        if(!utils::checkDirectoryExist(data.installPath / "data" / "Localization" / "german_(germany)"))
-                            std::filesystem::create_directories(data.installPath / "data" / "Localization" / "german_(germany)");
-
-                        std::ofstream file(data.installPath / "user.cfg");
-                        if(file.is_open())
-                        {
-                            file << "g_language = german_(germany)\n";
-                            file << "g_languageAudio = english\n";
-                            file.close();
-                        }
-                        downloadAndWriteToFile(data.info.server1, data.installPath / "data" / "Localization" / "german_(germany)" / "global.ini");
+                        success &= installGermanTranslation(data.installPath, {data.info.server1, data.info.server1_fallback});
                     }
                     else if(data.buttonDeFull.selected)
                     {
                         LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: DeVoll-selected";
-                        if(!utils::checkDirectoryExist(data.installPath / "data" / "Localization" / "german_(germany)"))
-                            std::filesystem::create_directories(data.installPath / "data" / "Localization" / "german_(germany)");
-
-                        std::ofstream file(data.installPath / "user.cfg");
-                        if(file.is_open())
-                        {
-                            file << "g_language = german_(germany)\n";
-                            file << "g_languageAudio = english\n";
-                            file.close();
-                        }
-
-                        downloadAndWriteToFile(data.info.server1, data.installPath / "data" / "Localization" / "german_(germany)" / "global.ini");
+                        success &= installGermanTranslation(data.installPath, {data.info.server3, data.info.server3_fallback});
                     }
                     else
                     {
+                        LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Eng-selected";
+                        removeGermanTranslation(data.installPath);
                     }
                 }
+
+                if(!success) LOG_ERROR(lg) << "makeUpdate() - at least one channel could not be updated";
+
                 Protocol::UpdateButtonPayload updateUpdateResponse;
                 updateUpdateResponse.updateButton.busy = false;
                 Protocol::Massage response(Protocol::MassageType::Response);
                 response.AddModuleNode("UPDATE", updateUpdateResponse.toJson());
 
+                updateRunning = false;
                 LOG_DEBUG(lg) << "makeUpdate() - FINISHED";
                 if(guiCallback)
                     guiCallback(response.getJson());
                 else
                     LOG_DEBUG(lg) << "makeUpdate() - GuiCallBack nullptr";
+
+                if(launchAfterUpdate) startGame(rsiLauncherInstallPath);
             })
             .detach();
 
-        LOG_DEBUG(lg) << "processAutoSearch() - RUNNING";
+        LOG_DEBUG(lg) << "makeUpdate() - RUNNING";
         response.updateButton.busy = true;
     }
 
@@ -218,9 +314,13 @@ class UpdateManager
     {
         Protocol::UpdateButtonPayload updateButtonResponse;
 
-        if(true)
+        updateButtonResponse.updateButton.enabled = true;
+        if(updateRunning)
         {
-            updateButtonResponse.updateButton.enabled = true;
+            // Keep the button blocked until the running update reports back
+            updateButtonResponse.updateButton.busy = true;
+            response.AddModuleNode("UPDATE", updateButtonResponse.toJson());
+            return;
         }
         updateButtonResponse.updateButton.active = backendData.anyChannelPathSet;
         updateButtonResponse.updateButton.LaunchScAfterTranslation = backendData.settings.checkboxes.LaunchScAfterTranslation;

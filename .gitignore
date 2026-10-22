@@ -12,3 +12,5 @@ resources/settings/vecteezy_gear-silhouette-icon_.eps
 *.eps
 
 release/
+
+.cache/
