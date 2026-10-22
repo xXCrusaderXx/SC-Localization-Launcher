@@ -131,7 +131,7 @@ class BackendTest : public QObject
             QCOMPARE(state.channels[i].installPath, std::string());
             QCOMPARE(state.channels[i].language, Protocol::ENGLISH);
         }
-        QCOMPARE(nlohmann::json(state.options), nlohmann::json(Protocol::Options{}));
+        QCOMPARE(jsonText(state.options), jsonText(Protocol::Options{}));
         QVERIFY(state.update == UpdateStatus::Idle);
     }
 
@@ -149,8 +149,8 @@ class BackendTest : public QObject
         // Written to the new location in the new format right away; the old file stays untouched
         auto file = readSettingsFile();
         QVERIFY(!file.contains("settings"));
-        QCOMPARE(file["channels"]["LIVE"]["language"], "de-full");
-        QCOMPARE(file["options"]["launchGameAfterUpdate"], true);
+        QCOMPARE(jsonText(file["channels"]["LIVE"]["language"]), jsonText("de-full"));
+        QCOMPARE(jsonText(file["options"]["launchGameAfterUpdate"]), jsonText(true));
         QVERIFY(std::filesystem::exists(PATHS::JSON_FILES::SETTINGS_LEGACY));
     }
 
@@ -163,7 +163,7 @@ class BackendTest : public QObject
         QCOMPARE(languageCodes(state), (Codes{"en", "de", "de-full", "fr"}));
         // Every translation carries its credit, English as the original text has none
         QCOMPARE(state.languages[0].credit.project, std::string());
-        for(size_t i = 1; i < state.languages.size(); ++i) QCOMPARE(nlohmann::json(state.languages[i].credit), testCredit());
+        for(size_t i = 1; i < state.languages.size(); ++i) QCOMPARE(jsonText(state.languages[i].credit), jsonText(testCredit()));
         QCOMPARE(channel(state, "LIVE").availableLanguages, (Codes{"en", "de", "de-full", "fr"}));
         QCOMPARE(channel(state, "PTU").availableLanguages, Codes{"en"});
         QCOMPARE(channel(state, "EPTU").availableLanguages, (Codes{"en", "fr"}));
@@ -256,7 +256,7 @@ class BackendTest : public QObject
         // The choice is kept and shown, even though PTU has no German source right now
         QVERIFY(setLanguage("PTU", "de"));
         QVERIFY(channel(latest(), "PTU").availableLanguages == Codes{"en"});
-        QCOMPARE(readSettingsFile()["channels"]["PTU"]["language"], "de");
+        QCOMPARE(jsonText(readSettingsFile()["channels"]["PTU"]["language"]), jsonText("de"));
 
         // Nothing else to update, so the update does not even start, and nothing is removed
         backEnd->execute(Protocol::StartUpdate{});
