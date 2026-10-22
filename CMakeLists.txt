@@ -1,85 +1,95 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
 message(STATUS "#### StarCitizen-Launcher ####")
-project(SC-Deutsch-Launcher)
+project(SC-Deutsch-Launcher VERSION 0.1.0 LANGUAGES CXX)
 
 set(SC_LAUNCHER_BINARY ${PROJECT_NAME})
-set(SC_LAUNCHER_APPIMAGE "${PROJECT_NAME}-AppImage")
-set(SC_LAUNCHER_FLATPAK "${PROJECT_NAME}-Flatpak")
+set(SC_APP_ID "io.github.xXCrusaderXx.StarCitizenDeutschLinux")
 
-set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/release" CACHE PATH "Install path prefix." FORCE)
+option(SC_BUILD_APPIMAGE "Add the 'appimage' target to the default build" OFF)
+# ON:  FHS layout for distro packages and Flatpak (bin/, share/applications, share/icons, share/metainfo)
+# OFF: portable layout in release/ (bin/ with local/settings.json next to the binary)
+option(SC_SYSTEM_INSTALL "Install with the FHS layout used by distro packages and Flatpak" OFF)
 
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
-find_package(nlohmann_json REQUIRED)
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND NOT SC_SYSTEM_INSTALL)
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/release" CACHE PATH "Install path prefix." FORCE)
+endif()
+include(GNUInstallDirs)
+
+# 6.4 is the oldest Qt shipped by current LTS distributions (Ubuntu 24.04, Debian 12)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Quick)
+message(STATUS "Using Qt ${Qt6_VERSION}")
+if(QT_KNOWN_POLICY_QTP0004)
+  qt_policy(SET QTP0004 NEW)
+endif()
+
+# 3.11 brings NLOHMANN_DEFINE_TYPE_*_WITH_DEFAULT; older distros (Ubuntu 22.04) get it downloaded
+# Version is checked by hand: some setups only allow find_package() without a version request
+find_package(nlohmann_json QUIET)
+if(NOT nlohmann_json_FOUND OR nlohmann_json_VERSION VERSION_LESS 3.11)
+  message(STATUS "nlohmann_json >= 3.11 not found, downloading it")
+  include(FetchContent)
+  FetchContent_Declare(nlohmann_json
+    URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+    URL_HASH SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
+  )
+  FetchContent_MakeAvailable(nlohmann_json)
+endif()
 find_package(CURL REQUIRED)
-
-set(INCLUDES
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-
-qt_wrap_cpp(MOC_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/include/MainWindow.hpp)
-qt_wrap_cpp(MOC_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/Update/Update.hpp)
-qt_wrap_cpp(MOC_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/Settings/Settings.hpp)
-qt_wrap_cpp(MOC_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/Settings/SettingsWindow.hpp)
-
-set(SOURCES
-  ${MOC_SRCS}
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/MainWindow.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/frontend/Settings/SettingsWindow.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/frontend/Settings/Settings.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/resources/resources.qrc
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/logging/logger/custom_logger/custom_logger.cpp
-
-)
 
 #############################################################
 # --- BINARY ---
 #############################################################
 
-add_executable(${SC_LAUNCHER_BINARY} ${SOURCES})
+add_executable(${SC_LAUNCHER_BINARY}
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/BackendBridge.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/logging/logger/custom_logger/custom_logger.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/resources/resources.qrc
+)
 
-target_link_libraries(${SC_LAUNCHER_BINARY}
-  Qt5::Widgets
-  nlohmann_json
+set(SC_QML_FILES
+  qml/Main.qml
+  qml/ChannelRow.qml
+  qml/LangSwitch.qml
+  qml/IconButton.qml
+  qml/PathRow.qml
+  qml/SettingsPanel.qml
+  qml/Theme.qml
+  qml/Toggle.qml
+)
+# Drop the qml/ folder from the resource path, so Main.qml is at qrc:/qt/qml/SCLauncher/Main.qml
+foreach(qml_file ${SC_QML_FILES})
+  get_filename_component(qml_name ${qml_file} NAME)
+  set_source_files_properties(${qml_file} PROPERTIES QT_RESOURCE_ALIAS ${qml_name})
+endforeach()
+set_source_files_properties(qml/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+qt_add_qml_module(${SC_LAUNCHER_BINARY}
+  URI SCLauncher
+  VERSION 1.0
+  # Fixed prefix, so main.cpp finds Main.qml on every Qt version
+  RESOURCE_PREFIX /qt/qml
+  QML_FILES ${SC_QML_FILES}
+)
+
+target_link_libraries(${SC_LAUNCHER_BINARY} PRIVATE
+  Qt6::Quick
+  nlohmann_json::nlohmann_json
   CURL::libcurl
 )
 
 target_include_directories(${SC_LAUNCHER_BINARY} PRIVATE
-  ${INCLUDES}
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-qt5_add_resources(RESOURCES resources/resources.qrc)
-target_sources(${SC_LAUNCHER_BINARY} PRIVATE ${RESOURCES})
-
-configure_file(
-  "${CMAKE_SOURCE_DIR}/resources/logo.png"
-  "${CMAKE_BINARY_DIR}/resources/logo.png"
-  COPYONLY
-)
-
-configure_file(
-  "${CMAKE_SOURCE_DIR}/resources/sc-deutsch.png"
-  "${CMAKE_BINARY_DIR}/resources/sc-deutsch.png"
-  COPYONLY
-)
-
-configure_file(
-  "${CMAKE_SOURCE_DIR}/resources/background2_main.png"
-  "${CMAKE_BINARY_DIR}/resources/background2_main.png"
-  COPYONLY
-)
-configure_file(
-  "${CMAKE_SOURCE_DIR}/resources/background2_settings.png"
-  "${CMAKE_BINARY_DIR}/resources/background2_settings.png"
-  COPYONLY
+target_compile_definitions(${SC_LAUNCHER_BINARY} PRIVATE
+  SC_APP_ID="${SC_APP_ID}"
+  SC_VERSION="${PROJECT_VERSION}"
 )
 
 configure_file(
@@ -88,131 +98,152 @@ configure_file(
   COPYONLY
 )
 
-configure_file(
-  "${CMAKE_SOURCE_DIR}/misc/starcitizen-launcher.desktop"
-  "${CMAKE_BINARY_DIR}/starcitizen-launcher.desktop"
-  COPYONLY
-)
+option(SC_BUILD_TESTS "Build the backend and GUI tests (run with ctest)" OFF)
+if(SC_BUILD_TESTS)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
 
-install(TARGETS ${SC_LAUNCHER_BINARY} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+set(SC_DESKTOP_FILE "${CMAKE_SOURCE_DIR}/misc/starcitizen-launcher.desktop")
+set(SC_ICON_FILE "${CMAKE_SOURCE_DIR}/resources/icon.png")
+set(SC_METAINFO_FILE "${CMAKE_SOURCE_DIR}/packaging/${SC_APP_ID}.metainfo.xml")
 
-install(FILES
-  "${CMAKE_SOURCE_DIR}/resources/logo.png"
-  "${CMAKE_SOURCE_DIR}/resources/sc-deutsch.png"
-  "${CMAKE_SOURCE_DIR}/resources/background2_main.png"
-  "${CMAKE_SOURCE_DIR}/resources/background2_settings.png"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/resources
-)
+#############################################################
+# --- INSTALL ---
+#############################################################
 
-install(FILES
-  "${CMAKE_SOURCE_DIR}/misc/settings.json"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/local
-)
-
-install(FILES
-  "${CMAKE_SOURCE_DIR}/misc/starcitizen-launcher.desktop"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)
+if(SC_SYSTEM_INSTALL)
+  install(TARGETS ${SC_LAUNCHER_BINARY} DESTINATION ${CMAKE_INSTALL_BINDIR})
+  install(FILES ${SC_DESKTOP_FILE} DESTINATION ${CMAKE_INSTALL_DATADIR}/applications RENAME ${SC_APP_ID}.desktop)
+  install(FILES ${SC_ICON_FILE} DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps RENAME ${SC_APP_ID}.png)
+  install(FILES ${SC_METAINFO_FILE} DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+  if(EXISTS "${CMAKE_SOURCE_DIR}/LICENSE")
+    install(FILES "${CMAKE_SOURCE_DIR}/LICENSE" DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/${PROJECT_NAME})
+  endif()
+else()
+  install(TARGETS ${SC_LAUNCHER_BINARY} DESTINATION bin)
+  install(FILES "${CMAKE_SOURCE_DIR}/misc/settings.json" DESTINATION bin/local)
+  install(FILES ${SC_DESKTOP_FILE} DESTINATION bin)
+endif()
 
 #############################################################
 # --- APPIMAGE ---
 #############################################################
+# linuxdeploy copies the binary and all libraries it needs, including Qt and its QML modules,
+# so the AppImage runs without Qt installed. For broad glibc compatibility build it on an old
+# distro (the CI uses Ubuntu 22.04). At runtime paths.hpp finds the AppDir via $APPDIR.
 
-add_executable(${SC_LAUNCHER_APPIMAGE} ${SOURCES})
-target_link_libraries(${SC_LAUNCHER_APPIMAGE}
-  Qt5::Widgets
-  nlohmann_json
-  CURL::libcurl
-)
+set(APPIMAGE_FILE ${CMAKE_BINARY_DIR}/${PROJECT_NAME}-x86_64.AppImage)
 
-target_include_directories(${SC_LAUNCHER_APPIMAGE} PRIVATE
-  ${INCLUDES}
-)
+# linuxdeploy-plugin-qt needs qmake; distro builds without it simply get no appimage target
+if(NOT TARGET Qt6::qmake)
+  message(STATUS "qmake not found, the appimage target is not available")
+else()
+  set(APPDIR ${CMAKE_BINARY_DIR}/AppDir)
+  set(TOOLS_DIR ${CMAKE_BINARY_DIR}/tools)
+  set(LINUXDEPLOY ${TOOLS_DIR}/linuxdeploy-x86_64.AppImage)
+  set(LINUXDEPLOY_QT ${TOOLS_DIR}/linuxdeploy-plugin-qt-x86_64.AppImage)
 
-qt5_add_resources(RESOURCES resources/resources.qrc)
-target_sources(${SC_LAUNCHER_APPIMAGE} PRIVATE ${RESOURCES})
+  set(LINUXDEPLOY_URL "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
+      CACHE STRING "Download URL for linuxdeploy")
+  set(LINUXDEPLOY_QT_URL "https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage"
+      CACHE STRING "Download URL for linuxdeploy-plugin-qt")
 
-target_compile_definitions(${SC_LAUNCHER_APPIMAGE} PRIVATE APPIMAGE)
-
-# AppDir Pfade
-set(APPDIR ${CMAKE_BINARY_DIR}/${SC_LAUNCHER_APPIMAGE}.AppDir)
-set(APPDIR_BIN ${APPDIR}/usr/bin)
-set(APPDIR_ICON_DIR ${APPDIR}/usr/share/icons/hicolor/256x256/apps)
-set(APP_DESKTOP ${APPDIR}/${SC_LAUNCHER_APPIMAGE}.desktop)
-set(APP_ICON ${CMAKE_BINARY_DIR}/resources/logo.png)
-set(APP_SETTINGS ${CMAKE_BINARY_DIR}/local/settings.json)
-
-# Ressourcenliste
-list(APPEND APP_RESOURCES
-  ${CMAKE_BINARY_DIR}/resources/logo.png
-  ${CMAKE_BINARY_DIR}/resources/sc-deutsch.png
-  ${CMAKE_BINARY_DIR}/resources/background2_main.png
-  ${CMAKE_BINARY_DIR}/resources/background2_settings.png
-)
-
-file(WRITE ${APP_DESKTOP}
-  "[Desktop Entry]\n"
-  "Name=${SC_LAUNCHER_APPIMAGE}\n"
-  "Exec=${SC_LAUNCHER_APPIMAGE}\n"
-  "Icon=${SC_LAUNCHER_APPIMAGE}\n"
-  "Type=Application\n"
-  "Categories=Utility;\n"
-)
-
-set(LINUXDEPLOY ${CMAKE_SOURCE_DIR}/misc/linuxdeploy-x86_64.appimage)
-set(LINUXDEPLOY_QT_PLUGIN ${CMAKE_SOURCE_DIR}/misc/linuxdeploy-plugin-qt-x86_64.appimage)
-set(APPIMAGETOOL ${CMAKE_SOURCE_DIR}/misc/appimagetool-x86_64.appimage)
-
-add_custom_target(appimage_prepare
-  DEPENDS ${SC_LAUNCHER_APPIMAGE}
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${APPDIR_BIN}
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${APPDIR}/resources
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${APPDIR}/local
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${APPDIR_ICON_DIR}
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${SC_LAUNCHER_APPIMAGE}> ${APPDIR_BIN}/
-  COMMAND ${CMAKE_COMMAND} -E create_symlink usr/bin/${SC_LAUNCHER_APPIMAGE} ${APPDIR}/AppRun
-  COMMAND ${CMAKE_COMMAND} -E copy ${APP_SETTINGS} ${APPDIR}/local/settings.json
-  COMMAND ${CMAKE_COMMAND} -E copy ${APP_ICON} ${APPDIR_ICON_DIR}/${SC_LAUNCHER_APPIMAGE}.png
-  COMMAND ${CMAKE_COMMAND} -E copy ${APP_ICON} ${APPDIR}/${SC_LAUNCHER_APPIMAGE}.png
-  COMMAND ${CMAKE_COMMAND} -E copy ${APP_RESOURCES} ${APPDIR}/resources/
-  COMMENT "Prepare AppDir for AppImage"
-)
-
-add_custom_target(appimage ALL
-  DEPENDS appimage_prepare ${SC_LAUNCHER_APPIMAGE}
-  COMMAND chmod +x ${APPIMAGETOOL}
-  COMMAND ${CMAKE_COMMAND} -E env ARCH=x86_64 DISABLE_STRIP=1 ${APPIMAGETOOL} ${APPDIR}
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-  COMMENT "Create AppImage"
-)
-
-install(FILES
-  "${CMAKE_BINARY_DIR}/${SC_LAUNCHER_APPIMAGE}-x86_64.AppImage"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/appimage
-)
-install(CODE "
-  file(RENAME
-    \"${CMAKE_INSTALL_PREFIX}/appimage/${SC_LAUNCHER_APPIMAGE}-x86_64.AppImage\"
-    \"${CMAKE_INSTALL_PREFIX}/appimage/${PROJECT_NAME}.AppImage\"
+  add_custom_command(
+    OUTPUT ${LINUXDEPLOY}
+    COMMAND ${CMAKE_COMMAND} -DURL=${LINUXDEPLOY_URL} -DDEST=${LINUXDEPLOY} -P ${CMAKE_SOURCE_DIR}/misc/download.cmake
+    COMMENT "Download linuxdeploy"
   )
-")
+  add_custom_command(
+    OUTPUT ${LINUXDEPLOY_QT}
+    COMMAND ${CMAKE_COMMAND} -DURL=${LINUXDEPLOY_QT_URL} -DDEST=${LINUXDEPLOY_QT} -P ${CMAKE_SOURCE_DIR}/misc/download.cmake
+    COMMENT "Download linuxdeploy-plugin-qt"
+  )
 
-install(FILES
-  "${CMAKE_SOURCE_DIR}/misc/AppImageIntegration.sh"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/appimage
-)
+  if(SC_BUILD_APPIMAGE)
+    set(APPIMAGE_ALL ALL)
+  endif()
 
-install(FILES
-  "${CMAKE_SOURCE_DIR}/misc/install.sh"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/appimage
-)
+  # The Wayland platform plugin is libqwayland.so since Qt 6.10, libqwayland-{generic,egl}.so before
+  get_target_property(SC_QMAKE Qt6::qmake IMPORTED_LOCATION)
+  execute_process(COMMAND ${SC_QMAKE} -query QT_INSTALL_PLUGINS OUTPUT_VARIABLE SC_QT_PLUGIN_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+  file(GLOB SC_WAYLAND_PLUGINS RELATIVE ${SC_QT_PLUGIN_DIR}/platforms ${SC_QT_PLUGIN_DIR}/platforms/libqwayland*.so)
+  string(JOIN "$<SEMICOLON>" SC_WAYLAND_PLUGINS ${SC_WAYLAND_PLUGINS})
 
-install(FILES
-  "${CMAKE_SOURCE_DIR}/misc/uninstall.sh"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/appimage
-)
+  # Qt 6 links the GLVND dispatcher libOpenGL.so.0, which linuxdeploy treats as a system library.
+  # Minimal installs often lack it; it only dispatches to the system's GL driver, so bundling it is safe.
+  find_library(SC_LIBOPENGL NAMES libOpenGL.so.0 OpenGL)
+  if(SC_LIBOPENGL)
+    set(SC_LINUXDEPLOY_EXTRA_LIBS --library ${SC_LIBOPENGL})
+  endif()
 
-install(FILES
-  "${CMAKE_SOURCE_DIR}/resources/logo.png"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/appimage
-)
+  add_custom_target(appimage ${APPIMAGE_ALL}
+    DEPENDS ${SC_LAUNCHER_BINARY} ${LINUXDEPLOY} ${LINUXDEPLOY_QT}
+    COMMAND ${CMAKE_COMMAND} -E rm -rf ${APPDIR}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${APPDIR}/local
+    COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/misc/settings.json ${APPDIR}/local/settings.json
+    # linuxdeploy needs the icon file named like the desktop file's Icon= entry
+    COMMAND ${CMAKE_COMMAND} -E copy ${SC_ICON_FILE} ${TOOLS_DIR}/${SC_APP_ID}.png
+    COMMAND ${CMAKE_COMMAND} -E copy ${SC_DESKTOP_FILE} ${TOOLS_DIR}/${SC_APP_ID}.desktop
+    COMMAND ${CMAKE_COMMAND} -E env
+              ARCH=x86_64
+              APPIMAGE_EXTRACT_AND_RUN=1
+              QMAKE=$<TARGET_FILE:Qt6::qmake>
+              QML_SOURCES_PATHS=${CMAKE_SOURCE_DIR}/qml
+              EXTRA_PLATFORM_PLUGINS=${SC_WAYLAND_PLUGINS}
+              EXTRA_QT_MODULES=waylandclient
+              LDAI_OUTPUT=${APPIMAGE_FILE}
+            ${LINUXDEPLOY}
+              --appdir ${APPDIR}
+              --executable $<TARGET_FILE:${SC_LAUNCHER_BINARY}>
+              --desktop-file ${TOOLS_DIR}/${SC_APP_ID}.desktop
+              --icon-file ${TOOLS_DIR}/${SC_APP_ID}.png
+              ${SC_LINUXDEPLOY_EXTRA_LIBS}
+              --plugin qt
+              --output appimage
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Create AppImage"
+    VERBATIM
+  )
+endif()
+
+if(NOT SC_SYSTEM_INSTALL)
+  # The AppImage is only installed when it was built (cmake --build . --target appimage)
+  install(FILES ${APPIMAGE_FILE} DESTINATION appimage RENAME ${PROJECT_NAME}.AppImage OPTIONAL)
+  install(FILES
+    "${CMAKE_SOURCE_DIR}/misc/AppImageIntegration.sh"
+    "${CMAKE_SOURCE_DIR}/misc/install.sh"
+    "${CMAKE_SOURCE_DIR}/misc/uninstall.sh"
+    "${CMAKE_SOURCE_DIR}/resources/logo.png"
+    DESTINATION appimage
+  )
+endif()
+
+#############################################################
+# --- DEB / RPM (cpack) ---
+#############################################################
+# cmake -B build -DSC_SYSTEM_INSTALL=ON -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build
+# cd build && cpack -G DEB   (or -G RPM)
+
+set(CPACK_PACKAGE_NAME "sc-deutsch-launcher")
+set(CPACK_PACKAGE_VENDOR "Marko Klein")
+set(CPACK_PACKAGE_CONTACT "Marko Klein <55139200+xXCrusaderXx@users.noreply.github.com>")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Deutsche Übersetzung für Star Citizen unter Linux")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/xXCrusaderXx/StarCitizenDeutschLinux")
+set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
+set(CPACK_STRIP_FILES ON)
+
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+set(CPACK_DEBIAN_PACKAGE_SECTION "games")
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+# QML modules are loaded at runtime, shlibdeps cannot see them
+set(CPACK_DEBIAN_PACKAGE_DEPENDS
+  "qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-dialogs, qml6-module-qtquick-layouts, qml6-module-qtquick-templates, qml6-module-qtquick-window, qml6-module-qtqml-workerscript, qt6-wayland")
+
+set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
+set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-or-later")
+set(CPACK_RPM_PACKAGE_GROUP "Amusements/Games")
+set(CPACK_RPM_PACKAGE_AUTOREQ ON)
+set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtdeclarative, qt6-qtwayland")
+
+include(CPack)
