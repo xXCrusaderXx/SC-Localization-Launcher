@@ -94,12 +94,14 @@ jobs:
           SC_VERSION_OVERRIDE: ${{ needs.version.outputs.version }}
         run: bash packaging/appimage/build.sh "$GITHUB_WORKSPACE"
 
-      - name: Rename
+      # Already named for the release: the .zsync file refers to the AppImage by this name
+      - name: Collect
         env:
           VERSION: ${{ needs.version.outputs.version }}
         run: |
           mkdir dist
-          mv build-appimage/SC-Localization-Launcher-x86_64.AppImage "dist/SC-Localization-Launcher-$VERSION-x86_64.AppImage"
+          mv "build-appimage/SC-Localization-Launcher-$VERSION-x86_64.AppImage" \
+             "build-appimage/SC-Localization-Launcher-$VERSION-x86_64.AppImage.zsync" dist/
 
       - uses: actions/upload-artifact@v7
         with:
@@ -224,7 +226,7 @@ jobs:
 
       - name: Install and start
         run: |
-          package="$(ls "$PWD"/pkg/*)"
+          package="$(find "$PWD/pkg" -type f ! -name '*.zsync' | head -n 1)"
           chmod +x "$package"
           bash packaging/${{ matrix.script }} "$package" "$PWD/screenshot.png"
 
@@ -244,17 +246,52 @@ jobs:
     permissions:
       contents: write
     steps:
+      # For packaging/minisign.pub
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
       - uses: actions/download-artifact@v8
         with:
           path: artifacts
 
-      # Only the packages, not the test screenshots
+      # Only the packages and the AppImage update file, not the test screenshots
       - name: Collect packages
         run: |
           mkdir dist
-          find artifacts -type f \( -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' -o -name '*.pkg.tar.zst' -o -name '*.flatpak' \) \
-            -exec mv {} dist/ \;
+          find artifacts -type f \( -name '*.AppImage' -o -name '*.AppImage.zsync' -o -name '*.deb' -o -name '*.rpm' \
+            -o -name '*.pkg.tar.zst' -o -name '*.flatpak' \) -exec mv {} dist/ \;
           ls -la dist
+
+      - name: Install minisign
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends minisign
+
+      # The launcher's self-update trusts a release only through this signature, so never publish without it
+      - name: Checksums and signature
+        env:
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -z "$MINISIGN_SECRET_KEY" ]; then
+            echo "::error::Secret MINISIGN_SECRET_KEY is missing; releases are only published signed"
+            exit 1
+          fi
+          key="$RUNNER_TEMP/minisign.key"
+          (umask 077 && printf '%s\n' "$MINISIGN_SECRET_KEY" > "$key")
+          trap 'rm -f "$key"' EXIT
+
+          cd dist
+          sha256sum -- * > SHA256SUMS
+          minisign -S -s "$key" -m SHA256SUMS -t "sc-localization-launcher v$VERSION"
+
+          # Catches a secret that does not belong to the public key the launcher ships
+          if [ -f "$GITHUB_WORKSPACE/packaging/minisign.pub" ]; then
+            minisign -V -p "$GITHUB_WORKSPACE/packaging/minisign.pub" -m SHA256SUMS
+          else
+            echo "::warning::packaging/minisign.pub not found, the signature was not checked against it"
+          fi
 
       # For a tag push the tag exists; otherwise gh creates it on the commit that was built
       - name: Create GitHub Release
@@ -269,5 +306,4 @@ jobs:
           args=(--title "$tag" --target "$GITHUB_SHA")
           if [[ "$VERSION" == *-* ]]; then args+=(--prerelease); fi
           if [ -n "$NOTES" ]; then args+=(--notes "$NOTES"); else args+=(--generate-notes); fi
-          (cd dist && sha256sum -- * > SHA256SUMS)
           gh release create "$tag" "${args[@]}" dist/*
