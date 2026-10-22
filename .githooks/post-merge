@@ -1,0 +1,28 @@
+#!/bin/sh
+# After `git pull`, deletes local branches whose remote branch is gone (merged
+# PRs; the remote branch is deleted by the "Clean up merged branches"
+# workflow). A worktree that has such a branch checked out is removed too, but
+# only when it has no uncommitted or untracked changes. Nothing else is touched.
+# Enable once with: git config core.hooksPath .githooks && git config fetch.prune true
+git fetch --prune --quiet 2>/dev/null || true
+
+current="$(git symbolic-ref --quiet --short HEAD)"
+git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads |
+    while read -r branch track; do
+        [ "$track" = "[gone]" ] || continue
+        [ "$branch" = "$current" ] && continue
+        # Path of a worktree that has this branch checked out, if any
+        worktree="$(git worktree list --porcelain | awk -v ref="refs/heads/$branch" '
+            /^worktree / { path = substr($0, 10) }
+            $0 == "branch " ref { print path }')"
+        if [ -n "$worktree" ]; then
+            if [ -n "$(git -C "$worktree" status --porcelain 2>/dev/null)" ]; then
+                echo "post-merge: kept $branch, its worktree $worktree has changes" >&2
+                continue
+            fi
+            git worktree remove "$worktree" && echo "post-merge: removed worktree $worktree"
+        fi
+        git branch -D "$branch" >/dev/null && echo "post-merge: deleted merged branch $branch"
+    done
+git worktree prune
+exit 0
