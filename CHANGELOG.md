@@ -33,3 +33,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - If a chosen language is temporarily not offered for a channel, updates skip that channel instead of removing the installed translation.
 - When switching languages, the previous language's folder is removed only after the new download succeeded.
+- Only one launcher runs at a time; starting it again brings the open window to the front instead of running two launchers that write the same settings and game folders.
