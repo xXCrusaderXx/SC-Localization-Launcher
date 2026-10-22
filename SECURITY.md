@@ -6,7 +6,7 @@ Only the latest release gets security fixes.
 
 ## Reporting a vulnerability
 
-Please **don't** open a public issue for security problems. Use [GitHub private vulnerability reporting](https://github.com/xXCrusaderXx/StarCitizenDeutschLinux/security/advisories/new) instead. It creates a private advisory that only the maintainers can see.
+Please **don't** open a public issue for security problems. Use [GitHub private vulnerability reporting](https://github.com/xXCrusaderXx/SC-Localization-Launcher/security/advisories/new) instead. It creates a private advisory that only the maintainers can see.
 
 Relevant topics include:
 
@@ -21,4 +21,4 @@ You will get a first answer within 7 days. Please give us a reasonable amount of
 
 ## Everything else
 
-Use a public [issue](https://github.com/xXCrusaderXx/StarCitizenDeutschLinux/issues) for ordinary bugs, feature requests, and documentation problems.
+Use a public [issue](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues) for ordinary bugs, feature requests, and documentation problems.

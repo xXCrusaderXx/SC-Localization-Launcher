@@ -1,8 +1,10 @@
-# Contributing to StarCitizen Deutsch Launcher
+# Contributing to SC Localization Launcher
 
 Thanks for helping out! Please read [LEGAL.md](LEGAL.md) before you contribute. It says which material must not end up in this repository.
 
-Translation texts are **not** maintained here. Wrong or missing German texts belong in [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI).
+Translation texts are **not** maintained here. Each language is maintained by its own community project. Wrong or missing German texts, for example, belong in [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI). This repository only *lists* translations, in [`languages.json`](languages.json).
+
+What is planned next is in the [roadmap](ROADMAP.md). It is open for additions.
 
 ---
 
@@ -33,6 +35,73 @@ You may use AI coding tools. The rules:
 ## Licensing of contributions
 
 By contributing, you agree that your contribution is licensed under the [GNU General Public License v3.0 or later](LICENSE). No separate CLA is needed.
+
+---
+
+## Ways to contribute
+
+- **Add a game language:** see [Adding a game language](#adding-a-game-language). This needs no C++.
+- **Translate the launcher's interface:** see [Translating the interface](#translating-the-interface).
+- **Code, packaging, docs:** pick an issue from a [milestone](https://github.com/xXCrusaderXx/SC-Localization-Launcher/milestones) or propose something new with a [roadmap proposal](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=roadmap_proposal.yml).
+
+### Adding a game language
+
+Game languages are listed in [`languages.json`](languages.json) in the repository root. The launcher downloads this file from `main` (with a cached and a built-in copy as fallback), so **a merged language reaches users without a new release**.
+
+```json
+{
+    "version": 1,
+    "languages": [
+        {
+            "code": "fr",
+            "name": "Français",
+            "folder": "french_(france)",
+            "source": {
+                "channels": {
+                    "LIVE": ["https://raw.githubusercontent.com/<project>/main/live/global.ini",
+                             "https://<mirror>/live/global.ini"],
+                    "PTU":  ["https://raw.githubusercontent.com/<project>/main/ptu/global.ini"]
+                }
+            },
+            "credit": {
+                "project": "<project name>",
+                "authors": "<maintainers, as they want to be credited>",
+                "url": "https://github.com/<project>",
+                "license": "CC BY-NC-SA 4.0",
+                "licenseUrl": "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+            }
+        }
+    ]
+}
+```
+
+| Field | Meaning |
+| ----- | ------- |
+| `code` | Unique, lowercase BCP-47 style (`fr`, `es`, `pl`, `de-ch`). `en` is reserved for the original English text. |
+| `name` | Written in the language itself (`Français`, `Español`). Shown as-is in the language picker. |
+| `folder` | The game's localization folder that the `global.ini` goes into and that `g_language` in `user.cfg` points to, e.g. `french_(france)`, `spanish_(spain)`, `italian_(italy)`, `polish_(poland)`, `portuguese_(brazil)`, `german_(germany)`. Check that the game accepts the folder name. |
+| `credit` | Required. Shown under the language in the picker and in the settings. `project`, `authors` and `license` must not be empty, `url` (the project page) must use HTTPS, `licenseUrl` is optional and must use HTTPS if set. |
+| `source` | Either `channels`: per channel (`LIVE`, `HOTFIX`, `PTU`, `TECH-PREVIEW`, `EPTU`) a list of HTTPS URLs, primary first, then fallbacks; channels that are missing are not offered for this language. Or `channelList` + `server`: a channel list in the format the German project uses; the launcher takes `<server>` and `<server>_fallback` of each channel and respects its `active` flag. |
+
+Rules for a new language:
+
+1. The URLs point to files that the **translation's own maintainers publish**. We never host translation files and never mirror them into this repository.
+2. The translation's license must allow downloading it this way. Name the license, the project, and the maintainers in the PR. Use the [new language](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=new_language.yml) template if you'd rather not edit the file yourself.
+3. All URLs use HTTPS.
+4. Test the language in the game (at least LIVE) before you open the PR.
+
+The launcher checks every entry when it loads the file. An invalid entry is skipped with an error in the log; all other languages still load. An entry is valid when:
+
+- `code` is not empty, unique, and not `en`;
+- `name` is not empty;
+- `folder` contains only letters, digits, `_`, `(`, `)` and `-` (no slashes or dots: it becomes a folder name inside the game directory);
+- `source` has exactly one of `channels` or `channelList`;
+- `credit` is complete (see the table above);
+- every URL uses HTTPS. A `channels` language without any usable URL is dropped.
+
+### Translating the interface
+
+The launcher's own interface is English by default and follows the system language. Translations live in `translations/*.ts` (Qt Linguist). To add one, copy an existing `.ts` file, change its `language` attribute, translate it with Qt Linguist (`linguist`), and register it in `CMakeLists.txt` next to the existing ones. Strings in QML use `qsTr()`.
 
 ---
 
@@ -69,6 +138,8 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+Optional: `.githooks/pre-push` stops a push when a commit's author or committer email matches a pattern you set locally, so a work or private address never reaches GitHub by accident (Git GUIs often use their own identity). Enable it with `git config core.hooksPath .githooks` and `git config --add hooks.blockedEmail 'example\.com'`. The patterns stay in your local config.
+
 CI checks only the lines your PR changes. To fix them in place, run `git clang-format origin/main`. Don't reformat code you didn't otherwise touch.
 
 To check the AppImage, run `packaging/appimage/build-in-docker.sh`. It builds in Ubuntu 22.04, exactly like the release pipeline.
@@ -92,7 +163,9 @@ To check the AppImage, run `packaging/appimage/build-in-docker.sh`. It builds in
 
 ## Releases
 
-Maintainers cut releases by bumping `project(... VERSION x.y.z)` in `CMakeLists.txt` and `CHANGELOG.md`, then pushing a tag `vx.y.z`. The `Release` workflow builds the AppImage, `.deb`, and `.rpm` and publishes a GitHub Release.
+Releases follow the [roadmap](ROADMAP.md): every phase is a milestone named `vX.Y.Z – Name`. When a maintainer closes the milestone, the `Milestone release` workflow checks that all its issues are closed and runs the `Release` workflow for `X.Y.Z`. That workflow builds and tests every package and publishes GitHub release `vX.Y.Z`, with the milestone's issues and PRs as release notes. The version comes from the milestone title, so no version-bump commit is needed. Before closing a milestone, work through the [release checklist](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=release.yml).
+
+For a release outside a milestone, either run the `Release` workflow by hand with a version (without a version it is a dry run that builds and tests everything but publishes nothing), or set `SC_DEFAULT_VERSION` in `CMakeLists.txt` and push a matching tag `vX.Y.Z`. A version with a suffix (`0.6.0-rc.1`) is published as a pre-release.
 
 ## Conduct
 

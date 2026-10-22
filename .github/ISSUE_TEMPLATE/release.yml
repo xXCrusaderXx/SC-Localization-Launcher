@@ -1,0 +1,26 @@
+name: Release checklist
+description: Maintainers only. Track the last steps before closing a milestone.
+title: "Release vX.Y.Z"
+labels: [release]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: e.g. 0.6.0
+    validations:
+      required: true
+  - type: checkboxes
+    id: steps
+    attributes:
+      label: Before closing the milestone
+      options:
+        - label: Every other issue and PR of the milestone is closed or moved to the next milestone.
+        - label: "`CHANGELOG.md`: `Unreleased` renamed to `[X.Y.Z] - YYYY-MM-DD`, with a fresh empty `Unreleased` section above it."
+        - label: "`ROADMAP.md` reflects what was actually delivered."
+        - label: CI on `main` is green.
+        - label: A manual run of the `Release` workflow (dry run) built and tested all packages.
+  - type: markdown
+    attributes:
+      value: |
+        Close this issue, then close the milestone. The `Milestone release` workflow publishes `vX.Y.Z` with the milestone's issues and PRs as release notes.

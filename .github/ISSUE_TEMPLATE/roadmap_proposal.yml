@@ -1,0 +1,47 @@
+name: Roadmap proposal
+description: Suggest a new feature or a change to the roadmap.
+labels: [roadmap]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The [roadmap](https://github.com/xXCrusaderXx/SC-Localization-Launcher/blob/main/ROADMAP.md) is open for additions. Describe the idea; it is discussed here and then scheduled in a milestone or listed under "Open ideas".
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea
+      description: What should the launcher do, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What problem does it solve? How do players handle it today?
+    validations:
+      required: true
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Fits into phase
+      options:
+        - Not sure / new phase
+        - 0.7.0 Languages & updates
+        - 0.8.0 Background operation
+        - 0.9.0 Item values & strings
+        - 0.10.0 Blueprints
+        - 0.11.0 Tools
+        - 0.12.0 Statistics & dashboard
+        - 1.0.0 Stable
+        - After 1.0.0
+  - type: textarea
+    id: data
+    attributes:
+      label: Data and legal questions
+      description: Does it need data from outside the player's computer (which source, which license)? Does it touch game files beyond `global.ini` and `user.cfg`?
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to work on this myself.

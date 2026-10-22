@@ -1,0 +1,31 @@
+#!/bin/sh
+# Refuses to push commits whose author or committer email matches a pattern in
+# the local git config, so private or work addresses never reach GitHub.
+# The patterns live only in your local config, never in the repository:
+#   git config core.hooksPath .githooks
+#   git config --add hooks.blockedEmail 'example-employer\.com'
+# Skip once with: git push --no-verify
+patterns="$(git config --get-all hooks.blockedEmail)"
+[ -z "$patterns" ] && exit 0
+
+status=0
+while read -r _local_ref local_sha remote_ref remote_sha; do
+    # Deleting a remote ref pushes no commits.
+    case "$local_sha" in *[!0]*) ;; *) continue ;; esac
+    case "$remote_sha" in
+        *[!0]*) range="$remote_sha..$local_sha" ;;
+        *) range="$local_sha --not --remotes" ;;
+    esac
+    # shellcheck disable=SC2086 # range is intentionally split into arguments
+    bad="$(git log --format='%h %ae %ce' $range | grep -E -f /dev/fd/3 3<<PATTERNS
+$patterns
+PATTERNS
+)"
+    if [ -n "$bad" ]; then
+        echo "pre-push: $remote_ref: commits with a blocked email (hooks.blockedEmail):" >&2
+        echo "$bad" >&2
+        echo "Fix the identity (git config user.email, or the profile in your Git GUI) and rewrite these commits." >&2
+        status=1
+    fi
+done
+exit $status

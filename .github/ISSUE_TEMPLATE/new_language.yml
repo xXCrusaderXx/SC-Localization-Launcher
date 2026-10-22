@@ -1,0 +1,74 @@
+name: New game language
+description: Add a community translation of Star Citizen to the launcher.
+labels: [language]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The launcher only **links** to translations, it never hosts them. A language can be added when its translation is published by its maintainers under a license that allows downloading it this way. See [CONTRIBUTING.md](https://github.com/xXCrusaderXx/SC-Localization-Launcher/blob/main/CONTRIBUTING.md#adding-a-game-language) and [LEGAL.md](https://github.com/xXCrusaderXx/SC-Localization-Launcher/blob/main/LEGAL.md).
+        You can also send a pull request that edits `languages.json` directly.
+  - type: input
+    id: name
+    attributes:
+      label: Language name, written in the language itself
+      placeholder: e.g. Français
+    validations:
+      required: true
+  - type: input
+    id: code
+    attributes:
+      label: Language code
+      description: Lowercase BCP-47 style, unique. `en` is reserved.
+      placeholder: e.g. fr, es, pl, de-ch
+    validations:
+      required: true
+  - type: input
+    id: folder
+    attributes:
+      label: Star Citizen localization folder
+      description: The folder under `data/Localization/` that `g_language` points to. Check that the game accepts it.
+      placeholder: e.g. french_(france)
+    validations:
+      required: true
+  - type: input
+    id: project
+    attributes:
+      label: Translation project
+      description: Link to the repository or website where the translation is maintained.
+      placeholder: https://github.com/…
+    validations:
+      required: true
+  - type: input
+    id: maintainers
+    attributes:
+      label: Maintainers / authors
+      description: Who maintains the translation? Name or team, exactly as they want to be credited in the launcher (`credit.authors`).
+    validations:
+      required: true
+  - type: input
+    id: license
+    attributes:
+      label: License of the translation
+      description: License name and a link to its text (`credit.license`, `credit.licenseUrl`). Where does the project state it (LICENSE file, README)?
+      placeholder: e.g. CC-BY-NC-SA-4.0
+    validations:
+      required: true
+  - type: textarea
+    id: urls
+    attributes:
+      label: Download URLs per channel
+      description: HTTPS links to the `global.ini` of each channel (primary and optional fallback). Leave out channels that have no translation.
+      placeholder: |
+        LIVE: https://raw.githubusercontent.com/…/live/global.ini
+        PTU:  https://raw.githubusercontent.com/…/ptu/global.ini
+      render: text
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: The translation's maintainers publish these files themselves, and their license allows the launcher to download them.
+          required: true
+        - label: I tested the files in the game (LIVE at least).
