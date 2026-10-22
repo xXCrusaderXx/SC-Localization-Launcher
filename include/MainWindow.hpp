@@ -8,7 +8,7 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <QWindow>
-#include <QtConcurrent/QtConcurrent>
+#include <QThreadPool>
 
 #include "frontend/Channels/EptuChannel.hpp"
 #include "frontend/Channels/HotfixChannel.hpp"

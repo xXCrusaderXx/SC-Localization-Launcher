@@ -3,7 +3,7 @@
 #include <QGridLayout>
 #include <QPushButton>
 #include <QWidget>
-#include <QtConcurrent/QtConcurrent>
+#include <QThreadPool>
 #include <iostream>
 #include <nlohmann/json.hpp>
 
@@ -31,7 +31,7 @@ class UpdateButton : public QWidget
 
         Protocol::Massage request(Protocol::MassageType::Request);
         request.AddModuleNode("UPDATE", updateButtonRequest.toJson());
-        QtConcurrent::run([this, request] { updateBackendCallback(request.getJson()); });
+        QThreadPool::globalInstance()->start([this, request] { updateBackendCallback(request.getJson()); });
     }
 
    public:

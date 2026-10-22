@@ -4,6 +4,7 @@
 #include <QGridLayout>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QThreadPool>
 #include <QWidget>
 #include <filesystem>
 #include <iostream>
@@ -51,7 +52,7 @@ class ChannelBase : public QWidget
             request.AddModuleNode(channel, channelRequest.toJson());
             LOG_DEBUG(lg) << "clicked_Channel() - request:\n" << request.getJson().dump(4);
 
-            QtConcurrent::run([request, this] { updateBackendCallback(request.getJson()); });
+            QThreadPool::globalInstance()->start([request, this] { updateBackendCallback(request.getJson()); });
         }
     }
 
@@ -74,7 +75,7 @@ class ChannelBase : public QWidget
 
         Protocol::Massage request(Protocol::MassageType::Request);
         request.AddModuleNode(channel, channelRequest.toJson());
-        QtConcurrent::run([request, this] { updateBackendCallback(request.getJson()); });
+        QThreadPool::globalInstance()->start([request, this] { updateBackendCallback(request.getJson()); });
     }
 
     void clicked_Eng ()
@@ -101,8 +102,8 @@ class ChannelBase : public QWidget
    public:
     explicit ChannelBase (const std::string &channelName, QWidget *parent = nullptr, QGridLayout *grid = nullptr, int row = 0)
         : QWidget(parent)
-        , channel(channelName)
         , lg(channelName + "-Channel")
+        , channel(channelName)
     {
         buttonChannel = new QPushButton(QString::fromStdString(channel), this);
         buttonEng = new QPushButton("eng", this);

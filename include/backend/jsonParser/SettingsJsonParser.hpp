@@ -23,8 +23,8 @@ class SettingsJsonParser
 
    public:
     SettingsJsonParser (std::filesystem::path filePath)
-        : filePath(filePath)
-        , lg("SettingsJsonParser")
+        : lg("SettingsJsonParser")
+        , filePath(filePath)
     {
         LOG_DEBUG(lg) << "instanziated";
     };

@@ -26,8 +26,8 @@ class SettingsManager
    public:
     SettingsManager (Database::BackendData& backendData)
         : lg("SettingsManager")
-        , backendData(backendData)
         , dirFinder(backendData)
+        , backendData(backendData)
     {
         LOG_DEBUG(lg) << "instanziated";
     };

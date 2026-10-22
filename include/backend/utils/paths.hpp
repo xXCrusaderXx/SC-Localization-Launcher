@@ -25,15 +25,16 @@ inline std::filesystem::path getUserRootPath ()
 
 inline std::filesystem::path getExecutablePath ()
 {
+    // The AppImage runtime sets APPDIR to the mounted AppDir, which holds resources/ and local/
+    const char* appDir = std::getenv("APPDIR");
+    if(appDir && *appDir != '\0') return std::filesystem::path(appDir);
+
     char result[PATH_MAX];
     ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
     if(count != -1)
     {
-#ifdef APPIMAGE
-        return std::filesystem::path(result).parent_path().parent_path().parent_path();
-#else
-        return std::filesystem::path(result).parent_path();
-#endif
+        // readlink() does not null-terminate
+        return std::filesystem::path(std::string(result, count)).parent_path();
     }
     throw std::runtime_error("Kann Pfad zur ausführbaren Datei nicht ermitteln");
 }
