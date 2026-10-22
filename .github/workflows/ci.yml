@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Supersede in-flight runs when the same PR is pushed again. Each push to main
+# gets its own group so a burst of merges does not cancel the main runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
+
+jobs:
+  # Checks only the lines a PR changes, so existing code is never reformatted
+  # as a side effect of an unrelated change.
+  format:
+    name: format
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      # Pinned so CI and contributors format identically; distro versions drift.
+      - name: Install clang-format
+        run: pipx install clang-format==23.1.1
+
+      - name: Check formatting of changed lines
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          base="$(git merge-base "$BASE_SHA" "$HEAD_SHA")"
+          if ! out="$(git clang-format --diff --extensions h,hpp,cpp "$base" "$HEAD_SHA" -- include src)"; then
+            echo "$out"
+            echo "::error::Formatting differs from .clang-format. Run: git clang-format origin/main"
+            exit 1
+          fi
+          echo "$out"
+
+  build-ubuntu:
+    name: build (ubuntu)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      # Ubuntu 24.04 ships Qt 6.4, the oldest Qt the launcher supports.
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build libgl-dev libcurl4-openssl-dev nlohmann-json3-dev \
+            qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+  build-arch:
+    name: build (arch)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # Rolling release: catches breakage with the newest Qt and compilers early.
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            base-devel cmake ninja curl nlohmann-json qt6-base qt6-declarative
+
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+      # Advisory only until the existing QML is warning-free.
+      - name: Lint QML
+        if: hashFiles('qml/*.qml') != ''
+        continue-on-error: true
+        run: /usr/lib/qt6/bin/qmllint -I build qml/*.qml
