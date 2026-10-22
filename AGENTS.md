@@ -25,7 +25,7 @@ Translation texts belong to [StarCitizen-Deutsch-INI](https://github.com/rjcncpt
 - `include/backend/`: header-only backend. `BackEnd` owns the state and runs work on `utils/TaskQueue` threads; managers download and install translations; `jsonParser/` reads the channel list and settings.
 - `include/protocol/`: the only contract between the UI and the backend. `Commands.hpp` describes what the user wants; `State.hpp` is the full snapshot the backend sends back. The UI never mutates state directly, and every command is answered by the next `State`.
 - `include/frontend/BackendBridge.hpp`: the Qt bridge. It exposes `state` to QML and turns QML calls into protocol commands.
-- `qml/`: the Qt Quick UI. `Theme.qml` is a singleton for colours and sizes; register new QML files in `qt_add_qml_module` in `CMakeLists.txt`.
+- `qml/`: the Qt Quick UI. `Theme.qml` is a singleton for colours and sizes; register new QML files in `SC_QML_FILES` in `CMakeLists.txt` (the GUI test uses the same list).
 - `packaging/`, `flatpak/`, `misc/`: AppImage, Flatpak, desktop file, and install scripts.
 
 ## Code
@@ -40,12 +40,13 @@ Translation texts belong to [StarCitizen-Deutsch-INI](https://github.com/rjcncpt
 ## Build and verify
 
 ```sh
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSC_BUILD_TESTS=ON
 cmake --build build
+ctest --test-dir build --output-on-failure
 git clang-format --diff origin/main
 ```
 
-A change is done only when it builds. Say so in the PR if you could not run the app or test a code path by hand.
+A change is done only when it builds and the tests pass. Backend behaviour belongs in `tests/BackendTest.cpp`, UI flows in `tests/GuiTest.cpp`. Say so in the PR if you could not run the app or test a code path by hand.
 
 ## Working in a shared checkout
 
