@@ -1,0 +1,75 @@
+name: DCO
+
+# The DCO check lives in its own workflow so it can react to `edited`: a
+# PR-level sign-off lives in the pull request description, so editing the
+# description must re-run the check without re-running the whole build.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # CONTRIBUTING.md requires a DCO sign-off on each PR. The sign-off may be
+  # per-commit or a single trailer / checked box in the PR description.
+  dco:
+    name: DCO sign-off
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Check Signed-off-by on the PR or its commits
+        # bash for here-string (`<<<`) support; see the SIGPIPE note below.
+        shell: bash
+        env:
+          # Contributor-controlled values reach the shell only through the
+          # environment, never interpolated into the script body.
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+
+          # Dependabot cannot sign off; its updates only touch workflow pins.
+          if [ "$PR_AUTHOR" = "dependabot[bot]" ]; then
+            echo "::notice::Dependabot PR; DCO not required."
+            exit 0
+          fi
+
+          # PR-level sign-off: a checked declaration from the template or a
+          # literal trailer covers the squash commit of the whole PR.
+          if grep -q '^- \[[xX]\] Signed off' <<<"$PR_BODY"; then
+            echo "::notice::PR description carries a checked sign-off declaration; DCO satisfied at the PR level."
+            exit 0
+          fi
+          if grep -q '^Signed-off-by: .\+ <.\+@.\+>' <<<"$PR_BODY"; then
+            echo "::notice::PR description carries a Signed-off-by trailer; DCO satisfied at the PR level."
+            exit 0
+          fi
+
+          # No PR-level sign-off: require one on every authored commit.
+          # grep reads from here-strings, never a pipe: under `pipefail`, piping
+          # into `grep -q` lets grep close the pipe on its first match, the
+          # upstream process takes SIGPIPE, and the pipeline reports failure.
+          missing=0
+          # --no-merges: merge commits are auto-generated and unsigned.
+          for sha in $(git rev-list --no-merges "$BASE_SHA".."$HEAD_SHA"); do
+            body="$(git log -1 --format=%B "$sha")"
+            if grep -q '^Signed-off-by: .\+ <.\+@.\+>' <<<"$body"; then
+              continue
+            fi
+            echo "::error::Commit $sha lacks a Signed-off-by trailer (git commit -s), and the PR description has no sign-off either"
+            missing=1
+          done
+          exit $missing

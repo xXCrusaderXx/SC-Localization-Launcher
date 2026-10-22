@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Wrong or missing German text
+    url: https://github.com/rjcncpt/StarCitizen-Deutsch-INI/issues
+    about: Translation texts are maintained in StarCitizen-Deutsch-INI. Please report text errors there.
+  - name: Security vulnerability
+    url: https://github.com/xXCrusaderXx/StarCitizenDeutschLinux/security/advisories/new
+    about: Report security problems privately. See SECURITY.md.

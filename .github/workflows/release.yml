@@ -1,0 +1,137 @@
+name: Release
+
+# Push a tag vX.Y.Z (matching project(... VERSION X.Y.Z) in CMakeLists.txt) to
+# build the AppImage, .deb and .rpm and publish them as a GitHub Release.
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: check version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Compare tag with CMakeLists.txt
+        id: check
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          cmake_version="$(sed -n 's/^project([^)]*VERSION \([0-9][0-9.]*\).*/\1/p' CMakeLists.txt)"
+          if [ "${TAG#v}" != "$cmake_version" ] && [[ "${TAG#v}" != "$cmake_version"-* ]]; then
+            echo "::error::Tag $TAG does not match CMakeLists.txt version $cmake_version"
+            exit 1
+          fi
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+  appimage:
+    name: AppImage
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # Oldest supported glibc; the AppImage then runs on every newer distro.
+    container: ubuntu:22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Build
+        run: bash packaging/appimage/build.sh "$GITHUB_WORKSPACE"
+
+      - name: Rename
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          mkdir dist
+          mv build-appimage/SC-Deutsch-Launcher-x86_64.AppImage "dist/SC-Deutsch-Launcher-$VERSION-x86_64.AppImage"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: appimage
+          path: dist/*
+
+  deb:
+    name: deb
+    needs: version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build dpkg-dev file libgl-dev libcurl4-openssl-dev nlohmann-json3-dev \
+            qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools
+
+      - name: Build package
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSC_SYSTEM_INSTALL=ON -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build
+          cd build && cpack -G DEB
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: deb
+          path: build/*.deb
+
+  rpm:
+    name: rpm
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: fedora:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          dnf install -y gcc-c++ cmake ninja-build rpm-build file libcurl-devel json-devel \
+            qt6-qtbase-devel qt6-qtdeclarative-devel
+
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Build package
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSC_SYSTEM_INSTALL=ON -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build
+          cd build && cpack -G RPM
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rpm
+          path: build/*.rpm
+
+  publish:
+    name: publish release
+    needs: [appimage, deb, rpm]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          prerelease=""
+          if [[ "$TAG" == *-* ]]; then prerelease="--prerelease"; fi
+          (cd dist && sha256sum -- * > SHA256SUMS)
+          gh release create "$TAG" --title "$TAG" --generate-notes $prerelease dist/*

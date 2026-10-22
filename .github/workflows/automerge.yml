@@ -1,0 +1,49 @@
+name: Auto-merge
+
+# Turns on GitHub auto-merge for every ready PR. GitHub then squash-merges it
+# by itself once the branch ruleset is satisfied (required checks green, one
+# approval, branch up to date). Nothing is merged before that.
+#
+# pull_request_target runs with the base repository's token so it works for
+# fork PRs too. It therefore MUST NOT check out or run code from the PR.
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable-auto-merge:
+    name: Enable auto-merge
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      # Optional AUTOMERGE_TOKEN (fine-grained PAT: contents + pull requests
+      # read/write). Merges done with GITHUB_TOKEN do not trigger the push
+      # workflows on main; merges done with a PAT do.
+      GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || secrets.GITHUB_TOKEN }}
+      PR_URL: ${{ github.event.pull_request.html_url }}
+    steps:
+      - name: Enable squash auto-merge
+        run: gh pr merge --auto --squash "$PR_URL"
+
+  dependabot:
+    name: Approve Dependabot
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+
+      # Major updates can change action behaviour, so they wait for a human.
+      - name: Approve minor and patch updates
+        if: ${{ steps.meta.outputs.update-type != 'version-update:semver-major' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr review --approve --body "Minor/patch dependency update; approved automatically after CI." "$PR_URL"
