@@ -1,0 +1,38 @@
+name: Update PR branches
+
+# After every change on main, brings all open PRs with auto-merge up to date,
+# so they don't get stuck at "branch out of date". Needs the secret
+# AUTOMERGE_TOKEN: updates made with GITHUB_TOKEN would not start the CI.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    name: update behind PRs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Update auto-merge PRs that are behind main
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::Secret AUTOMERGE_TOKEN is missing, PRs are not updated."
+            exit 0
+          fi
+          for n in $(gh pr list --state open --json number,autoMergeRequest,mergeStateStatus \
+                       --jq '.[] | select(.autoMergeRequest != null and .mergeStateStatus == "BEHIND") | .number'); do
+            echo "Updating #$n"
+            gh api -X PUT "repos/$GH_REPO/pulls/$n/update-branch" --silent \
+              || echo "::warning::#$n could not be updated (conflict?)"
+          done
