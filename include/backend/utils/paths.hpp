@@ -3,6 +3,8 @@
 #include <limits.h>
 #include <unistd.h>
 #include <filesystem>
+#include <iostream>
+#include <stdexcept>
 
 namespace PATHS
 {

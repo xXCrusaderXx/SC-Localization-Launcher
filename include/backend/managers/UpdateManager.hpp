@@ -26,6 +26,9 @@ class UpdateManager
     using Callback = std::function<void(const nlohmann::json&)>;
     Callback guiCallback;
     std::atomic<bool> updateRunning{false};
+    // Finished workers are only joined on shutdown, joining inside makeUpdate() could deadlock
+    // with a worker that is still waiting for backendData.mutex in its GUI callback.
+    std::vector<std::thread> workers;
 
     inline static const std::string GERMAN_LOCALIZATION = "german_(germany)";
 
@@ -35,6 +38,12 @@ class UpdateManager
         size_t totalSize = size * nmemb;
         outFile->write(static_cast<char*>(contents), totalSize);
         return totalSize;
+    }
+
+    // Aborts a running download as soon as the app closes
+    static int abortOnShutdown (void* clientp, curl_off_t, curl_off_t, curl_off_t, curl_off_t)
+    {
+        return static_cast<std::atomic<bool>*>(clientp)->load() ? 1 : 0;
     }
 
     bool downloadAndWriteToFile (const std::string& url, const std::filesystem::path& outputFile)
@@ -59,6 +68,9 @@ class UpdateManager
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);  // Redirects erlauben
         curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, 120L);
+        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+        curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, abortOnShutdown);
+        curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &backendData.shuttingDown);
 
         CURLcode res = curl_easy_perform(curl);
         long httpCode = 0;
@@ -210,7 +222,18 @@ class UpdateManager
     {
         LOG_DEBUG(lg) << "instanziated";
     };
-    ~UpdateManager () { LOG_DEBUG(lg) << "destructed"; }
+    ~UpdateManager ()
+    {
+        waitForWorkers();
+        LOG_DEBUG(lg) << "destructed";
+    }
+
+    void waitForWorkers ()
+    {
+        for(auto& worker : workers)
+            if(worker.joinable()) worker.join();
+        workers.clear();
+    }
 
     void setGuiCallback (Callback cb)
     {
@@ -257,12 +280,13 @@ class UpdateManager
         bool launchAfterUpdate = backendData.settings.checkboxes.LaunchScAfterTranslation;
         auto rsiLauncherInstallPath = backendData.rsiLauncherInstallPath;
 
-        std::thread(
+        workers.emplace_back(
             [this, channelData, launchAfterUpdate, rsiLauncherInstallPath] ()
             {
                 bool success = true;
                 for(const auto& [channel, data] : channelData)
                 {
+                    if(backendData.shuttingDown) break;
                     if(data.installPath.empty())
                     {
                         LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Path is empty, skip!";
@@ -302,9 +326,8 @@ class UpdateManager
                 else
                     LOG_DEBUG(lg) << "makeUpdate() - GuiCallBack nullptr";
 
-                if(launchAfterUpdate) startGame(rsiLauncherInstallPath);
-            })
-            .detach();
+                if(launchAfterUpdate && !backendData.shuttingDown) startGame(rsiLauncherInstallPath);
+            });
 
         LOG_DEBUG(lg) << "makeUpdate() - RUNNING";
         response.updateButton.busy = true;

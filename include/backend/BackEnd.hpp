@@ -29,10 +29,6 @@ class BackEnd
     using Callback = std::function<void(const nlohmann::json&)>;
     Callback guiCallback;
 
-    // processMassage() runs on the Qt thread pool and the managers call back from worker threads.
-    // Recursive, because manager callbacks re-enter initGui() while processMassage() holds the lock.
-    std::recursive_mutex mutex;
-
     void saveSettings ()
     {
         try
@@ -53,18 +49,14 @@ class BackEnd
         , updateManager(backendData)
         , settingsManager(backendData)
     {
-        settingsManager.setGuiCallback(
-            [this] (const nlohmann::json& msg)
-            {
-                this->guiCallback(msg);
-                this->initGui();
-            });
-        updateManager.setGuiCallback(
-            [this] (const nlohmann::json& msg)
-            {
-                this->guiCallback(msg);
-                this->initGui();
-            });
+        auto workerCallback = [this] (const nlohmann::json& msg)
+        {
+            if(backendData.shuttingDown || !guiCallback) return;
+            this->guiCallback(msg);
+            this->initGui();
+        };
+        settingsManager.setGuiCallback(workerCallback);
+        updateManager.setGuiCallback(workerCallback);
 
         settingsJsonParser.getChannelSettings(backendData);
         if(!channelsJsonParser.getChannels(backendData)) LOG_ERROR(lg) << "no channel information, translations cannot be downloaded";
@@ -75,6 +67,10 @@ class BackEnd
     }
     virtual ~BackEnd ()
     {
+        // Workers still use backendData and the callbacks, so stop them before anything is destroyed
+        backendData.shuttingDown = true;
+        updateManager.waitForWorkers();
+        settingsManager.waitForWorkers();
         saveSettings();
         LOG_DEBUG(lg) << "destructed";
     }
@@ -91,7 +87,7 @@ class BackEnd
 
     void processMassage (const nlohmann::json& msg)
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex);
+        std::lock_guard<std::recursive_mutex> lock(backendData.mutex);
         LOG_DEBUG(lg) << "processMassage() - msg:\n" << msg.dump(4);
 
         Protocol::Massage request(msg);
@@ -113,11 +109,13 @@ class BackEnd
     }
     void initGui ()
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex);
+        std::lock_guard<std::recursive_mutex> lock(backendData.mutex);
         LOG_DEBUG(lg) << "initGui()";
 
         Protocol::Massage response(Protocol::MassageType::Response);
 
+        // Paths may have changed in the background (auto search), so recompute the button states
+        channelManager.initialSetup();
         channelManager.updateChannelResponse(response);
         settingsManager.updateSettingsResponse(response);
         updateManager.updateUpdateResponse(response);
