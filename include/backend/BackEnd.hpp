@@ -37,6 +37,7 @@ class BackEnd
     std::thread languagesJob;
     std::thread updateJob;
     std::thread searchJob;
+    std::thread versionCheckJob;
 
     // Declared last: its thread uses all members above
     TaskQueue queue;
@@ -77,6 +78,73 @@ class BackEnd
         return nullptr;
     }
 
+    std::vector<std::string> managedFolders () const
+    {
+        std::vector<std::string> folders;
+        for(const auto& language : data.languages)
+            if(std::find(folders.begin(), folders.end(), language.folder) == folders.end()) folders.push_back(language.folder);
+        return folders;
+    }
+
+    static bool hasTranslationFile (const std::filesystem::path& installPath, const std::string& folder)
+    {
+        std::error_code ec;
+        return std::filesystem::exists(installPath / "data" / "Localization" / folder / "global.ini", ec);
+    }
+
+    Protocol::ChannelStatus channelStatus (const Database::ChannelData& channel) const
+    {
+        using Protocol::ChannelStatus;
+        if(channel.installPath.empty()) return ChannelStatus::NoPath;
+
+        if(channel.language == Protocol::ENGLISH)
+        {
+            // English means no translation files; any left over still has to be removed
+            auto folders = managedFolders();
+            bool leftOver =
+                std::any_of(folders.begin(), folders.end(), [&] (const auto& folder) { return hasTranslationFile(channel.installPath, folder); });
+            return leftOver ? ChannelStatus::UpdateAvailable : ChannelStatus::Installed;
+        }
+
+        const auto* language = findLanguage(channel.language);
+        if(!language || !hasTranslationFile(channel.installPath, language->folder)) return ChannelStatus::NotInstalled;
+        // Installed by hand, by the former SC Deutsch Launcher or as another language of the same folder: version unknown
+        if(channel.installed.language != channel.language) return ChannelStatus::UpdateAvailable;
+        if(!channel.remoteEtag.empty() && channel.remoteEtag != channel.installed.etag) return ChannelStatus::UpdateAvailable;
+        return ChannelStatus::Installed;
+    }
+
+    // Asks the sources whether the chosen translations changed, without downloading them
+    void checkRemoteVersions ()
+    {
+        std::map<std::string, std::vector<std::string>> urls;
+        std::map<std::string, std::string> checkedLanguage;
+        for(const auto& [name, channel] : data.channels)
+        {
+            if(channel.installPath.empty() || channel.language == Protocol::ENGLISH || !isAvailable(name, channel.language)) continue;
+            urls[name] = findLanguage(channel.language)->urls.at(name);
+            checkedLanguage[name] = channel.language;
+        }
+        if(urls.empty()) return;
+
+        startJob(versionCheckJob,
+                 [this, urls, checkedLanguage]
+                 {
+                     auto etags = updateManager.remoteVersions(urls);
+                     queue.post(
+                         [this, etags, checkedLanguage]
+                         {
+                             for(const auto& [name, etag] : etags)
+                             {
+                                 auto& channel = data.channels[name];
+                                 // The user may have picked another language meanwhile
+                                 if(channel.language == checkedLanguage.at(name)) channel.remoteEtag = etag;
+                             }
+                             publish();
+                         });
+                 });
+    }
+
     Protocol::State snapshot () const
     {
         Protocol::State state;
@@ -92,7 +160,7 @@ class BackEnd
         for(const auto& name : names)
         {
             const auto& channel = data.channels.at(name);
-            state.channels.push_back({name, channel.installPath.string(), channel.language, availableLanguages(name)});
+            state.channels.push_back({name, channel.installPath.string(), channel.language, availableLanguages(name), channelStatus(channel)});
         }
 
         state.rsiLauncherPath = data.rsiLauncherPath.string();
@@ -118,6 +186,7 @@ class BackEnd
         {
             data.channels[name].installPath = settings.installPath;
             data.channels[name].language = settings.language;
+            data.channels[name].installed = settings.installed;
         }
         data.rsiLauncherPath = file.rsiLauncherPath;
         data.options = file.options;
@@ -128,7 +197,7 @@ class BackEnd
     void saveSettings ()
     {
         SettingsFile file;
-        for(const auto& [name, channel] : data.channels) file.channels[name] = {channel.installPath.string(), channel.language};
+        for(const auto& [name, channel] : data.channels) file.channels[name] = {channel.installPath.string(), channel.language, channel.installed};
         file.rsiLauncherPath = data.rsiLauncherPath.string();
         file.options = data.options;
         settingsJsonParser.save(file);
@@ -148,6 +217,7 @@ class BackEnd
                              for(const auto& language : data.languages)
                                  for(const auto& [channel, urls] : language.urls) data.channels[channel];
                              publish();
+                             checkRemoteVersions();
                          });
                  });
     }
@@ -161,12 +231,23 @@ class BackEnd
             LOG_ERROR(lg) << "unknown language: " << command.language;
             return;
         }
-        if(auto* channel = findChannel(command.channel)) channel->language = command.language;
+        if(auto* channel = findChannel(command.channel))
+        {
+            channel->language = command.language;
+            // The known version belonged to the previous language
+            channel->remoteEtag.clear();
+        }
     }
 
     void handle (const Protocol::SetInstallPath& command)
     {
-        if(auto* channel = findChannel(command.channel)) channel->installPath = command.path;
+        if(auto* channel = findChannel(command.channel))
+        {
+            channel->installPath = command.path;
+            // The record described the previous folder
+            channel->installed = {};
+            channel->remoteEtag.clear();
+        }
     }
 
     void handle (const Protocol::SetRsiLauncherPath& command) { data.rsiLauncherPath = command.path; }
@@ -192,11 +273,6 @@ class BackEnd
             return;
         }
 
-        std::vector<std::string> managedFolders;
-        for(const auto& language : data.languages)
-            if(std::find(managedFolders.begin(), managedFolders.end(), language.folder) == managedFolders.end())
-                managedFolders.push_back(language.folder);
-
         // The job works on a copy, the user may change settings while it runs
         std::vector<UpdateManager::Job> jobs;
         for(const auto& [name, channel] : data.channels)
@@ -209,7 +285,9 @@ class BackEnd
                 continue;
             }
 
-            UpdateManager::Job job{name, channel.installPath, channel.language, "", {}, managedFolders};
+            // Same language as installed: the source can answer "not modified" instead of sending the file again
+            std::string etag = channel.installed.language == channel.language ? channel.installed.etag : "";
+            UpdateManager::Job job{name, channel.installPath, channel.language, "", {}, managedFolders(), etag};
             if(const auto* language = findLanguage(channel.language))
             {
                 job.folder = language->folder;
@@ -229,13 +307,24 @@ class BackEnd
         startJob(updateJob,
                  [this, jobs, launchGame, rsiLauncherPath = data.rsiLauncherPath]
                  {
-                     bool success = updateManager.update(jobs);
+                     auto results = updateManager.update(jobs);
                      // Also after a partial failure, the other channels are still playable
                      if(launchGame && !data.shuttingDown) updateManager.startGame(rsiLauncherPath);
                      queue.post(
-                         [this, success]
+                         [this, results, jobCount = jobs.size()]
                          {
+                             bool success = results.size() == jobCount;
+                             for(const auto& result : results)
+                             {
+                                 success &= result.success;
+                                 if(!result.success) continue;
+                                 auto& channel = data.channels[result.channel];
+                                 bool english = result.language == Protocol::ENGLISH;
+                                 channel.installed = {english ? "" : result.language, result.etag};
+                                 if(channel.language == result.language) channel.remoteEtag = result.etag;
+                             }
                              data.update = success ? Protocol::UpdateStatus::Succeeded : Protocol::UpdateStatus::Failed;
+                             saveSettings();
                              publish();
                          });
                  });
@@ -293,7 +382,7 @@ class BackEnd
         data.shuttingDown = true;
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
-        for(auto* job : {&languagesJob, &updateJob, &searchJob})
+        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }

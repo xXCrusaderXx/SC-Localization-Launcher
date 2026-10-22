@@ -13,6 +13,8 @@ ApplicationWindow {
     readonly property bool updateBusy: appState.update === "running"
     readonly property bool updateFailed: appState.update === "failed"
     readonly property bool updateReady: channels.some(c => c.installPath !== "")
+    // Channels whose translation is missing, outdated or still has to be removed
+    readonly property int pendingUpdates: channels.filter(c => c.status === "notInstalled" || c.status === "updateAvailable").length
     readonly property bool launchAfterUpdate: appState.options.launchGameAfterUpdate === true
     readonly property bool searchBusy: appState.searching === true
 
@@ -222,7 +224,7 @@ ApplicationWindow {
                         width: 6
                         height: 6
                         radius: 3
-                        color: window.updateBusy || window.searchBusy ? Theme.accent : window.updateFailed ? Theme.danger : window.updateReady ? Theme.success : Theme.disabled
+                        color: window.updateBusy || window.searchBusy ? Theme.accent : window.updateFailed ? Theme.danger : window.pendingUpdates > 0 ? Theme.warning : window.updateReady ? Theme.success : Theme.disabled
 
                         SequentialAnimation on opacity {
                             running: window.updateBusy || window.searchBusy
@@ -240,7 +242,7 @@ ApplicationWindow {
                     }
 
                     Text {
-                        text: window.updateBusy ? qsTr("Downloading translations …") : window.searchBusy ? qsTr("Searching for Star Citizen installations …") : window.updateFailed ? qsTr("Update failed, see the log for details") : window.appState.update === "succeeded" ? qsTr("Translations updated") : window.updateReady ? qsTr("Ready") : qsTr("Choose a game folder or use the automatic search")
+                        text: window.updateBusy ? qsTr("Downloading translations …") : window.searchBusy ? qsTr("Searching for Star Citizen installations …") : window.updateFailed ? qsTr("Update failed, see the log for details") : window.pendingUpdates > 0 ? qsTr("%n channel(s) need an update", "", window.pendingUpdates) : window.appState.update === "succeeded" ? qsTr("Translations updated") : window.updateReady ? qsTr("Ready") : qsTr("Choose a game folder or use the automatic search")
                         color: Theme.muted
                         font.pixelSize: 11
                     }

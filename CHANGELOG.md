@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The interface is available in English and German and follows the system language.
 - Public [roadmap](ROADMAP.md). Closing a roadmap milestone publishes a release automatically.
 - Issue templates for new game languages, roadmap proposals and release checklists.
+- Each channel shows whether its translation is installed, missing or outdated; the launcher checks for new translation versions at start without downloading them.
+- Updates download only translations that changed (HTTP ETag); unchanged channels are skipped.
 
 ### Changed
 
