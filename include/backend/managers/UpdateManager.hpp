@@ -1,6 +1,7 @@
 #pragma once
 
 #include <curl/curl.h>
+#include <strings.h>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QStringList>
@@ -8,6 +9,7 @@
 #include <atomic>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <optional>
 #include <vector>
 
@@ -36,10 +38,58 @@ class UpdateManager
         return static_cast<const std::atomic<bool>*>(clientp)->load() ? 1 : 0;
     }
 
-    bool downloadAndWriteToFile (const std::string& url, const std::filesystem::path& outputFile)
+    struct Download
+    {
+        bool ok = false;
+        // The server confirmed that the installed file is still current (HTTP 304), nothing was written
+        bool notModified = false;
+        std::string etag;
+    };
+
+    // Keeps the ETag of the last response; a redirect starts a new response with its own headers
+    static size_t etagHeaderCallback (char* buffer, size_t size, size_t nitems, void* userdata)
+    {
+        auto* etag = static_cast<std::string*>(userdata);
+        std::string line(buffer, size * nitems);
+        if(line.starts_with("HTTP/")) etag->clear();
+        if(line.size() > 5 && strncasecmp(line.c_str(), "etag:", 5) == 0)
+        {
+            auto start = line.find_first_not_of(" \t", 5);
+            auto end = line.find_last_not_of(" \t\r\n");
+            if(start != std::string::npos && end >= start) *etag = line.substr(start, end - start + 1);
+        }
+        return size * nitems;
+    }
+
+    // Common options; the caller sets what is specific to the request
+    CURL* createRequest (const std::string& url, std::string& etag, curl_slist*& headers, const std::string& ifNoneMatch)
     {
         CURL* curl = curl_easy_init();
-        if(!curl) return false;
+        if(!curl) return nullptr;
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 120L);
+        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+        curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, abortOnShutdown);
+        curl_easy_setopt(curl, CURLOPT_XFERINFODATA, const_cast<std::atomic<bool>*>(&shuttingDown));
+        curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, etagHeaderCallback);
+        curl_easy_setopt(curl, CURLOPT_HEADERDATA, &etag);
+        if(!ifNoneMatch.empty())
+        {
+            headers = curl_slist_append(headers, ("If-None-Match: " + ifNoneMatch).c_str());
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        }
+        return curl;
+    }
+
+    // ifNoneMatch: ETag of the installed file; the server answers 304 if it is still current
+    Download downloadAndWriteToFile (const std::string& url, const std::filesystem::path& outputFile, const std::string& ifNoneMatch)
+    {
+        Download download;
+        curl_slist* headers = nullptr;
+        CURL* curl = createRequest(url, download.etag, headers, ifNoneMatch);
+        if(!curl) return download;
 
         // Download into a temp file first, so a failed download never destroys a working global.ini
         std::filesystem::path tmpFile = outputFile;
@@ -49,31 +99,34 @@ class UpdateManager
         if(!file.is_open())
         {
             curl_easy_cleanup(curl);
-            return false;
+            curl_slist_free_all(headers);
+            return download;
         }
 
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeToFileCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &file);
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);  // Redirects erlauben
-        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 120L);
-        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-        curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, abortOnShutdown);
-        curl_easy_setopt(curl, CURLOPT_XFERINFODATA, const_cast<std::atomic<bool>*>(&shuttingDown));
 
         CURLcode res = curl_easy_perform(curl);
         long httpCode = 0;
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
         curl_easy_cleanup(curl);
+        curl_slist_free_all(headers);
         file.close();
 
         std::error_code ec;
+        if(res == CURLE_OK && httpCode == 304 && !ifNoneMatch.empty())
+        {
+            LOG_DEBUG(lg) << "not modified: " << url;
+            std::filesystem::remove(tmpFile, ec);
+            download.ok = download.notModified = true;
+            download.etag = ifNoneMatch;
+            return download;
+        }
         if(res != CURLE_OK || httpCode != 200 || std::filesystem::file_size(tmpFile, ec) == 0)
         {
             LOG_ERROR(lg) << "download failed: " << url << " :: " << curl_easy_strerror(res) << " (HTTP " << httpCode << ")";
             std::filesystem::remove(tmpFile, ec);
-            return false;
+            return download;
         }
 
         std::filesystem::rename(tmpFile, outputFile, ec);
@@ -81,20 +134,41 @@ class UpdateManager
         {
             LOG_ERROR(lg) << "rename failed: " << tmpFile << " -> " << outputFile << " :: " << ec.message();
             std::filesystem::remove(tmpFile, ec);
-            return false;
+            return download;
         }
-        return true;
+        download.ok = true;
+        return download;
     }
 
-    bool downloadWithFallback (const std::vector<std::string>& urls, const std::filesystem::path& outputFile)
+    Download downloadWithFallback (const std::vector<std::string>& urls, const std::filesystem::path& outputFile, const std::string& ifNoneMatch)
     {
         for(const auto& url : urls)
         {
             if(url.empty()) continue;
             LOG_DEBUG(lg) << "download: " << url;
-            if(downloadAndWriteToFile(url, outputFile)) return true;
+            if(auto download = downloadAndWriteToFile(url, outputFile, ifNoneMatch); download.ok) return download;
         }
-        return false;
+        return {};
+    }
+
+    // ETag of a file without downloading it, from the first URL that answers
+    std::optional<std::string> fetchEtag (const std::vector<std::string>& urls)
+    {
+        for(const auto& url : urls)
+        {
+            std::string etag;
+            curl_slist* headers = nullptr;
+            CURL* curl = createRequest(url, etag, headers, "");
+            if(!curl) continue;
+            curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+            CURLcode res = curl_easy_perform(curl);
+            long httpCode = 0;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+            curl_easy_cleanup(curl);
+            if(res == CURLE_OK && httpCode == 200) return etag;
+            LOG_DEBUG(lg) << "fetchEtag() - " << url << " :: " << curl_easy_strerror(res) << " (HTTP " << httpCode << ")";
+        }
+        return std::nullopt;
     }
 
     static bool isLanguageLine (const std::string& line)
@@ -152,7 +226,8 @@ class UpdateManager
         if(std::filesystem::is_empty(installPath / "data", ec)) std::filesystem::remove(installPath / "data", ec);
     }
 
-    bool installTranslation (const std::filesystem::path& installPath, const std::string& folder, const std::vector<std::string>& urls)
+    Download installTranslation (const std::filesystem::path& installPath, const std::string& folder, const std::vector<std::string>& urls,
+                                 const std::string& ifNoneMatch)
     {
         std::filesystem::path targetDir = installPath / "data" / "Localization" / folder;
         std::error_code ec;
@@ -160,12 +235,14 @@ class UpdateManager
         if(ec)
         {
             LOG_ERROR(lg) << "cannot create " << targetDir << " :: " << ec.message();
-            return false;
+            return {};
         }
 
-        if(downloadWithFallback(urls, targetDir / "global.ini")) return true;
-        if(std::filesystem::is_empty(targetDir, ec)) std::filesystem::remove(targetDir, ec);
-        return false;
+        // Only ask for "not modified" when the file is really there
+        std::string etag = std::filesystem::exists(targetDir / "global.ini") ? ifNoneMatch : "";
+        Download download = downloadWithFallback(urls, targetDir / "global.ini", etag);
+        if(!download.ok && std::filesystem::is_empty(targetDir, ec)) std::filesystem::remove(targetDir, ec);
+        return download;
     }
 
     // The wine prefix is the folder that contains drive_c
@@ -204,6 +281,16 @@ class UpdateManager
         std::vector<std::string> urls;
         // Folders of all known languages; the ones not in use are removed
         std::vector<std::string> managedFolders;
+        // ETag of the installed file of this language; a source that still has it is not downloaded again
+        std::string etag;
+    };
+
+    struct Result
+    {
+        std::string channel;
+        std::string language;
+        bool success = false;
+        std::string etag;
     };
 
     UpdateManager (const std::atomic<bool>& shuttingDown)
@@ -214,29 +301,47 @@ class UpdateManager
     };
     ~UpdateManager () { LOG_DEBUG(lg) << "destructed"; }
 
-    // Blocks until all channels are done. Returns false if at least one channel failed.
-    bool update (const std::vector<Job>& jobs)
+    // Blocks until all channels are done
+    std::vector<Result> update (const std::vector<Job>& jobs)
     {
         LOG_DEBUG(lg) << "update() - START";
-        bool success = true;
+        std::vector<Result> results;
         for(const auto& job : jobs)
         {
-            if(shuttingDown) return false;
+            if(shuttingDown) break;
             LOG_DEBUG(lg) << "update() - Channel: " << job.channel << " :: Path: " << job.installPath << " :: Language: " << job.language;
+            Result result{job.channel, job.language, false, ""};
 
             // Download first: if it fails, the translation installed so far stays in place
-            if(!job.folder.empty() && !installTranslation(job.installPath, job.folder, job.urls))
+            if(!job.folder.empty())
             {
-                success = false;
-                continue;
+                Download download = installTranslation(job.installPath, job.folder, job.urls, job.etag);
+                if(!download.ok)
+                {
+                    results.push_back(result);
+                    continue;
+                }
+                result.etag = download.etag;
             }
             removeTranslations(job.installPath, job.managedFolders, job.folder);
             patchUserCfg(job.installPath / "user.cfg", job.folder);
+            result.success = true;
+            results.push_back(result);
         }
-
-        if(!success) LOG_ERROR(lg) << "update() - at least one channel could not be updated";
         LOG_DEBUG(lg) << "update() - FINISHED";
-        return success;
+        return results;
+    }
+
+    // Current ETag per channel, without downloading; channels whose source does not answer are missing
+    std::map<std::string, std::string> remoteVersions (const std::map<std::string, std::vector<std::string>>& urlsPerChannel)
+    {
+        std::map<std::string, std::string> etags;
+        for(const auto& [channel, urls] : urlsPerChannel)
+        {
+            if(shuttingDown) break;
+            if(auto etag = fetchEtag(urls); etag && !etag->empty()) etags[channel] = *etag;
+        }
+        return etags;
     }
 
     void startGame (const std::filesystem::path& rsiLauncherPath)

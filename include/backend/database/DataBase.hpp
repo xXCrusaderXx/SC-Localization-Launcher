@@ -54,11 +54,24 @@ struct AvailableLanguage
     Protocol::Credit credit;
 };
 
+// What the launcher last installed into a channel. Empty language: nothing, the game shows English.
+struct InstalledTranslation
+{
+    std::string language;
+    // ETag of the downloaded global.ini, to find out whether a newer version exists
+    std::string etag;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(InstalledTranslation, language, etag)
+
 struct ChannelData
 {
     std::filesystem::path installPath;
     // The user's choice. While no source offers it, updates skip the channel instead of removing anything
     std::string language = Protocol::ENGLISH;
+    InstalledTranslation installed;
+    // ETag the source reports for the chosen language right now; empty until checked
+    std::string remoteEtag;
 };
 
 // Only touched by the backend thread, see BackEnd

@@ -57,7 +57,7 @@ Rectangle {
             width: 8
             height: 8
             radius: 4
-            color: row.pathSet ? Theme.success : Theme.disabled
+            color: row.channel.status === "installed" ? Theme.success : row.pathSet ? Theme.warning : Theme.disabled
         }
 
         ColumnLayout {
@@ -74,8 +74,18 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
-                text: !row.pathSet ? qsTr("No install path set") : row.choiceAvailable ? row.channel.installPath : qsTr("%1 is currently not available for this channel").arg(row.choiceName)
-                color: row.pathSet && !row.choiceAvailable ? Theme.warning : Theme.muted
+                text: {
+                    if (!row.pathSet)
+                        return qsTr("No install path set");
+                    if (!row.choiceAvailable)
+                        return qsTr("%1 is currently not available for this channel").arg(row.choiceName);
+                    if (row.channel.status === "notInstalled")
+                        return qsTr("%1 is not installed yet").arg(row.choiceName);
+                    if (row.channel.status === "updateAvailable")
+                        return row.channel.language === "en" ? qsTr("The translation is removed with the next update") : qsTr("Update available for %1").arg(row.choiceName);
+                    return row.channel.installPath;
+                }
+                color: row.pathSet && (!row.choiceAvailable || row.channel.status !== "installed") ? Theme.warning : Theme.muted
                 font.pixelSize: 11
                 elide: Text.ElideMiddle
             }
