@@ -115,7 +115,7 @@ class GuiTest : public QObject
             QTRY_COMPARE(launchGameOption(), expected);
             QTRY_COMPARE(launchToggle()->property("checked").toBool(), expected);
         }
-        QCOMPARE(readSettingsFile()["options"]["launchGameAfterUpdate"], false);
+        QCOMPARE(jsonText(readSettingsFile()["options"]["launchGameAfterUpdate"]), jsonText(false));
     }
 
     void pickLanguage ()
@@ -132,7 +132,7 @@ class GuiTest : public QObject
         QVERIFY(findText("Test-INI · CC BY-NC-SA 4.0"));
         QVERIFY(click("Deutsch"));
         QTRY_COMPARE(channel("LIVE")["language"].toString(), QString("de"));
-        QCOMPARE(readSettingsFile()["channels"]["LIVE"]["language"], "de");
+        QCOMPARE(jsonText(readSettingsFile()["channels"]["LIVE"]["language"]), jsonText("de"));
 
         // The picker shows the confirmed choice, and opening it again highlights it
         QTRY_VERIFY(!picker->property("popup").value<QObject*>()->property("visible").toBool());
@@ -151,11 +151,14 @@ class GuiTest : public QObject
         auto* dialog = engine->rootObjects().first()->findChild<QObject*>("folderDialog");
         QVERIFY(dialog);
         QTRY_COMPARE(dialog->property("target").toString(), QString("PTU"));
+        // Fails here (instead of crashing in accept()) when the dialog implementation is missing,
+        // e.g. on Debian/Ubuntu without qml6-module-qt-labs-folderlistmodel
+        QTRY_VERIFY(dialog->property("visible").toBool());
 
         dialog->setProperty("selectedFolder", QUrl::fromLocalFile(ptuDir.path()));
         QMetaObject::invokeMethod(dialog, "accept");
         QTRY_COMPARE(channel("PTU")["installPath"].toString(), ptuDir.path());
-        QCOMPARE(readSettingsFile()["channels"]["PTU"]["installPath"], ptuDir.path().toStdString());
+        QCOMPARE(jsonText(readSettingsFile()["channels"]["PTU"]["installPath"]), jsonText(ptuDir.path().toStdString()));
     }
 
     void runUpdate ()
