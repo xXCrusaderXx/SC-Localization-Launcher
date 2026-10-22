@@ -44,7 +44,7 @@ int main (int argc, char *argv[])
 
     if(!engine.rootObjects().isEmpty())
     {
-        auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().first());
         QObject::connect(&instance, &SingleInstance::activationRequested, window,
                          [window]
                          {
