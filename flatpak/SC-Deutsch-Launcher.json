@@ -1,20 +1,62 @@
 {
-    "app-id": "org.marko.StarCitizenDeutschLauncher",
-    "runtime": "org.freedesktop.Platform",
-    "runtime-version": "22.08",
-    "sdk": "org.freedesktop.Sdk",
-    "command": "StarCitizenLauncher",
+    "id": "io.github.xXCrusaderXx.StarCitizenDeutschLinux",
+    "runtime": "org.kde.Platform",
+    "runtime-version": "6.10",
+    "sdk": "org.kde.Sdk",
+    "command": "SC-Deutsch-Launcher",
+    "finish-args": [
+        "--share=network",
+        "--share=ipc",
+        "--socket=wayland",
+        "--socket=fallback-x11",
+        "--device=dri",
+        "--filesystem=host",
+        "--talk-name=org.freedesktop.Flatpak"
+    ],
+    "cleanup": [
+        "/include",
+        "/lib/cmake",
+        "/share/cmake",
+        "/share/pkgconfig"
+    ],
     "modules": [
         {
-            "name": "starcitizen-launcher",
-            "buildsystem": "cmake",
+            "name": "nlohmann-json",
+            "buildsystem": "cmake-ninja",
             "config-opts": [
-                "-DCMAKE_BUILD_TYPE=Release"
+                "-DJSON_BuildTests=OFF"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz",
+                    "sha256": "42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa"
+                }
+            ]
+        },
+        {
+            "name": "sc-deutsch-launcher",
+            "buildsystem": "cmake-ninja",
+            "config-opts": [
+                "-DCMAKE_BUILD_TYPE=Release",
+                "-DSC_SYSTEM_INSTALL=ON"
             ],
             "sources": [
                 {
                     "type": "dir",
-                    "path": "."
+                    "path": "..",
+                    "skip": [
+                        ".git",
+                        ".cache",
+                        ".flatpak-builder",
+                        "build",
+                        "build-appimage",
+                        "build-flatpak",
+                        "release",
+                        "misc/appimagetool-x86_64.appimage",
+                        "misc/linuxdeploy-x86_64.appimage",
+                        "misc/linuxdeploy-plugin-qt-x86_64.appimage"
+                    ]
                 }
             ]
         }
