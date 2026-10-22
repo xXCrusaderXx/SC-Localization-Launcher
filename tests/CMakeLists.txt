@@ -14,6 +14,9 @@ target_link_libraries(sc_test_support INTERFACE Qt6::Test Qt6::Network nlohmann_
 add_executable(BackendTest BackendTest.cpp)
 target_link_libraries(BackendTest PRIVATE sc_test_support)
 
+add_executable(SingleInstanceTest SingleInstanceTest.cpp ${CMAKE_SOURCE_DIR}/include/frontend/SingleInstance.hpp)
+target_link_libraries(SingleInstanceTest PRIVATE sc_test_support)
+
 add_executable(GuiTest
   GuiTest.cpp
   ${CMAKE_SOURCE_DIR}/include/frontend/BackendBridge.hpp
@@ -35,7 +38,7 @@ qt_add_qml_module(GuiTest
   QML_FILES ${SC_TEST_QML_FILES}
 )
 
-foreach(test BackendTest GuiTest)
+foreach(test BackendTest SingleInstanceTest GuiTest)
   add_test(NAME ${test} COMMAND ${test})
   # Own HOME and XDG dirs, so the user's settings are never touched. Empty PATH, so the game can never be started.
   set(test_home ${CMAKE_CURRENT_BINARY_DIR}/home-${test})
