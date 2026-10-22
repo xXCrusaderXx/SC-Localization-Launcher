@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 
 namespace PATHS
 {
@@ -39,14 +40,28 @@ inline std::filesystem::path getExecutablePath ()
     throw std::runtime_error("Kann Pfad zur ausführbaren Datei nicht ermitteln");
 }
 
+// $XDG_<name> if set, otherwise $HOME/<fallback> (XDG Base Directory spec); Flatpak sets these to its sandbox dirs
+inline std::filesystem::path xdgDir (const char* variable, const char* fallback)
+{
+    const char* dir = std::getenv(variable);
+    if(dir && *dir != '\0') return std::filesystem::path(dir);
+    return getUserRootPath() / fallback;
+}
+
+inline const std::string APP_DIR_NAME = "sc-localization-launcher";
+
 inline const std::filesystem::path ROOT = getExecutablePath();
-inline const std::filesystem::path ROOT_USER = getUserRootPath() / "SC-Deutsch-Launcher";
+inline const std::filesystem::path CONFIG_USER = xdgDir("XDG_CONFIG_HOME", ".config") / APP_DIR_NAME;
+inline const std::filesystem::path CACHE_USER = xdgDir("XDG_CACHE_HOME", ".cache") / APP_DIR_NAME;
 inline const std::filesystem::path LOGPATH = std::filesystem::current_path();
-inline const std::filesystem::path LOGPATH_USER = ROOT_USER;
+inline const std::filesystem::path LOGPATH_USER = xdgDir("XDG_STATE_HOME", ".local/state") / APP_DIR_NAME;
+// Used up to the rename to SC Localization Launcher, only read to migrate the settings
+inline const std::filesystem::path LEGACY_ROOT_USER = getUserRootPath() / "SC-Deutsch-Launcher";
 
 struct JSON_FILES
 {
-    static inline const std::filesystem::path SETTINGS_USER = ROOT_USER / "local" / "settings.json";
+    static inline const std::filesystem::path SETTINGS_USER = CONFIG_USER / "settings.json";
+    static inline const std::filesystem::path SETTINGS_LEGACY = LEGACY_ROOT_USER / "local" / "settings.json";
     static inline const std::filesystem::path SETTINGS = ROOT / "local" / "settings.json";
 };
 

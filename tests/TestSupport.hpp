@@ -14,6 +14,7 @@
 
 // Placeholder translation; real global.ini files must not be part of this repository (LEGAL.md)
 inline const QByteArray TRANSLATION = "test_key=Deutscher Testtext\n";
+inline const QByteArray TRANSLATION_FR = "test_key=Texte de test\n";
 
 // Minimal HTTP server on 127.0.0.1. It runs in its own thread, so it keeps answering
 // while a test blocks the main thread. "{base}" in a served file becomes the server's URL.
@@ -74,32 +75,64 @@ class TestServer : public QThread
     QString url (const QString& path) { return QString("http://127.0.0.1:%1%2").arg(portFuture.get()).arg(path); }
 };
 
-// LIVE: German only through the fallback URL, German full is listed but cannot be downloaded.
-// PTU: switched off on the server. TECH-PREV: the server's name for TECH-PREVIEW. EPTU: only in "backup".
+inline nlohmann::json testCredit ()
+{
+    return {{"project", "Test-INI"},
+            {"authors", "Test community"},
+            {"url", "https://example.org/test-ini"},
+            {"license", "CC BY-NC-SA 4.0"},
+            {"licenseUrl", "https://creativecommons.org/licenses/by-nc-sa/4.0/"}};
+}
+
+// de: fixed URLs, LIVE only through the fallback URL; TECH-PREV is the server name for TECH-PREVIEW.
+// de-full: listed for LIVE, but neither URL can be downloaded.
+// fr: a channel list in the sc-deutsch-launcher.de format; PTU is switched off there, EPTU is only in "backup".
+// The last four entries are invalid (unsafe folder, plain HTTP, duplicate code, no credit) and must be ignored.
 inline QHash<QByteArray, QByteArray> fixtureFiles ()
 {
+    nlohmann::json languages = {
+        {"version", 1},
+        {"languages",
+         {{{"code", "de"},
+           {"name", "Deutsch"},
+           {"folder", "german_(germany)"},
+           {"source", {{"channels", {{"LIVE", {"{base}/missing.ini", "{base}/de.ini"}}, {"TECH-PREV", {"{base}/de.ini"}}}}}}},
+          {{"code", "de-full"},
+           {"name", "Deutsch (vollständig)"},
+           {"folder", "german_(germany)"},
+           {"source", {{"channels", {{"LIVE", {"{base}/missing.ini", "{base}/missing-too.ini"}}}}}}},
+          {{"code", "fr"},
+           {"name", "Français"},
+           {"folder", "french_(france)"},
+           {"source", {{"channelList", "{base}/channels.json"}, {"server", "server1"}}}},
+          {{"code", "evil"}, {"name", "Evil"}, {"folder", "../../evil"}, {"source", {{"channels", {{"LIVE", {"{base}/de.ini"}}}}}}},
+          {{"code", "plain"}, {"name", "Plain HTTP"}, {"folder", "plain"}, {"source", {{"channels", {{"LIVE", {"http://example.com/global.ini"}}}}}}},
+          {{"code", "de"}, {"name", "Duplicate"}, {"folder", "german_(germany)"}, {"source", {{"channels", {{"PTU", {"{base}/de.ini"}}}}}}},
+          {{"code", "nocredit"}, {"name", "No credit"}, {"folder", "nocredit"}, {"source", {{"channels", {{"LIVE", {"{base}/de.ini"}}}}}}}}}};
+    for(auto& language : languages["languages"])
+        if(language["code"] != "nocredit") language["credit"] = testCredit();
     nlohmann::json channels = {{"channels",
-                                {{{"active", 1},
-                                  {"description", "LIVE"},
-                                  {"server1", "{base}/missing.ini"},
-                                  {"server1_fallback", "{base}/de.ini"},
-                                  {"server3", "{base}/missing.ini"},
-                                  {"server3_fallback", "{base}/missing-too.ini"}},
-                                 {{"active", 0}, {"description", "PTU"}, {"server1", "{base}/de.ini"}},
-                                 {{"active", 1}, {"description", "TECH-PREV"}, {"server1", "{base}/de.ini"}}}},
-                               {"backup", {{"EPTU", {{"active", 0}, {"server1", "{base}/de.ini"}}}}}};
-    return {{"/channels.json", QByteArray::fromStdString(channels.dump())}, {"/de.ini", TRANSLATION}};
+                                {{{"active", 1}, {"description", "LIVE"}, {"server1", "{base}/fr.ini"}},
+                                 {{"active", 0}, {"description", "PTU"}, {"server1", "{base}/fr.ini"}}}},
+                               {"backup", {{"EPTU", {{"active", 1}, {"server1", "{base}/missing.ini"}, {"server1_fallback", "{base}/fr.ini"}}}}}};
+    return {{"/languages.json", QByteArray::fromStdString(languages.dump())},
+            {"/channels.json", QByteArray::fromStdString(channels.dump())},
+            {"/de.ini", TRANSLATION},
+            {"/fr.ini", TRANSLATION_FR}};
 }
 
 inline std::filesystem::path settingsFilePath () { return PATHS::JSON_FILES::SETTINGS_USER; }
 
-// Every test starts without settings and without a cached channels.json
-inline void resetUserDir () { std::filesystem::remove_all(PATHS::ROOT_USER); }
-
-inline void writeSettingsFile (const nlohmann::json& json)
+// Every test starts without settings and without cached downloads
+inline void resetUserDir ()
 {
-    std::filesystem::create_directories(settingsFilePath().parent_path());
-    std::ofstream(settingsFilePath()) << json.dump(4);
+    for(const auto& dir : {PATHS::CONFIG_USER, PATHS::CACHE_USER, PATHS::LEGACY_ROOT_USER}) std::filesystem::remove_all(dir);
+}
+
+inline void writeSettingsFile (const nlohmann::json& json, const std::filesystem::path& path = settingsFilePath())
+{
+    std::filesystem::create_directories(path.parent_path());
+    std::ofstream(path) << json.dump(4);
 }
 
 inline nlohmann::json readSettingsFile ()
@@ -108,7 +141,7 @@ inline nlohmann::json readSettingsFile ()
     return nlohmann::json::parse(stream, nullptr, false);
 }
 
-// settings.json as written before the protocol refactor
+// settings.json of the former SC Deutsch Launcher, written before the protocol refactor
 inline nlohmann::json legacySettings (const std::string& livePath, const std::string& liveTranslation, bool launchGame)
 {
     return {{"channels", {{"LIVE", {{"installPath", livePath}, {"selectedTrans", liveTranslation}}}}},
@@ -120,4 +153,10 @@ inline nlohmann::json legacySettings (const std::string& livePath, const std::st
               {"rsiLauncherInstallPath", "/nonexistent/RSI Launcher"},
               {"showUpdateStatus", false},
               {"startScdWithSystemStart", false}}}};
+}
+
+inline std::string readFile (const std::filesystem::path& path)
+{
+    std::ifstream stream(path);
+    return std::string(std::istreambuf_iterator<char>(stream), {});
 }

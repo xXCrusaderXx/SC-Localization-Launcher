@@ -22,8 +22,6 @@ class UpdateManager
     LoggerFramework::LogEx lg;
     const std::atomic<bool>& shuttingDown;
 
-    inline static const std::string GERMAN_LOCALIZATION = "german_(germany)";
-
     static size_t writeToFileCallback (void* contents, size_t size, size_t nmemb, void* userp)
     {
         std::ofstream* outFile = static_cast<std::ofstream*>(userp);
@@ -108,8 +106,9 @@ class UpdateManager
         return key == "g_language" || key == "g_languageaudio";
     }
 
-    // Only touches the language lines, all other user.cfg settings of the user are kept
-    void patchUserCfg (const std::filesystem::path& userCfg, bool german)
+    // Only touches the language lines, all other user.cfg settings of the user are kept.
+    // An empty folder removes the language setting, so the game uses its original English text.
+    void patchUserCfg (const std::filesystem::path& userCfg, const std::string& folder)
     {
         std::vector<std::string> lines;
         {
@@ -122,9 +121,9 @@ class UpdateManager
             }
         }
 
-        if(german)
+        if(!folder.empty())
         {
-            lines.push_back("g_language = " + GERMAN_LOCALIZATION);
+            lines.push_back("g_language = " + folder);
             lines.push_back("g_languageAudio = english");
         }
 
@@ -140,22 +139,22 @@ class UpdateManager
         for(const auto& l : lines) out << l << "\n";
     }
 
-    void removeGermanTranslation (const std::filesystem::path& installPath)
+    // Removes the translations of all managed folders except `keep`
+    void removeTranslations (const std::filesystem::path& installPath, const std::vector<std::string>& managedFolders, const std::string& keep)
     {
         std::error_code ec;
         std::filesystem::path localization = installPath / "data" / "Localization";
-        std::filesystem::remove_all(localization / GERMAN_LOCALIZATION, ec);
+        for(const auto& folder : managedFolders)
+            if(folder != keep) std::filesystem::remove_all(localization / folder, ec);
 
         // Clean up the folders we created, but only if nothing else lives in them
         if(std::filesystem::is_empty(localization, ec)) std::filesystem::remove(localization, ec);
         if(std::filesystem::is_empty(installPath / "data", ec)) std::filesystem::remove(installPath / "data", ec);
-
-        patchUserCfg(installPath / "user.cfg", false);
     }
 
-    bool installGermanTranslation (const std::filesystem::path& installPath, const std::vector<std::string>& urls)
+    bool installTranslation (const std::filesystem::path& installPath, const std::string& folder, const std::vector<std::string>& urls)
     {
-        std::filesystem::path targetDir = installPath / "data" / "Localization" / GERMAN_LOCALIZATION;
+        std::filesystem::path targetDir = installPath / "data" / "Localization" / folder;
         std::error_code ec;
         std::filesystem::create_directories(targetDir, ec);
         if(ec)
@@ -164,10 +163,9 @@ class UpdateManager
             return false;
         }
 
-        if(!downloadWithFallback(urls, targetDir / "global.ini")) return false;
-
-        patchUserCfg(installPath / "user.cfg", true);
-        return true;
+        if(downloadWithFallback(urls, targetDir / "global.ini")) return true;
+        if(std::filesystem::is_empty(targetDir, ec)) std::filesystem::remove(targetDir, ec);
+        return false;
     }
 
     // The wine prefix is the folder that contains drive_c
@@ -200,8 +198,12 @@ class UpdateManager
     {
         std::string channel;
         std::filesystem::path installPath;
-        Protocol::Language language = Protocol::Language::English;
-        Database::WebInfo info;
+        std::string language = Protocol::ENGLISH;
+        // Target localization folder and download URLs, both empty for English
+        std::string folder;
+        std::vector<std::string> urls;
+        // Folders of all known languages; the ones not in use are removed
+        std::vector<std::string> managedFolders;
     };
 
     UpdateManager (const std::atomic<bool>& shuttingDown)
@@ -220,21 +222,16 @@ class UpdateManager
         for(const auto& job : jobs)
         {
             if(shuttingDown) return false;
-            LOG_DEBUG(lg) << "update() - Channel: " << job.channel << " :: Path: " << job.installPath
-                          << " :: Language: " << nlohmann::json(job.language);
+            LOG_DEBUG(lg) << "update() - Channel: " << job.channel << " :: Path: " << job.installPath << " :: Language: " << job.language;
 
-            switch(job.language)
+            // Download first: if it fails, the translation installed so far stays in place
+            if(!job.folder.empty() && !installTranslation(job.installPath, job.folder, job.urls))
             {
-                case Protocol::Language::German:
-                    success &= installGermanTranslation(job.installPath, {job.info.server1, job.info.server1_fallback});
-                    break;
-                case Protocol::Language::GermanFull:
-                    success &= installGermanTranslation(job.installPath, {job.info.server3, job.info.server3_fallback});
-                    break;
-                case Protocol::Language::English:
-                    removeGermanTranslation(job.installPath);
-                    break;
+                success = false;
+                continue;
             }
+            removeTranslations(job.installPath, job.managedFolders, job.folder);
+            patchUserCfg(job.installPath / "user.cfg", job.folder);
         }
 
         if(!success) LOG_ERROR(lg) << "update() - at least one channel could not be updated";

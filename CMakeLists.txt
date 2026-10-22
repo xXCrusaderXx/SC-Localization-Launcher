@@ -6,10 +6,27 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 message(STATUS "#### StarCitizen-Launcher ####")
-project(SC-Deutsch-Launcher VERSION 0.1.0 LANGUAGES CXX)
 
-set(SC_LAUNCHER_BINARY ${PROJECT_NAME})
-set(SC_APP_ID "io.github.xXCrusaderXx.StarCitizenDeutschLinux")
+# Version of a normal build. Release workflows read this line; keep it a plain number.
+set(SC_DEFAULT_VERSION 0.1.0)
+# CI sets the release version (e.g. 0.6.0 or 0.6.0-rc1), so no version bump commit is needed
+set(SC_VERSION_OVERRIDE "" CACHE STRING "Release version set by CI")
+if(SC_VERSION_OVERRIDE)
+  set(SC_FULL_VERSION "${SC_VERSION_OVERRIDE}")
+else()
+  set(SC_FULL_VERSION "${SC_DEFAULT_VERSION}")
+endif()
+# project() only accepts numbers; a suffix like -rc1 stays in SC_FULL_VERSION
+string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" SC_NUMERIC_VERSION "${SC_FULL_VERSION}")
+if(NOT SC_NUMERIC_VERSION)
+  message(FATAL_ERROR "Invalid version '${SC_FULL_VERSION}', expected X.Y.Z or X.Y.Z-suffix")
+endif()
+
+project(SC-Localization-Launcher VERSION ${SC_NUMERIC_VERSION} LANGUAGES CXX)
+
+# Lowercase like other Linux programs; also the package name
+set(SC_LAUNCHER_BINARY sc-localization-launcher)
+set(SC_APP_ID "io.github.xXCrusaderXx.SCLocalizationLauncher")
 
 option(SC_BUILD_APPIMAGE "Add the 'appimage' target to the default build" OFF)
 # ON:  FHS layout for distro packages and Flatpak (bin/, share/applications, share/icons, share/metainfo)
@@ -42,6 +59,11 @@ if(NOT nlohmann_json_FOUND OR nlohmann_json_VERSION VERSION_LESS 3.11)
 endif()
 find_package(CURL REQUIRED)
 
+# languages.json is downloaded at runtime; this built-in copy is used on a first start without network
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/languages.json)
+file(READ ${CMAKE_SOURCE_DIR}/languages.json SC_BUNDLED_LANGUAGES)
+configure_file(${CMAKE_SOURCE_DIR}/include/backend/BundledLanguages.hpp.in ${CMAKE_BINARY_DIR}/generated/BundledLanguages.hpp @ONLY)
+
 #############################################################
 # --- BINARY ---
 #############################################################
@@ -56,7 +78,7 @@ add_executable(${SC_LAUNCHER_BINARY}
 set(SC_QML_FILES
   qml/Main.qml
   qml/ChannelRow.qml
-  qml/LangSwitch.qml
+  qml/LanguagePicker.qml
   qml/IconButton.qml
   qml/PathRow.qml
   qml/SettingsPanel.qml
@@ -77,6 +99,17 @@ qt_add_qml_module(${SC_LAUNCHER_BINARY}
   QML_FILES ${SC_QML_FILES}
 )
 
+# UI translations, picked by the system language. Without Qt Linguist the UI is English only.
+find_package(Qt6 QUIET COMPONENTS LinguistTools)
+if(Qt6LinguistTools_FOUND)
+  qt_add_translations(${SC_LAUNCHER_BINARY}
+    TS_FILES translations/sc-localization-launcher_de.ts
+    RESOURCE_PREFIX /i18n
+  )
+else()
+  message(STATUS "Qt LinguistTools not found, the UI will be English only")
+endif()
+
 target_link_libraries(${SC_LAUNCHER_BINARY} PRIVATE
   Qt6::Quick
   nlohmann_json::nlohmann_json
@@ -85,11 +118,12 @@ target_link_libraries(${SC_LAUNCHER_BINARY} PRIVATE
 
 target_include_directories(${SC_LAUNCHER_BINARY} PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_BINARY_DIR}/generated
 )
 
 target_compile_definitions(${SC_LAUNCHER_BINARY} PRIVATE
   SC_APP_ID="${SC_APP_ID}"
-  SC_VERSION="${PROJECT_VERSION}"
+  SC_VERSION="${SC_FULL_VERSION}"
 )
 
 configure_file(
@@ -104,7 +138,7 @@ if(SC_BUILD_TESTS)
   add_subdirectory(tests)
 endif()
 
-set(SC_DESKTOP_FILE "${CMAKE_SOURCE_DIR}/misc/starcitizen-launcher.desktop")
+set(SC_DESKTOP_FILE "${CMAKE_SOURCE_DIR}/packaging/${SC_APP_ID}.desktop")
 set(SC_ICON_FILE "${CMAKE_SOURCE_DIR}/resources/icon.png")
 set(SC_METAINFO_FILE "${CMAKE_SOURCE_DIR}/packaging/${SC_APP_ID}.metainfo.xml")
 
@@ -118,7 +152,7 @@ if(SC_SYSTEM_INSTALL)
   install(FILES ${SC_ICON_FILE} DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps RENAME ${SC_APP_ID}.png)
   install(FILES ${SC_METAINFO_FILE} DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
   if(EXISTS "${CMAKE_SOURCE_DIR}/LICENSE")
-    install(FILES "${CMAKE_SOURCE_DIR}/LICENSE" DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/${PROJECT_NAME})
+    install(FILES "${CMAKE_SOURCE_DIR}/LICENSE" DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/${SC_LAUNCHER_BINARY})
   endif()
 else()
   install(TARGETS ${SC_LAUNCHER_BINARY} DESTINATION bin)
@@ -225,11 +259,11 @@ endif()
 # cmake -B build -DSC_SYSTEM_INSTALL=ON -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build
 # cd build && cpack -G DEB   (or -G RPM)
 
-set(CPACK_PACKAGE_NAME "sc-deutsch-launcher")
+set(CPACK_PACKAGE_NAME "${SC_LAUNCHER_BINARY}")
 set(CPACK_PACKAGE_VENDOR "Marko Klein")
 set(CPACK_PACKAGE_CONTACT "Marko Klein <55139200+xXCrusaderXx@users.noreply.github.com>")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Deutsche Übersetzung für Star Citizen unter Linux")
-set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/xXCrusaderXx/StarCitizenDeutschLinux")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Installs community translations for Star Citizen on Linux")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/xXCrusaderXx/SC-Localization-Launcher")
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")
 set(CPACK_STRIP_FILES ON)
 

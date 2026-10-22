@@ -16,6 +16,8 @@ Item {
     readonly property var options: appState.options || {}
     readonly property var channels: appState.channels || []
     readonly property bool searchBusy: appState.searching === true
+    // Languages with a credit, i.e. every translation (English is the original game text)
+    readonly property var translations: (appState.languages || []).filter(l => l.credit && l.credit.project)
 
     visible: open || sheet.x < width
 
@@ -71,7 +73,7 @@ Item {
             }
 
             Text {
-                text: "Einstellungen"
+                text: qsTr("Settings")
                 color: Theme.text
                 font.pixelSize: 20
                 font.bold: true
@@ -112,7 +114,7 @@ Item {
                 }
 
                 SectionTitle {
-                    text: "VERHALTEN"
+                    text: qsTr("BEHAVIOUR")
                 }
 
                 ColumnLayout {
@@ -121,38 +123,38 @@ Item {
                     spacing: 14
 
                     Toggle {
-                        text: "Star Citizen nach dem Update starten"
-                        description: "Startet über das LUG-Skript oder Lutris"
+                        text: qsTr("Start Star Citizen after the update")
+                        description: qsTr("Starts through the LUG script or Lutris")
                         checked: panel.options.launchGameAfterUpdate === true
                         onSwitched: on => backend.setOption("launchGameAfterUpdate", on)
                     }
 
                     Toggle {
-                        text: "Übersetzung beim Start aktualisieren"
+                        text: qsTr("Update translations on start")
                         comingSoon: true
                         checked: panel.options.updateAtStart === true
                     }
 
                     Toggle {
-                        text: "Neue Übersetzungen automatisch installieren"
+                        text: qsTr("Install new translations automatically")
                         comingSoon: true
                         checked: panel.options.installNewTranslations === true
                     }
 
                     Toggle {
-                        text: "Nach Updates in den Tray minimieren"
+                        text: qsTr("Minimize to the tray after updates")
                         comingSoon: true
                         checked: panel.options.minimizeAfterUpdate === true
                     }
 
                     Toggle {
-                        text: "Mit dem System starten"
+                        text: qsTr("Start with the system")
                         comingSoon: true
                         checked: panel.options.startWithSystem === true
                     }
 
                     Toggle {
-                        text: "Update-Fortschritt anzeigen"
+                        text: qsTr("Show update progress")
                         comingSoon: true
                         checked: panel.options.showUpdateProgress === true
                     }
@@ -163,7 +165,7 @@ Item {
                     Layout.topMargin: 12
 
                     SectionTitle {
-                        text: "INSTALLATIONEN"
+                        text: qsTr("INSTALLATIONS")
                     }
 
                     Item {
@@ -172,7 +174,7 @@ Item {
 
                     Text {
                         Layout.topMargin: 8
-                        text: panel.searchBusy ? "Suche läuft …" : "Automatisch suchen"
+                        text: panel.searchBusy ? qsTr("Searching …") : qsTr("Search automatically")
                         color: searchMouse.containsMouse ? Theme.text : Theme.accent
                         font.pixelSize: 11
                         font.bold: true
@@ -192,7 +194,6 @@ Item {
                 ColumnLayout {
                     Layout.leftMargin: 24
                     Layout.rightMargin: 24
-                    Layout.bottomMargin: 24
                     spacing: 8
 
                     PathRow {
@@ -213,6 +214,75 @@ Item {
                             path: channel.installPath || ""
                             locked: panel.locked
                             onChangeRequested: panel.pathChangeRequested(channel.name)
+                        }
+                    }
+                }
+
+                SectionTitle {
+                    Layout.topMargin: 12
+                    text: qsTr("TRANSLATIONS")
+                }
+
+                // Credit and license of every offered translation, as the community projects' licenses require
+                ColumnLayout {
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    Layout.bottomMargin: 24
+                    spacing: 8
+
+                    Repeater {
+                        model: panel.translations
+
+                        delegate: Rectangle {
+                            required property var modelData
+
+                            Layout.fillWidth: true
+                            implicitHeight: creditColumn.implicitHeight + 20
+                            radius: 10
+                            color: Theme.panel
+                            border.color: Theme.border
+
+                            Column {
+                                id: creditColumn
+
+                                anchors {
+                                    left: parent.left
+                                    right: parent.right
+                                    verticalCenter: parent.verticalCenter
+                                    leftMargin: 14
+                                    rightMargin: 14
+                                }
+                                spacing: 2
+
+                                Text {
+                                    width: parent.width
+                                    text: modelData.name
+                                    color: Theme.text
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                }
+
+                                Text {
+                                    width: parent.width
+                                    text: qsTr("%1 by %2").arg("<a href=\"%1\">%2</a>".arg(modelData.credit.url).arg(modelData.credit.project)).arg(modelData.credit.authors)
+                                    textFormat: Text.StyledText
+                                    linkColor: Theme.accent
+                                    color: Theme.muted
+                                    font.pixelSize: 11
+                                    wrapMode: Text.Wrap
+                                    onLinkActivated: link => Qt.openUrlExternally(link)
+                                }
+
+                                Text {
+                                    width: parent.width
+                                    text: modelData.credit.licenseUrl ? qsTr("License: %1").arg("<a href=\"%1\">%2</a>".arg(modelData.credit.licenseUrl).arg(modelData.credit.license)) : qsTr("License: %1").arg(modelData.credit.license)
+                                    textFormat: Text.StyledText
+                                    linkColor: Theme.accent
+                                    color: Theme.muted
+                                    font.pixelSize: 11
+                                    onLinkActivated: link => Qt.openUrlExternally(link)
+                                }
+                            }
                         }
                     }
                 }

@@ -7,6 +7,8 @@ Rectangle {
 
     // Protocol::Channel: { name, installPath, language, availableLanguages }
     property var channel: ({})
+    // Protocol::State.languages: [{ code, name, credit }]
+    property var languages: []
     property bool locked: false
 
     signal languagePicked(string language)
@@ -14,7 +16,20 @@ Rectangle {
 
     readonly property bool pathSet: (channel.installPath || "") !== ""
     readonly property var available: channel.availableLanguages || []
-    readonly property bool germanAvailable: available.indexOf("de") >= 0 || available.indexOf("deFull") >= 0
+    readonly property bool choiceAvailable: available.indexOf(channel.language) >= 0
+    readonly property string choiceName: {
+        for (const language of languages)
+            if (language.code === channel.language)
+                return language.name;
+        return channel.language || "";
+    }
+    // Every known language; the ones this channel does not offer right now are shown but cannot be picked
+    readonly property var options: languages.map(l => ({
+                code: l.code,
+                name: l.name,
+                credit: l.credit,
+                available: available.indexOf(l.code) >= 0
+            }))
 
     Layout.fillWidth: true
     implicitHeight: 56
@@ -59,35 +74,19 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
-                text: !row.pathSet ? "Kein Installationspfad gesetzt" : row.germanAvailable ? row.channel.installPath : "Aktuell keine Übersetzung für diesen Kanal"
-                color: Theme.muted
+                text: !row.pathSet ? qsTr("No install path set") : row.choiceAvailable ? row.channel.installPath : qsTr("%1 is currently not available for this channel").arg(row.choiceName)
+                color: row.pathSet && !row.choiceAvailable ? Theme.warning : Theme.muted
                 font.pixelSize: 11
                 elide: Text.ElideMiddle
             }
         }
 
-        LangSwitch {
+        LanguagePicker {
             visible: row.pathSet
-            interactive: !row.locked
-            currentKey: row.channel.language || ""
-            options: [
-                {
-                    key: "eng",
-                    label: "ENG",
-                    enabled: row.available.indexOf("eng") >= 0
-                },
-                {
-                    key: "de",
-                    label: "DE",
-                    enabled: row.available.indexOf("de") >= 0
-                },
-                {
-                    key: "deFull",
-                    label: "DE Voll",
-                    enabled: row.available.indexOf("deFull") >= 0
-                }
-            ]
-            onPicked: key => row.languagePicked(key)
+            enabled: !row.locked
+            languages: row.options
+            currentCode: row.channel.language || ""
+            onPicked: code => row.languagePicked(code)
         }
 
         // Shown as a pill when no path is set, as a small edit button otherwise
@@ -102,7 +101,7 @@ Rectangle {
             Text {
                 id: choosePathLabel
                 anchors.centerIn: parent
-                text: "Pfad wählen"
+                text: qsTr("Choose folder")
                 color: Theme.accent
                 font.pixelSize: 12
                 font.bold: true

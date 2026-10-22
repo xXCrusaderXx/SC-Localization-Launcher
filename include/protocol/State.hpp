@@ -1,6 +1,5 @@
 #pragma once
 #include <nlohmann/json.hpp>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -12,22 +11,31 @@ namespace Protocol
 // Channels in display order
 inline const std::vector<std::string> CHANNEL_NAMES{"LIVE", "PTU", "EPTU", "HOTFIX", "TECH-PREVIEW"};
 
-enum class Language
+// The original game text: no translation installed. Every other language code comes from languages.json.
+inline const std::string ENGLISH = "en";
+
+// Who made a translation and under which license; shown wherever the translation is offered
+struct Credit
 {
-    English,
-    German,
-    GermanFull
+    std::string project;
+    std::string authors;
+    std::string url;
+    std::string license;
+    std::string licenseUrl;
 };
 
-NLOHMANN_JSON_SERIALIZE_ENUM(Language, {{Language::English, "eng"}, {Language::German, "de"}, {Language::GermanFull, "deFull"}})
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Credit, project, authors, url, license, licenseUrl)
 
-// Unlike from_json, which falls back to English, unknown names are rejected
-inline std::optional<Language> languageFromString (const std::string& name)
+struct Language
 {
-    for(auto language : {Language::English, Language::German, Language::GermanFull})
-        if(nlohmann::json(language) == name) return language;
-    return std::nullopt;
-}
+    std::string code;
+    // In the language itself, e.g. "Deutsch"
+    std::string name;
+    // Empty for ENGLISH, the original game text
+    Credit credit;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Language, code, name, credit)
 
 enum class UpdateStatus
 {
@@ -59,15 +67,18 @@ struct Channel
 {
     std::string name;
     std::string installPath;
-    Language language = Language::English;
-    // What the translation server currently offers, independent of the install path
-    std::vector<Language> availableLanguages;
+    std::string language = ENGLISH;
+    // Codes the translation sources currently offer for this channel, always including ENGLISH,
+    // independent of the install path
+    std::vector<std::string> availableLanguages;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages)
 
 struct State
 {
+    // All known languages in display order, ENGLISH first
+    std::vector<Language> languages;
     std::vector<Channel> channels;
     std::string rsiLauncherPath;
     Options options;
@@ -75,6 +86,6 @@ struct State
     bool searching = false;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, channels, rsiLauncherPath, options, update, searching)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, searching)
 
 }  // namespace Protocol
