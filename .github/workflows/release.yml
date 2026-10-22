@@ -1,10 +1,13 @@
 name: Release
 
 # Push a tag vX.Y.Z (matching project(... VERSION X.Y.Z) in CMakeLists.txt) to
-# build the AppImage, .deb and .rpm and publish them as a GitHub Release.
+# build the AppImage, .deb, .rpm, Arch and Flatpak packages, install and start
+# each of them on fresh distros, and publish them as a GitHub Release.
+# "Run workflow" does the same as a dry run without publishing.
 on:
   push:
     tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -23,10 +26,14 @@ jobs:
       - name: Compare tag with CMakeLists.txt
         id: check
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: |
           set -euo pipefail
           cmake_version="$(sed -n 's/^project([^)]*VERSION \([0-9][0-9.]*\).*/\1/p' CMakeLists.txt)"
+          if [ -z "$TAG" ]; then
+            echo "version=$cmake_version" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if [ "${TAG#v}" != "$cmake_version" ] && [[ "${TAG#v}" != "$cmake_version"-* ]]; then
             echo "::error::Tag $TAG does not match CMakeLists.txt version $cmake_version"
             exit 1
@@ -59,62 +66,135 @@ jobs:
           name: appimage
           path: dist/*
 
-  deb:
-    name: deb
-    needs: version
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7.0.1
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential cmake ninja-build dpkg-dev file libgl-dev libcurl4-openssl-dev nlohmann-json3-dev \
-            qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools
-
-      - name: Build package
-        run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSC_SYSTEM_INSTALL=ON -DCMAKE_INSTALL_PREFIX=/usr
-          cmake --build build
-          cd build && cpack -G DEB
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: deb
-          path: build/*.deb
-
-  rpm:
-    name: rpm
+  # Built per distro: Ubuntu 24.04 packages depend on the t64 libraries Debian 12 does not have.
+  native:
+    name: ${{ matrix.name }}
     needs: version
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    container: fedora:latest
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: deb (ubuntu 24.04), image: "ubuntu:24.04", suffix: ubuntu24.04, ext: deb }
+          - { name: deb (debian 12), image: "debian:12", suffix: debian12, ext: deb }
+          - { name: rpm (fedora), image: "fedora:latest", suffix: fedora, ext: rpm }
     steps:
-      - name: Install dependencies
-        run: |
-          dnf install -y gcc-c++ cmake ninja-build rpm-build file libcurl-devel json-devel \
-            qt6-qtbase-devel qt6-qtdeclarative-devel
-
       - name: Checkout
         uses: actions/checkout@v7.0.1
 
       - name: Build package
+        run: bash packaging/native/build.sh "$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE/out"
+
+      - name: Rename
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
-          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSC_SYSTEM_INSTALL=ON -DCMAKE_INSTALL_PREFIX=/usr
-          cmake --build build
-          cd build && cpack -G RPM
+          mkdir dist
+          for f in out/*.${{ matrix.ext }}; do
+            mv "$f" "dist/sc-deutsch-launcher-$VERSION-${{ matrix.suffix }}-x86_64.${{ matrix.ext }}"
+          done
 
       - uses: actions/upload-artifact@v7
         with:
-          name: rpm
-          path: build/*.rpm
+          name: native-${{ matrix.suffix }}
+          path: dist/*
+
+  arch:
+    name: arch package
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: archlinux:latest
+    steps:
+      - name: Install git
+        run: pacman -Syu --noconfirm --needed git
+
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      # The AUR PKGBUILD downloads the tag tarball; here it is built from this checkout instead.
+      - name: Build PKGBUILD
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git archive --prefix="StarCitizenDeutschLinux-${VERSION%%-*}/" -o /tmp/src.tar.gz HEAD
+          bash packaging/aur/test.sh /tmp/src.tar.gz out
+          mkdir dist
+          mv out/*.pkg.tar.zst "dist/sc-deutsch-launcher-$VERSION-arch-x86_64.pkg.tar.zst"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: native-arch
+          path: dist/*
+
+  flatpak:
+    name: Flatpak
+    needs: version
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:kde-6.10
+      options: --privileged
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Build bundle
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: SC-Deutsch-Launcher-${{ needs.version.outputs.version }}-x86_64.flatpak
+          manifest-path: flatpak/SC-Deutsch-Launcher.json
+          cache-key: flatpak-builder-${{ github.sha }}
+          upload-artifact: true
+
+  # Installs every package on a fresh distro without build tools and starts it under Xvfb.
+  test:
+    name: test ${{ matrix.name }}
+    needs: [appimage, native, arch]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: AppImage on ubuntu 22.04, image: "ubuntu:22.04", artifact: appimage, script: appimage/smoke-test.sh }
+          - { name: AppImage on debian 12, image: "debian:12", artifact: appimage, script: appimage/smoke-test.sh }
+          - { name: AppImage on fedora, image: "fedora:latest", artifact: appimage, script: appimage/smoke-test.sh }
+          - { name: AppImage on arch, image: "archlinux:latest", artifact: appimage, script: appimage/smoke-test.sh }
+          - { name: deb on ubuntu 24.04, image: "ubuntu:24.04", artifact: native-ubuntu24.04, script: native/install-test.sh }
+          - { name: deb on debian 12, image: "debian:12", artifact: native-debian12, script: native/install-test.sh }
+          - { name: rpm on fedora, image: "fedora:latest", artifact: native-fedora, script: native/install-test.sh }
+          - { name: pkg on arch, image: "archlinux:latest", artifact: native-arch, script: native/install-test.sh }
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ matrix.artifact }}
+          path: pkg
+
+      - name: Install and start
+        run: |
+          package="$(ls "$PWD"/pkg/*)"
+          chmod +x "$package"
+          bash packaging/${{ matrix.script }} "$package" "$PWD/screenshot.png"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: screenshot-${{ strategy.job-index }}
+          path: screenshot.png
+          if-no-files-found: ignore
 
   publish:
     name: publish release
-    needs: [appimage, deb, rpm]
+    needs: [version, test, flatpak]
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -122,8 +202,15 @@ jobs:
     steps:
       - uses: actions/download-artifact@v8
         with:
-          path: dist
-          merge-multiple: true
+          path: artifacts
+
+      # Only the packages, not the test screenshots
+      - name: Collect packages
+        run: |
+          mkdir dist
+          find artifacts -type f \( -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' -o -name '*.pkg.tar.zst' -o -name '*.flatpak' \) \
+            -exec mv {} dist/ \;
+          ls -la dist
 
       - name: Create GitHub Release
         env:
