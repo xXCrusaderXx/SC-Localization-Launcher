@@ -1,0 +1,59 @@
+{
+    "version": 1,
+    "languages": [
+        {
+            "code": "de",
+            "name": "Deutsch",
+            "folder": "german_(germany)",
+            "source": {
+                "channels": {
+                    "LIVE": ["https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live/global.ini"],
+                    "HOTFIX": ["https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live/global.ini"]
+                }
+            },
+            "credit": {
+                "project": "StarCitizen-Deutsch-INI",
+                "authors": "rjcncpt and the German translation community",
+                "url": "https://github.com/rjcncpt/StarCitizen-Deutsch-INI",
+                "license": "CC BY-NC-SA 4.0",
+                "licenseUrl": "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+            }
+        },
+        {
+            "code": "de-full",
+            "name": "Deutsch (vollständig)",
+            "folder": "german_(germany)",
+            "source": {
+                "channels": {
+                    "LIVE": ["https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live/full/global.ini"],
+                    "HOTFIX": ["https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live/full/global.ini"]
+                }
+            },
+            "credit": {
+                "project": "StarCitizen-Deutsch-INI",
+                "authors": "rjcncpt and the German translation community",
+                "url": "https://github.com/rjcncpt/StarCitizen-Deutsch-INI",
+                "license": "CC BY-NC-SA 4.0",
+                "licenseUrl": "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+            }
+        },
+        {
+            "code": "de-ch",
+            "name": "Schwiizerdütsch",
+            "folder": "german_(germany)",
+            "source": {
+                "channels": {
+                    "LIVE": ["https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live-CH/global.ini"],
+                    "HOTFIX": ["https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live-CH/global.ini"]
+                }
+            },
+            "credit": {
+                "project": "StarCitizen-Deutsch-INI",
+                "authors": "rjcncpt and the German translation community",
+                "url": "https://github.com/rjcncpt/StarCitizen-Deutsch-INI",
+                "license": "CC BY-NC-SA 4.0",
+                "licenseUrl": "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+            }
+        }
+    ]
+}

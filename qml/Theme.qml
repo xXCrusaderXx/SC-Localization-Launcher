@@ -16,5 +16,6 @@ QtObject {
     readonly property color accent: "#38bdf8"
     readonly property color accent2: "#6366f1"
     readonly property color success: "#22c55e"
+    readonly property color warning: "#f59e0b"
     readonly property color danger: "#ef4444"
 }

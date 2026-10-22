@@ -15,7 +15,8 @@
 struct ChannelSettings
 {
     std::string installPath;
-    Protocol::Language language = Protocol::Language::English;
+    // A language code from languages.json or Protocol::ENGLISH
+    std::string language = Protocol::ENGLISH;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelSettings, installPath, language)
@@ -35,6 +36,15 @@ class SettingsJsonParser
     LoggerFramework::LogEx lg;
     std::filesystem::path filePath;
 
+    // Language names written by earlier versions; unknown names are kept, the backend checks them against languages.json
+    static std::string migrateLanguage (const std::string& language)
+    {
+        static const std::map<std::string, std::string> renamed{
+            {"", Protocol::ENGLISH}, {"eng", Protocol::ENGLISH}, {"deFull", "de-full"}, {"deVoll", "de-full"}};
+        auto it = renamed.find(language);
+        return it != renamed.end() ? it->second : language;
+    }
+
     // Format up to the protocol refactor: "selectedTrans" per channel and a "settings" node
     static SettingsFile fromLegacyJson (const nlohmann::json& json)
     {
@@ -43,11 +53,8 @@ class SettingsJsonParser
         const auto channels = json.value("channels", nlohmann::json::object());
         for(const auto& [name, channel] : channels.items())
         {
-            std::string selected = channel.value("selectedTrans", "");
             file.channels[name].installPath = channel.value("installPath", "");
-            file.channels[name].language = selected == "de"       ? Protocol::Language::German
-                                           : selected == "deVoll" ? Protocol::Language::GermanFull
-                                                                  : Protocol::Language::English;
+            file.channels[name].language = channel.value("selectedTrans", "");
         }
 
         const auto settings = json.value("settings", nlohmann::json::object());
@@ -70,8 +77,9 @@ class SettingsJsonParser
         {
             nlohmann::json json = nlohmann::json::parse(stream);
             LOG_DEBUG(lg) << "load() - " << path;
-            if(json.contains("settings")) return fromLegacyJson(json);
-            return json.get<SettingsFile>();
+            SettingsFile file = json.contains("settings") ? fromLegacyJson(json) : json.get<SettingsFile>();
+            for(auto& [name, channel] : file.channels) channel.language = migrateLanguage(channel.language);
+            return file;
         }
         catch(const std::exception& e)
         {
@@ -89,10 +97,12 @@ class SettingsJsonParser
     };
     ~SettingsJsonParser () { LOG_DEBUG(lg) << "destructed"; };
 
-    // Falls back to the shipped settings.json and then to the defaults, so a broken file never stops the app
+    // Falls back to the settings of the former SC Deutsch Launcher, the shipped settings.json and then to the
+    // defaults, so a broken file never stops the app. The next save() writes to filePath.
     SettingsFile load ()
     {
         if(auto file = loadFrom(filePath)) return *file;
+        if(auto file = loadFrom(PATHS::JSON_FILES::SETTINGS_LEGACY)) return *file;
         if(auto file = loadFrom(PATHS::JSON_FILES::SETTINGS)) return *file;
         LOG_DEBUG(lg) << "load() - no settings.json found, using defaults";
         return {};

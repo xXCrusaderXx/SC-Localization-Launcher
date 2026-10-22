@@ -14,7 +14,8 @@ struct SetLanguage
 {
     static constexpr const char* name = "setLanguage";
     std::string channel;
-    Language language = Language::English;
+    // A code from State::languages
+    std::string language;
 };
 
 struct SetInstallPath

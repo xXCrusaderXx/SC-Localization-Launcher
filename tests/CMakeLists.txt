@@ -6,8 +6,8 @@ find_package(Qt6 REQUIRED COMPONENTS Test Network)
 # Backend headers, logger and test helpers for both tests
 add_library(sc_test_support INTERFACE)
 target_sources(sc_test_support INTERFACE ${CMAKE_SOURCE_DIR}/src/logging/logger/custom_logger/custom_logger.cpp)
-target_include_directories(sc_test_support INTERFACE ${CMAKE_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR})
-# Enables the SC_CHANNELS_URL override, which the app itself never has
+target_include_directories(sc_test_support INTERFACE ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/generated ${CMAKE_CURRENT_SOURCE_DIR})
+# Enables the SC_LANGUAGES_URL override and plain HTTP to 127.0.0.1, which the app itself never has
 target_compile_definitions(sc_test_support INTERFACE SC_TESTING)
 target_link_libraries(sc_test_support INTERFACE Qt6::Test Qt6::Network nlohmann_json::nlohmann_json CURL::libcurl)
 
@@ -37,9 +37,10 @@ qt_add_qml_module(GuiTest
 
 foreach(test BackendTest GuiTest)
   add_test(NAME ${test} COMMAND ${test})
-  # Own HOME, so the user's settings are never touched. Empty PATH, so the game can never be started.
+  # Own HOME and XDG dirs, so the user's settings are never touched. Empty PATH, so the game can never be started.
+  set(test_home ${CMAKE_CURRENT_BINARY_DIR}/home-${test})
   set_tests_properties(${test} PROPERTIES
     TIMEOUT 120
-    ENVIRONMENT "HOME=${CMAKE_CURRENT_BINARY_DIR}/home-${test};PATH=/nonexistent;QT_QPA_PLATFORM=offscreen;QT_FORCE_STDERR_LOGGING=1"
+    ENVIRONMENT "HOME=${test_home};XDG_CONFIG_HOME=${test_home}/.config;XDG_CACHE_HOME=${test_home}/.cache;XDG_STATE_HOME=${test_home}/.local/state;PATH=/nonexistent;QT_QPA_PLATFORM=offscreen;QT_FORCE_STDERR_LOGGING=1;LANGUAGE=en;LC_ALL=C.UTF-8"
   )
 endforeach()

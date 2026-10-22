@@ -55,11 +55,24 @@ class GuiTest : public QObject
         return {};
     }
 
+    QQuickItem* languagePicker () const
+    {
+        std::function<QQuickItem*(QQuickItem*)> walk = [&] (QQuickItem* item) -> QQuickItem*
+        {
+            if(!item->isVisible()) return nullptr;
+            if(item->inherits("QQuickComboBox")) return item;
+            for(auto* child : item->childItems())
+                if(auto* found = walk(child)) return found;
+            return nullptr;
+        };
+        return walk(window->contentItem());
+    }
+
     bool launchGameOption () const { return bridge->state()["options"].toMap()["launchGameAfterUpdate"].toBool(); }
 
     QQuickItem* launchToggle () const
     {
-        QQuickItem* item = findText("Star Citizen danach starten");
+        QQuickItem* item = findText("Start Star Citizen afterwards");
         while(item && !item->inherits("QQuickSwitch")) item = item->parentItem();
         return item;
     }
@@ -68,10 +81,10 @@ class GuiTest : public QObject
     void initTestCase ()
     {
         LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>());
-        qputenv("SC_CHANNELS_URL", server.url("/channels.json").toUtf8());
+        qputenv("SC_LANGUAGES_URL", server.url("/languages.json").toUtf8());
         resetUserDir();
         // Starts with the game launch switched on, the first test turns it off before any update runs
-        writeSettingsFile(legacySettings(liveDir.path().toStdString(), "eng", true));
+        writeSettingsFile(legacySettings(liveDir.path().toStdString(), "eng", true), PATHS::JSON_FILES::SETTINGS_LEGACY);
 
         bridge = std::make_unique<BackendBridge>();
         engine = std::make_unique<QQmlApplicationEngine>();
@@ -80,7 +93,7 @@ class GuiTest : public QObject
         QVERIFY(!engine->rootObjects().isEmpty());
         window = qobject_cast<QQuickWindow*>(engine->rootObjects().first());
         QVERIFY(QTest::qWaitForWindowExposed(window));
-        QTRY_COMPARE(channel("LIVE")["availableLanguages"].toList().size(), 3);
+        QTRY_COMPARE(channel("LIVE")["availableLanguages"].toList().size(), 4);
     }
 
     void cleanupTestCase ()
@@ -98,7 +111,7 @@ class GuiTest : public QObject
         // Off, on, off: the switch must follow the backend state every time
         for(bool expected : {false, true, false})
         {
-            QVERIFY(click("Star Citizen danach starten"));
+            QVERIFY(click("Start Star Citizen afterwards"));
             QTRY_COMPARE(launchGameOption(), expected);
             QTRY_COMPARE(launchToggle()->property("checked").toBool(), expected);
         }
@@ -107,16 +120,34 @@ class GuiTest : public QObject
 
     void pickLanguage ()
     {
-        // The first "DE" on screen belongs to LIVE, the only row with a path
-        QVERIFY(click("DE"));
+        // LIVE is the only row with a path, so its picker is the only one on screen
+        QQuickItem* picker = languagePicker();
+        QVERIFY(picker);
+        QVERIFY(findText("English"));
+
+        QVERIFY(click("English"));
+        QTRY_VERIFY(picker->property("popup").value<QObject*>()->property("opened").toBool());
+        // The list creates its entries with the next frame; each translation shows its credit
+        QTRY_VERIFY(findText("Deutsch"));
+        QVERIFY(findText("Test-INI · CC BY-NC-SA 4.0"));
+        QVERIFY(click("Deutsch"));
         QTRY_COMPARE(channel("LIVE")["language"].toString(), QString("de"));
         QCOMPARE(readSettingsFile()["channels"]["LIVE"]["language"], "de");
+
+        // The picker shows the confirmed choice, and opening it again highlights it
+        QTRY_VERIFY(!picker->property("popup").value<QObject*>()->property("visible").toBool());
+        QTRY_VERIFY(findText("Deutsch"));
+        QVERIFY(click("Deutsch"));
+        QTRY_VERIFY(picker->property("popup").value<QObject*>()->property("opened").toBool());
+        QCOMPARE(picker->property("highlightedIndex").toInt(), 1);
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!picker->property("popup").value<QObject*>()->property("visible").toBool());
     }
 
     void choosePathWithDialog ()
     {
-        // The first "Pfad wählen" belongs to PTU
-        QVERIFY(click("Pfad wählen"));
+        // The first "Choose folder" belongs to PTU
+        QVERIFY(click("Choose folder"));
         auto* dialog = engine->rootObjects().first()->findChild<QObject*>("folderDialog");
         QVERIFY(dialog);
         QTRY_COMPARE(dialog->property("target").toString(), QString("PTU"));
@@ -133,12 +164,13 @@ class GuiTest : public QObject
 
         // The local download is too fast to catch "running" by polling, so record every state
         QStringList statuses;
-        connect(bridge.get(), &BackendBridge::stateChanged, this, [&] { statuses << bridge->state()["update"].toString(); });
+        auto connection = connect(bridge.get(), &BackendBridge::stateChanged, this, [&] { statuses << bridge->state()["update"].toString(); });
 
-        QVERIFY(click("Übersetzung aktualisieren"));
+        QVERIFY(click("Update translations"));
         QTRY_VERIFY_WITH_TIMEOUT(statuses.contains("succeeded"), 30000);
+        disconnect(connection);
         QCOMPARE(statuses, (QStringList{"running", "succeeded"}));
-        QTRY_VERIFY(findText("Übersetzungen aktualisiert"));
+        QTRY_VERIFY(findText("Translations updated"));
         QVERIFY(QFile::exists(liveDir.filePath("data/Localization/german_(germany)/global.ini")));
     }
 };
