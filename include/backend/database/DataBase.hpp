@@ -8,15 +8,21 @@
 namespace Database
 {
 
+// Server mapping in channels.json:
+// server1 = German (hybrid), server2 = English, server3 = German (full), server4 = Swiss German
 struct WebInfo
 {
     std::string description;
     std::string folder;
-    int active;
+    int active = 0;
     std::string server1;
     std::string server2;
+    std::string server3;
+    std::string server4;
     std::string server1_fallback;
     std::string server2_fallback;
+    std::string server3_fallback;
+    std::string server4_fallback;
 };
 
 struct ChannelButton

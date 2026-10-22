@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <nlohmann/json.hpp>
 #include <thread>
 
@@ -28,13 +29,29 @@ class BackEnd
     using Callback = std::function<void(const nlohmann::json&)>;
     Callback guiCallback;
 
+    // processMassage() runs on the Qt thread pool and the managers call back from worker threads.
+    // Recursive, because manager callbacks re-enter initGui() while processMassage() holds the lock.
+    std::recursive_mutex mutex;
+
+    void saveSettings ()
+    {
+        try
+        {
+            settingsJsonParser.saveChannelSettings(backendData);
+        }
+        catch(const std::exception& e)
+        {
+            LOG_ERROR(lg) << "saveSettings() - " << e.what();
+        }
+    }
+
    public:
     BackEnd ()
-        : settingsJsonParser(PATHS::JSON_FILES::SETTINGS_USER)
-        , lg("BackEnd")
+        : lg("BackEnd")
+        , settingsJsonParser(PATHS::JSON_FILES::SETTINGS_USER)
         , channelManager(backendData)
-        , settingsManager(backendData)
         , updateManager(backendData)
+        , settingsManager(backendData)
     {
         settingsManager.setGuiCallback(
             [this] (const nlohmann::json& msg)
@@ -50,7 +67,7 @@ class BackEnd
             });
 
         settingsJsonParser.getChannelSettings(backendData);
-        channelsJsonParser.getChannels(backendData);
+        if(!channelsJsonParser.getChannels(backendData)) LOG_ERROR(lg) << "no channel information, translations cannot be downloaded";
 
         channelManager.initialSetup();
 
@@ -58,7 +75,7 @@ class BackEnd
     }
     virtual ~BackEnd ()
     {
-        settingsJsonParser.saveChannelSettings(backendData);
+        saveSettings();
         LOG_DEBUG(lg) << "destructed";
     }
 
@@ -74,6 +91,7 @@ class BackEnd
 
     void processMassage (const nlohmann::json& msg)
     {
+        std::lock_guard<std::recursive_mutex> lock(mutex);
         LOG_DEBUG(lg) << "processMassage() - msg:\n" << msg.dump(4);
 
         Protocol::Massage request(msg);
@@ -83,15 +101,19 @@ class BackEnd
            request.moduleExist("TECH-PREVIEW"))
         {
             channelManager.processRequest(request, response);
+            // A new install path can make the update button ready
+            updateManager.updateUpdateResponse(response);
         }
 
         if(request.moduleExist("SETTINGS")) settingsManager.processRequest(request, response);
         if(request.moduleExist("UPDATE")) updateManager.processRequest(request, response);
 
-        guiCallback(response.getJson());
+        saveSettings();
+        if(guiCallback) guiCallback(response.getJson());
     }
     void initGui ()
     {
+        std::lock_guard<std::recursive_mutex> lock(mutex);
         LOG_DEBUG(lg) << "initGui()";
 
         Protocol::Massage response(Protocol::MassageType::Response);

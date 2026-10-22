@@ -68,17 +68,17 @@ class SettingsManager
             backendData.settings.checkboxes.autoNewTranslation = settingsRequest.settings.autoNewTranslation.value();
             processAutoNewTranslation(settingsRequest, settingsResponse);
         }
-        if(backendData.settings.checkboxes.minimizeScdAfterUpdate)
+        if(settingsRequest.settings.minimizeScdAfterUpdate)
         {
             backendData.settings.checkboxes.minimizeScdAfterUpdate = settingsRequest.settings.minimizeScdAfterUpdate.value();
             processMinimizeScdAfterUpdate(settingsRequest, settingsResponse);
         }
-        if(backendData.settings.checkboxes.startScdWithSystemStart)
+        if(settingsRequest.settings.startScdWithSystemStart)
         {
             backendData.settings.checkboxes.startScdWithSystemStart = settingsRequest.settings.startScdWithSystemStart.value();
             processStartScdWithSystemStart(settingsRequest, settingsResponse);
         }
-        if(backendData.settings.checkboxes.showUpdateStatus)
+        if(settingsRequest.settings.showUpdateStatus)
         {
             backendData.settings.checkboxes.showUpdateStatus = settingsRequest.settings.showUpdateStatus.value();
             processShowUpdateStatus(settingsRequest, settingsResponse);

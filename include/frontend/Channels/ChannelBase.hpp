@@ -55,69 +55,47 @@ class ChannelBase : public QWidget
         }
     }
 
-    void clicked_Eng ()
+    // Only updates the button look; does not notify the backend
+    void showSelection (QPushButton *selected)
     {
-        LOG_DEBUG(lg) << "clicked_Eng()";
-        buttonEng->setStyleSheet(ButtonStyle::Active);
-        buttonDe->setStyleSheet(ButtonStyle::Inactive);
-        buttonDeVoll->setStyleSheet(ButtonStyle::Inactive);
+        for(QPushButton *button : {buttonEng, buttonDe, buttonDeVoll})
+        {
+            button->setStyleSheet(button == selected ? ButtonStyle::Active : ButtonStyle::Inactive);
+            button->setDisabled(button == selected);
+        }
+    }
 
-        buttonEng->setVisible(true);
-
-        buttonEng->setDisabled(true);
-        buttonDe->setDisabled(false);
-        buttonDeVoll->setDisabled(false);
-
+    void sendSelection (bool eng, bool de, bool deFull)
+    {
         Protocol::ChannelPayload channelRequest;
-        channelRequest.buttonEng.selected = true;
-        channelRequest.buttonDe.selected = false;
-        channelRequest.buttonDeFull.selected = false;
+        channelRequest.buttonEng.selected = eng;
+        channelRequest.buttonDe.selected = de;
+        channelRequest.buttonDeFull.selected = deFull;
 
         Protocol::Massage request(Protocol::MassageType::Request);
         request.AddModuleNode(channel, channelRequest.toJson());
         QtConcurrent::run([request, this] { updateBackendCallback(request.getJson()); });
+    }
+
+    void clicked_Eng ()
+    {
+        LOG_DEBUG(lg) << "clicked_Eng()";
+        showSelection(buttonEng);
+        sendSelection(true, false, false);
     }
 
     void clicked_De ()
     {
         LOG_DEBUG(lg) << "clicked_De()";
-        buttonEng->setStyleSheet(ButtonStyle::Inactive);
-        buttonDe->setStyleSheet(ButtonStyle::Active);
-        buttonDeVoll->setStyleSheet(ButtonStyle::Inactive);
-
-        buttonEng->setDisabled(false);
-        buttonDe->setDisabled(true);
-        buttonDeVoll->setDisabled(false);
-
-        Protocol::ChannelPayload channelRequest;
-        channelRequest.buttonEng.selected = false;
-        channelRequest.buttonDe.selected = true;
-        channelRequest.buttonDeFull.selected = false;
-
-        Protocol::Massage request(Protocol::MassageType::Request);
-        request.AddModuleNode(channel, channelRequest.toJson());
-        QtConcurrent::run([request, this] { updateBackendCallback(request.getJson()); });
+        showSelection(buttonDe);
+        sendSelection(false, true, false);
     }
 
     void clicked_DeFull ()
     {
         LOG_DEBUG(lg) << "clicked_DeFull()";
-        buttonEng->setStyleSheet(ButtonStyle::Inactive);
-        buttonDe->setStyleSheet(ButtonStyle::Inactive);
-        buttonDeVoll->setStyleSheet(ButtonStyle::Active);
-
-        buttonEng->setDisabled(false);
-        buttonDe->setDisabled(false);
-        buttonDeVoll->setDisabled(true);
-
-        Protocol::ChannelPayload channelRequest;
-        channelRequest.buttonEng.selected = false;
-        channelRequest.buttonDe.selected = false;
-        channelRequest.buttonDeFull.selected = true;
-
-        Protocol::Massage request(Protocol::MassageType::Request);
-        request.AddModuleNode(channel, channelRequest.toJson());
-        QtConcurrent::run([request, this] { updateBackendCallback(request.getJson()); });
+        showSelection(buttonDeVoll);
+        sendSelection(false, false, true);
     }
 
    public:
@@ -210,7 +188,7 @@ class ChannelBase : public QWidget
         {
             if(channelResponse.buttonEng.selected.value())
             {
-                clicked_Eng();
+                showSelection(buttonEng);
             }
         }
 
@@ -230,7 +208,7 @@ class ChannelBase : public QWidget
         {
             if(channelResponse.buttonDe.selected.value())
             {
-                clicked_De();
+                showSelection(buttonDe);
             }
         }
         if(channelResponse.buttonDeFull.enabled)
@@ -249,7 +227,7 @@ class ChannelBase : public QWidget
         {
             if(channelResponse.buttonDeFull.selected.value())
             {
-                clicked_DeFull();
+                showSelection(buttonDeVoll);
             }
         }
 
