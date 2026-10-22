@@ -1,80 +1,62 @@
 #pragma once
 
+#include <algorithm>
 #include <atomic>
-#include <exception>
-#include <fstream>
+#include <filesystem>
 #include <future>
-#include <iostream>
-#include <nlohmann/json.hpp>
+#include <map>
+#include <optional>
 #include <set>
+#include <string>
+#include <vector>
 
-#include "backend/database/DataBase.hpp"
 #include "logging/logging.h"
+#include "protocol/State.hpp"
 
+// Searches the disks for an RSI Launcher installation. Works only on its own data,
+// so it can run on any thread.
 class DirectoryFinder
 {
-   private:
-    LoggerFramework::LogEx lg;
-    nlohmann::json json;
-    Database::BackendData& backendData;
-
-    std::string rootTarget = "/Roberts Space Industries/RSI Launcher";
-
-    std::map<std::string, std::string> targets{{"LIVE", "StarCitizen/LIVE"},
-                                               {"PTU", "StarCitizen/PTU"},
-                                               {"EPTU", "StarCitizen/EPTU"},
-                                               {"HOTFIX", "StarCitizen/HOTFIX"},
-                                               {"TECH-PREVIEW", "StarCitizen/TECH-PREVIEW"}};
-
-    std::vector<std::string> executables{"RSI Launcher.exe", "StarCitizen_Launcher.exe"};
-
    public:
-    DirectoryFinder (Database::BackendData& backendData)
-        : lg("DirectoryFinder")
-        , backendData(backendData)
+    struct Result
     {
-        LOG_DEBUG(lg) << "instanziated";
+        std::filesystem::path rsiLauncherPath;
+        std::map<std::string, std::filesystem::path> channelPaths;
     };
 
-    ~DirectoryFinder () { LOG_DEBUG(lg) << "destructed"; };
+   private:
+    mutable LoggerFramework::LogEx lg;
 
-    void findRsiInstallation ()
+    std::string rootTarget = "/Roberts Space Industries/RSI Launcher";
+    std::vector<std::string> executables{"RSI Launcher.exe", "StarCitizen_Launcher.exe"};
+
+    bool hasLauncherExecutable (const std::filesystem::path& path) const
     {
-        LOG_DEBUG(lg) << "findRsiInstallation()";
-        find(rootTarget);
+        return std::any_of(executables.begin(), executables.end(),
+                           [&] (const std::string& exe) { return std::filesystem::is_regular_file(path / exe); });
     }
 
-    void find (std::string target)
+    // The channel folders live next to the launcher: .../Roberts Space Industries/StarCitizen/<channel>
+    Result readInstallation (const std::filesystem::path& launcherPath) const
     {
-        LOG_DEBUG(lg) << "find() - find target: " << target;
+        Result result;
+        if(!hasLauncherExecutable(launcherPath)) return result;
 
-        std::vector<std::string> rootPaths = {"/home", "/opt", "/usr", "/mnt", "/media"};
-        std::vector<std::future<void>> tasks;
-        std::atomic<bool> foundFlag{false};
-
-        for(const auto& path : rootPaths)
+        result.rsiLauncherPath = launcherPath;
+        for(const auto& channel : Protocol::CHANNEL_NAMES)
         {
-            if(!std::filesystem::exists(path)) continue;
-
-            tasks.emplace_back(std::async(std::launch::async, [this, path, target, &foundFlag] { searchPath(path, target, foundFlag); }));
+            std::filesystem::path channelPath = launcherPath.parent_path() / "StarCitizen" / channel;
+            LOG_DEBUG(lg) << "[check] " << channelPath;
+            if(std::filesystem::exists(channelPath))
+            {
+                LOG_DEBUG(lg) << "[set] " << channel << " → " << channelPath;
+                result.channelPaths[channel] = channelPath;
+            }
         }
-
-        for(auto& t : tasks)
-        {
-            t.wait();
-        }
-
-        if(!foundFlag)
-        {
-            LOG_DEBUG(lg) << "[RESULT] Kein Pfad mit '" << target << "' gefunden.";
-        }
-        else
-        {
-            LOG_DEBUG(lg) << "[DONE] Pfad gefunden.";
-        }
+        return result;
     }
 
-    void searchPath (const std::string& basePath, const std::string& target, std::atomic<bool>& foundFlag)
+    std::optional<Result> searchPath (const std::string& basePath, const std::atomic<bool>& foundFlag, const std::atomic<bool>& shuttingDown) const
     {
         std::set<std::string> ignorePaths = {"/proc", "/sys", "/run", "/dev", "/tmp", "/var"};
         size_t counter = 0;
@@ -84,7 +66,7 @@ class DirectoryFinder
             for(const auto& entry :
                 std::filesystem::recursive_directory_iterator(basePath, std::filesystem::directory_options::skip_permission_denied))
             {
-                if(foundFlag.load() || backendData.shuttingDown) break;  // Frühzeitiger Abbruch
+                if(foundFlag.load() || shuttingDown.load()) break;  // Another search thread was faster
 
                 if(!entry.is_directory()) continue;
 
@@ -93,49 +75,12 @@ class DirectoryFinder
                 if(std::any_of(ignorePaths.begin(), ignorePaths.end(), [&] (const std::string& ignore) { return path.starts_with(ignore); }))
                     continue;
 
-                if(++counter % 1000 == 0)
+                if(++counter % 1000 == 0) LOG_DEBUG(lg) << "[scan] " << path;
+
+                if(path.ends_with(rootTarget))
                 {
-                    LOG_DEBUG(lg) << "[scan] " << path;
-                }
-
-                if(path.ends_with(target))
-                {
-                    {
-                        LOG_DEBUG(lg) << "[FOUND] " << path;
-                    }
-
-                    for(const auto& exe : executables)
-                    {
-                        if(std::filesystem::is_regular_file(path + "/" + exe))
-                        {
-                            std::lock_guard<std::recursive_mutex> lock(backendData.mutex);
-                            backendData.rsiLauncherInstallPath = path;
-                        }
-                    }
-
-                    for(const auto& [key, suffix] : targets)
-                    {
-                        std::filesystem::path targetPath = entry.path().parent_path() / suffix;
-                        {
-                            LOG_DEBUG(lg) << "[check] " << targetPath;
-                        }
-
-                        if(std::filesystem::exists(targetPath))
-                        {
-                            for(const auto& exe : executables)
-                            {
-                                if(std::filesystem::is_regular_file(path + "/" + exe))
-                                {
-                                    LOG_DEBUG(lg) << "[set] " << key << " → " << targetPath;
-                                    std::lock_guard<std::recursive_mutex> lock(backendData.mutex);
-                                    backendData.channelData[key].installPath = targetPath;
-                                }
-                            }
-                        }
-                    }
-
-                    foundFlag = true;
-                    break;
+                    LOG_DEBUG(lg) << "[FOUND] " << path;
+                    return readInstallation(entry.path());
                 }
             }
         }
@@ -143,5 +88,51 @@ class DirectoryFinder
         {
             LOG_DEBUG(lg) << "[ERROR] " << e.what();
         }
+        return std::nullopt;
+    }
+
+   public:
+    DirectoryFinder ()
+        : lg("DirectoryFinder")
+    {
+        LOG_DEBUG(lg) << "instanziated";
+    };
+
+    ~DirectoryFinder () { LOG_DEBUG(lg) << "destructed"; };
+
+    // Blocks until the search is done. Returns nullopt if no installation was found.
+    std::optional<Result> findRsiInstallation (const std::atomic<bool>& shuttingDown)
+    {
+        LOG_DEBUG(lg) << "findRsiInstallation() - target: " << rootTarget;
+
+        std::vector<std::string> rootPaths = {"/home", "/opt", "/usr", "/mnt", "/media"};
+        std::vector<std::future<std::optional<Result>>> tasks;
+        std::atomic<bool> foundFlag{false};
+
+        for(const auto& path : rootPaths)
+        {
+            if(!std::filesystem::exists(path)) continue;
+
+            tasks.emplace_back(std::async(std::launch::async,
+                                          [this, path, &foundFlag, &shuttingDown]
+                                          {
+                                              auto result = searchPath(path, foundFlag, shuttingDown);
+                                              if(result) foundFlag = true;
+                                              return result;
+                                          }));
+        }
+
+        std::optional<Result> found;
+        for(auto& task : tasks)
+        {
+            auto result = task.get();
+            if(result && !found) found = result;
+        }
+
+        if(found)
+            LOG_DEBUG(lg) << "[DONE] Pfad gefunden.";
+        else
+            LOG_DEBUG(lg) << "[RESULT] Kein Pfad mit '" << rootTarget << "' gefunden.";
+        return found;
     }
 };

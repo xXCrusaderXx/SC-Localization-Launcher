@@ -9,26 +9,18 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
-#include <thread>
 #include <vector>
 
 #include "backend/database/DataBase.hpp"
 #include "backend/utils/utils.hpp"
 #include "logging/logging.h"
-#include "protocol/Protocol.hpp"
-#include "protocol/UpdateButtonPayload.hpp"
+#include "protocol/State.hpp"
 
 class UpdateManager
 {
    private:
     LoggerFramework::LogEx lg;
-    Database::BackendData& backendData;
-    using Callback = std::function<void(const nlohmann::json&)>;
-    Callback guiCallback;
-    std::atomic<bool> updateRunning{false};
-    // Finished workers are only joined on shutdown, joining inside makeUpdate() could deadlock
-    // with a worker that is still waiting for backendData.mutex in its GUI callback.
-    std::vector<std::thread> workers;
+    const std::atomic<bool>& shuttingDown;
 
     inline static const std::string GERMAN_LOCALIZATION = "german_(germany)";
 
@@ -43,7 +35,7 @@ class UpdateManager
     // Aborts a running download as soon as the app closes
     static int abortOnShutdown (void* clientp, curl_off_t, curl_off_t, curl_off_t, curl_off_t)
     {
-        return static_cast<std::atomic<bool>*>(clientp)->load() ? 1 : 0;
+        return static_cast<const std::atomic<bool>*>(clientp)->load() ? 1 : 0;
     }
 
     bool downloadAndWriteToFile (const std::string& url, const std::filesystem::path& outputFile)
@@ -70,7 +62,7 @@ class UpdateManager
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, 120L);
         curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
         curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, abortOnShutdown);
-        curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &backendData.shuttingDown);
+        curl_easy_setopt(curl, CURLOPT_XFERINFODATA, const_cast<std::atomic<bool>*>(&shuttingDown));
 
         CURLcode res = curl_easy_perform(curl);
         long httpCode = 0;
@@ -189,165 +181,89 @@ class UpdateManager
         return std::nullopt;
     }
 
-    void startGame (const std::filesystem::path& rsiLauncherInstallPath)
+    static bool inFlatpak () { return std::filesystem::exists("/.flatpak-info"); }
+
+    // Inside a Flatpak the game and its launchers live on the host, not in the sandbox
+    static bool startOnHost (const QString& program, const QStringList& arguments, const QString& workingDirectory = {})
+    {
+        if(!inFlatpak()) return QProcess::startDetached(program, arguments, workingDirectory);
+
+        QStringList hostArguments{"--host"};
+        if(!workingDirectory.isEmpty()) hostArguments << "--directory=" + workingDirectory;
+        hostArguments << program << arguments;
+        return QProcess::startDetached("flatpak-spawn", hostArguments);
+    }
+
+   public:
+    // One channel to update, prepared by the backend
+    struct Job
+    {
+        std::string channel;
+        std::filesystem::path installPath;
+        Protocol::Language language = Protocol::Language::English;
+        Database::WebInfo info;
+    };
+
+    UpdateManager (const std::atomic<bool>& shuttingDown)
+        : lg("UpdateManager")
+        , shuttingDown(shuttingDown)
+    {
+        LOG_DEBUG(lg) << "instanziated";
+    };
+    ~UpdateManager () { LOG_DEBUG(lg) << "destructed"; }
+
+    // Blocks until all channels are done. Returns false if at least one channel failed.
+    bool update (const std::vector<Job>& jobs)
+    {
+        LOG_DEBUG(lg) << "update() - START";
+        bool success = true;
+        for(const auto& job : jobs)
+        {
+            if(shuttingDown) return false;
+            LOG_DEBUG(lg) << "update() - Channel: " << job.channel << " :: Path: " << job.installPath
+                          << " :: Language: " << nlohmann::json(job.language);
+
+            switch(job.language)
+            {
+                case Protocol::Language::German:
+                    success &= installGermanTranslation(job.installPath, {job.info.server1, job.info.server1_fallback});
+                    break;
+                case Protocol::Language::GermanFull:
+                    success &= installGermanTranslation(job.installPath, {job.info.server3, job.info.server3_fallback});
+                    break;
+                case Protocol::Language::English:
+                    removeGermanTranslation(job.installPath);
+                    break;
+            }
+        }
+
+        if(!success) LOG_ERROR(lg) << "update() - at least one channel could not be updated";
+        LOG_DEBUG(lg) << "update() - FINISHED";
+        return success;
+    }
+
+    void startGame (const std::filesystem::path& rsiLauncherPath)
     {
         LOG_DEBUG(lg) << "startGame() - START";
 
-        auto prefix = findWinePrefix(rsiLauncherInstallPath);
+        auto prefix = findWinePrefix(rsiLauncherPath);
         if(prefix && std::filesystem::exists(*prefix / "sc-launch.sh"))
         {
             // LUG helper installation
             std::filesystem::path script = *prefix / "sc-launch.sh";
             LOG_DEBUG(lg) << "startGame() - LUG: " << script;
-            if(!QProcess::startDetached("bash", {QString::fromStdString(script.string())}, QString::fromStdString(prefix->string())))
+            if(!startOnHost("bash", {QString::fromStdString(script.string())}, QString::fromStdString(prefix->string())))
                 LOG_ERROR(lg) << "startGame() - failed to start " << script;
             return;
         }
 
-        QString lutris = QStandardPaths::findExecutable("lutris");
-        if(!lutris.isEmpty())
+        if(inFlatpak() || !QStandardPaths::findExecutable("lutris").isEmpty())
         {
-            LOG_DEBUG(lg) << "startGame() - Lutris: " << lutris.toStdString();
-            if(!QProcess::startDetached(lutris, {"lutris:rungame/star-citizen"})) LOG_ERROR(lg) << "startGame() - failed to start lutris";
+            LOG_DEBUG(lg) << "startGame() - Lutris";
+            if(!startOnHost("lutris", {"lutris:rungame/star-citizen"})) LOG_ERROR(lg) << "startGame() - failed to start lutris";
             return;
         }
 
-        LOG_ERROR(lg) << "startGame() - neither sc-launch.sh nor lutris found (RSI Launcher path: " << rsiLauncherInstallPath << ")";
-    }
-
-   public:
-    UpdateManager (Database::BackendData& backendData)
-        : lg("UpdateManager")
-        , backendData(backendData)
-    {
-        LOG_DEBUG(lg) << "instanziated";
-    };
-    ~UpdateManager ()
-    {
-        waitForWorkers();
-        LOG_DEBUG(lg) << "destructed";
-    }
-
-    void waitForWorkers ()
-    {
-        for(auto& worker : workers)
-            if(worker.joinable()) worker.join();
-        workers.clear();
-    }
-
-    void setGuiCallback (Callback cb)
-    {
-        LOG_DEBUG(lg) << "setGuiCallback()";
-        if(!guiCallback)
-        {
-            LOG_DEBUG(lg) << "Setting new gui callback.";
-            guiCallback = cb;
-        }
-    }
-
-    void initialSetup ()
-    {
-        LOG_DEBUG(lg) << "initialSetup() - Start";
-        LOG_DEBUG(lg) << "initialSetup() - Finished";
-    }
-
-    void processRequest (Protocol::Massage& request, Protocol::Massage& response)
-    {
-        LOG_DEBUG(lg) << "processRequest() - START";
-        Protocol::UpdateButtonPayload updateButtonRequest(request.getModuleNode("UPDATE"));
-        Protocol::UpdateButtonPayload updateButtonResponse;
-
-        if(updateButtonRequest.updateButton.updateButtonClicked.value_or(false))
-        {
-            makeUpdate(updateButtonResponse);
-            response.AddModuleNode("UPDATE", updateButtonResponse.toJson());
-        }
-        LOG_DEBUG(lg) << "processRequest() - FINISHED";
-    }
-
-    void makeUpdate (Protocol::UpdateButtonPayload& response)
-    {
-        LOG_DEBUG(lg) << "makeUpdate() - Start";
-        if(updateRunning.exchange(true))
-        {
-            LOG_DEBUG(lg) << "makeUpdate() - update already running";
-            response.updateButton.busy = true;
-            return;
-        }
-
-        // Work on a copy, the GUI may change backendData while the download is running
-        auto channelData = backendData.channelData;
-        bool launchAfterUpdate = backendData.settings.checkboxes.LaunchScAfterTranslation;
-        auto rsiLauncherInstallPath = backendData.rsiLauncherInstallPath;
-
-        workers.emplace_back(
-            [this, channelData, launchAfterUpdate, rsiLauncherInstallPath] ()
-            {
-                bool success = true;
-                for(const auto& [channel, data] : channelData)
-                {
-                    if(backendData.shuttingDown) break;
-                    if(data.installPath.empty())
-                    {
-                        LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Path is empty, skip!";
-                        continue;
-                    }
-
-                    LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Path: " << data.installPath;
-
-                    if(data.buttonDe.selected)
-                    {
-                        LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: De-selected";
-                        success &= installGermanTranslation(data.installPath, {data.info.server1, data.info.server1_fallback});
-                    }
-                    else if(data.buttonDeFull.selected)
-                    {
-                        LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: DeVoll-selected";
-                        success &= installGermanTranslation(data.installPath, {data.info.server3, data.info.server3_fallback});
-                    }
-                    else
-                    {
-                        LOG_DEBUG(lg) << "update() - Channel: " << channel << " :: Eng-selected";
-                        removeGermanTranslation(data.installPath);
-                    }
-                }
-
-                if(!success) LOG_ERROR(lg) << "makeUpdate() - at least one channel could not be updated";
-
-                Protocol::UpdateButtonPayload updateUpdateResponse;
-                updateUpdateResponse.updateButton.busy = false;
-                Protocol::Massage response(Protocol::MassageType::Response);
-                response.AddModuleNode("UPDATE", updateUpdateResponse.toJson());
-
-                updateRunning = false;
-                LOG_DEBUG(lg) << "makeUpdate() - FINISHED";
-                if(guiCallback)
-                    guiCallback(response.getJson());
-                else
-                    LOG_DEBUG(lg) << "makeUpdate() - GuiCallBack nullptr";
-
-                if(launchAfterUpdate && !backendData.shuttingDown) startGame(rsiLauncherInstallPath);
-            });
-
-        LOG_DEBUG(lg) << "makeUpdate() - RUNNING";
-        response.updateButton.busy = true;
-    }
-
-    void updateUpdateResponse (Protocol::Massage& response)
-    {
-        Protocol::UpdateButtonPayload updateButtonResponse;
-
-        updateButtonResponse.updateButton.enabled = true;
-        if(updateRunning)
-        {
-            // Keep the button blocked until the running update reports back
-            updateButtonResponse.updateButton.busy = true;
-            response.AddModuleNode("UPDATE", updateButtonResponse.toJson());
-            return;
-        }
-        updateButtonResponse.updateButton.active = backendData.anyChannelPathSet;
-        updateButtonResponse.updateButton.LaunchScAfterTranslation = backendData.settings.checkboxes.LaunchScAfterTranslation;
-
-        response.AddModuleNode("UPDATE", updateButtonResponse.toJson());
+        LOG_ERROR(lg) << "startGame() - neither sc-launch.sh nor lutris found (RSI Launcher path: " << rsiLauncherPath << ")";
     }
 };
