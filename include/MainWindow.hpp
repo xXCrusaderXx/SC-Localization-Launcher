@@ -123,6 +123,12 @@ class MainWindow : public QMainWindow
         backEnd.initGui();
     }
 
+    ~MainWindow () override
+    {
+        // Pending button requests call into backEnd, which is destroyed right after this
+        QThreadPool::globalInstance()->waitForDone();
+    }
+
     void setupTopWidged (QWidget *widged, QGridLayout *grid)
     {
         LOG_DEBUG(lg) << "::setupTopWidged()";

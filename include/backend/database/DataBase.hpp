@@ -1,7 +1,10 @@
 #pragma once
 
+#include <atomic>
 #include <filesystem>
 #include <map>
+#include <mutex>
+#include <optional>
 #include <nlohmann/json.hpp>
 #include <string>
 
@@ -68,6 +71,12 @@ struct BackendData
     Settings settings;
     std::filesystem::path rsiLauncherInstallPath = "";
     bool anyChannelPathSet = false;
+
+    // Guards all fields above. Recursive, because manager callbacks re-enter the backend
+    // (e.g. initGui()) while processMassage() holds the lock.
+    std::recursive_mutex mutex;
+    // Set when the app closes; workers stop early and skip GUI callbacks
+    std::atomic<bool> shuttingDown{false};
 };
 
 }  // namespace Database

@@ -1,7 +1,9 @@
 #pragma once
 
+#include <atomic>
 #include <exception>
 #include <fstream>
+#include <future>
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <set>
@@ -82,7 +84,7 @@ class DirectoryFinder
             for(const auto& entry :
                 std::filesystem::recursive_directory_iterator(basePath, std::filesystem::directory_options::skip_permission_denied))
             {
-                if(foundFlag.load()) break;  // Frühzeitiger Abbruch
+                if(foundFlag.load() || backendData.shuttingDown) break;  // Frühzeitiger Abbruch
 
                 if(!entry.is_directory()) continue;
 
@@ -106,6 +108,7 @@ class DirectoryFinder
                     {
                         if(std::filesystem::is_regular_file(path + "/" + exe))
                         {
+                            std::lock_guard<std::recursive_mutex> lock(backendData.mutex);
                             backendData.rsiLauncherInstallPath = path;
                         }
                     }
@@ -124,6 +127,7 @@ class DirectoryFinder
                                 if(std::filesystem::is_regular_file(path + "/" + exe))
                                 {
                                     LOG_DEBUG(lg) << "[set] " << key << " → " << targetPath;
+                                    std::lock_guard<std::recursive_mutex> lock(backendData.mutex);
                                     backendData.channelData[key].installPath = targetPath;
                                 }
                             }

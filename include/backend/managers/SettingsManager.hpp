@@ -1,6 +1,8 @@
 #pragma once
+#include <atomic>
 #include <optional>
 #include <thread>
+#include <vector>
 
 #include "backend/DirectoryFinder.hpp"
 #include "backend/database/DataBase.hpp"
@@ -17,6 +19,9 @@ class SettingsManager
     Database::BackendData& backendData;
     using Callback = std::function<void(const nlohmann::json&)>;
     Callback guiCallback;
+    std::atomic<bool> searchRunning{false};
+    // Joined on shutdown only, see UpdateManager::workers
+    std::vector<std::thread> workers;
 
    public:
     SettingsManager (Database::BackendData& backendData)
@@ -27,7 +32,18 @@ class SettingsManager
         LOG_DEBUG(lg) << "instanziated";
     };
 
-    ~SettingsManager () { LOG_DEBUG(lg) << "destructed"; }
+    ~SettingsManager ()
+    {
+        waitForWorkers();
+        LOG_DEBUG(lg) << "destructed";
+    }
+
+    void waitForWorkers ()
+    {
+        for(auto& worker : workers)
+            if(worker.joinable()) worker.join();
+        workers.clear();
+    }
 
     void initialSetup ()
     {
@@ -115,18 +131,28 @@ class SettingsManager
     void processAutoSearch (Protocol::SettingsPayload& response)
     {
         LOG_DEBUG(lg) << "processAutoSearch() - START";
-        std::thread(
+        if(searchRunning.exchange(true))
+        {
+            LOG_DEBUG(lg) << "processAutoSearch() - search already running";
+            response.autoSearchButton.busy = true;
+            return;
+        }
+        workers.emplace_back(
             [this] ()
             {
                 dirFinder.findRsiInstallation();
                 Protocol::SettingsPayload settingsResponse;
                 settingsResponse.autoSearchButton.busy = false;
-                settingsResponse.paths.liveInstallPath = backendData.channelData["LIVE"].installPath;
-                settingsResponse.paths.ptuInstallPath = backendData.channelData["PTU"].installPath;
-                settingsResponse.paths.eptuInstallPath = backendData.channelData["EPTU"].installPath;
-                settingsResponse.paths.hotfixInstallPath = backendData.channelData["HOTFIX"].installPath;
-                settingsResponse.paths.techPrevieInstallPath = backendData.channelData["TECH-PREVIEW"].installPath;
-                settingsResponse.paths.rsiLauncherInstallPath = backendData.rsiLauncherInstallPath;
+                {
+                    std::lock_guard<std::recursive_mutex> lock(backendData.mutex);
+                    settingsResponse.paths.liveInstallPath = backendData.channelData["LIVE"].installPath;
+                    settingsResponse.paths.ptuInstallPath = backendData.channelData["PTU"].installPath;
+                    settingsResponse.paths.eptuInstallPath = backendData.channelData["EPTU"].installPath;
+                    settingsResponse.paths.hotfixInstallPath = backendData.channelData["HOTFIX"].installPath;
+                    settingsResponse.paths.techPrevieInstallPath = backendData.channelData["TECH-PREVIEW"].installPath;
+                    settingsResponse.paths.rsiLauncherInstallPath = backendData.rsiLauncherInstallPath;
+                }
+                searchRunning = false;
                 Protocol::Massage response(Protocol::MassageType::Response);
                 response.AddModuleNode("SETTINGS", settingsResponse.toJson());
 
@@ -135,8 +161,7 @@ class SettingsManager
                     guiCallback(response.getJson());
                 else
                     LOG_DEBUG(lg) << "processAutoSearch() - GuiCallBack nullptr";
-            })
-            .detach();
+            });
         LOG_DEBUG(lg) << "processAutoSearch() - RUNNING";
         response.autoSearchButton.busy = true;
     }
