@@ -102,7 +102,7 @@ cd build && cpack -G DEB       # or -G RPM
 
 ## Contributing
 
-Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Every commit needs a DCO sign-off (`git commit -s`). Pull requests are checked by CI and merge automatically once they are approved.
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Every commit needs a DCO sign-off (`git commit -s`). Pull requests are checked by CI; a maintainer reviews and merges them.
 
 - Security problems: [SECURITY.md](SECURITY.md)
 - Code of conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
