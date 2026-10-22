@@ -120,6 +120,8 @@ A PR can only be merged when all required checks are green (`format`, `build (ub
 - **Maintainers' own PRs:** auto-merge is enabled automatically. Ticking the sign-off box in the PR description is the maintainer's one action; the PR merges once the checks are green.
 - **Dependabot:** minor and patch updates of GitHub Actions merge automatically once CI is green. Major updates wait for a maintainer.
 
+After every merge, the `Update PR branches` workflow brings the other open auto-merge PRs up to date with `main`, so they don't need a manual "Update branch". A PR with a merge conflict is skipped and needs a rebase by its author.
+
 Draft PRs are never merged; mark the PR "Ready for review" when you are done.
 
 ---
