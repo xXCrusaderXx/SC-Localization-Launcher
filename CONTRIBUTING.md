@@ -47,7 +47,7 @@ By contributing, you agree that your contribution is licensed under the [GNU Gen
 
 Every PR gets **auto-merge (squash)** enabled automatically. GitHub merges it once:
 
-- all required checks are green (`format`, `build (ubuntu)`, `build (arch)`, `DCO sign-off`),
+- all required checks are green (`format`, `build (ubuntu)`, `build (arch)` including the tests, `DCO sign-off`),
 - a maintainer has approved it, and
 - the branch is up to date with `main`.
 
@@ -63,9 +63,10 @@ Run the same checks as CI before you push:
 # Formatting of the lines you changed (.clang-format in the repository root)
 git fetch origin && git clang-format --diff origin/main
 
-# Build
-cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+# Build and test (the tests need no internet and never touch your settings)
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSC_BUILD_TESTS=ON
 cmake --build build
+ctest --test-dir build --output-on-failure
 ```
 
 CI checks only the lines your PR changes. To fix them in place, run `git clang-format origin/main`. Don't reformat code you didn't otherwise touch.
@@ -84,7 +85,7 @@ To check the AppImage, run `packaging/appimage/build-in-docker.sh`. It builds in
 
 - [ ] Signed off (`git commit -s`, or one `Signed-off-by` line in the PR description).
 - [ ] `git clang-format --diff origin/main` reports no changes.
-- [ ] The project builds with `cmake --build build`.
+- [ ] The project builds with `cmake --build build`, and `ctest --test-dir build` passes.
 - [ ] You tested the change by hand. Describe how in the PR.
 - [ ] No Star Citizen assets, translation files, or binaries are committed (see [LEGAL.md](LEGAL.md)).
 - [ ] User-visible changes are noted under `Unreleased` in [CHANGELOG.md](CHANGELOG.md).
