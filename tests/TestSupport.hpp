@@ -155,6 +155,10 @@ inline nlohmann::json legacySettings (const std::string& livePath, const std::st
               {"startScdWithSystemStart", false}}}};
 }
 
+// QCOMPARE cannot take nlohmann::json with Qt 6.4: json converts implicitly to anything, including qfloat16.
+// Comparing the JSON text works everywhere and prints readable values on failure.
+inline std::string jsonText (const nlohmann::json& json) { return json.dump(); }
+
 inline std::string readFile (const std::filesystem::path& path)
 {
     std::ifstream stream(path);
