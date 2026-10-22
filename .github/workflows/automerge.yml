@@ -1,8 +1,12 @@
 name: Auto-merge
 
-# Turns on GitHub auto-merge for every ready PR. GitHub then squash-merges it
-# by itself once the branch ruleset is satisfied (required checks green, one
-# approval, branch up to date). Nothing is merged before that.
+# Turns on GitHub auto-merge for trusted PRs. GitHub then squash-merges them by
+# itself once the branch ruleset is satisfied (required checks green, branch up
+# to date). Nothing is merged before that.
+#
+# Trusted: PRs opened by the repository owner, members or collaborators, and
+# Dependabot minor/patch updates. Everything else (fork PRs, major Dependabot
+# updates) waits for a maintainer to review it and merge it by hand.
 #
 # pull_request_target runs with the base repository's token so it works for
 # fork PRs too. It therefore MUST NOT check out or run code from the PR.
@@ -26,24 +30,28 @@ jobs:
       # workflows on main; merges done with a PAT do.
       GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || secrets.GITHUB_TOKEN }}
       PR_URL: ${{ github.event.pull_request.html_url }}
-    steps:
-      - name: Enable squash auto-merge
-        run: gh pr merge --auto --squash "$PR_URL"
-
-  dependabot:
-    name: Approve Dependabot
-    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+      ASSOCIATION: ${{ github.event.pull_request.author_association }}
+      IS_DEPENDABOT: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
     steps:
       - name: Fetch Dependabot metadata
         id: meta
+        if: env.IS_DEPENDABOT == 'true'
         uses: dependabot/fetch-metadata@v2
 
-      # Major updates can change action behaviour, so they wait for a human.
-      - name: Approve minor and patch updates
-        if: ${{ steps.meta.outputs.update-type != 'version-update:semver-major' }}
+      - name: Enable squash auto-merge for trusted PRs
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr review --approve --body "Minor/patch dependency update; approved automatically after CI." "$PR_URL"
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+        run: |
+          case "$ASSOCIATION" in
+            OWNER|MEMBER|COLLABORATOR) trusted=true ;;
+            *) trusted=false ;;
+          esac
+          # Major updates can change action behaviour, so they wait for a human.
+          if [ "$IS_DEPENDABOT" = "true" ] && [ "$UPDATE_TYPE" != "version-update:semver-major" ]; then
+            trusted=true
+          fi
+          if [ "$trusted" != "true" ]; then
+            echo "::notice::Not enabling auto-merge (author association $ASSOCIATION). A maintainer reviews and merges this PR."
+            exit 0
+          fi
+          gh pr merge --auto --squash "$PR_URL"
