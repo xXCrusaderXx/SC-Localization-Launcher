@@ -39,7 +39,7 @@ endif()
 include(GNUInstallDirs)
 
 # 6.4 is the oldest Qt shipped by current LTS distributions (Ubuntu 24.04, Debian 12)
-find_package(Qt6 6.4 REQUIRED COMPONENTS Quick)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Quick Network)
 message(STATUS "Using Qt ${Qt6_VERSION}")
 if(QT_KNOWN_POLICY_QTP0004)
   qt_policy(SET QTP0004 NEW)
@@ -70,6 +70,7 @@ configure_file(${CMAKE_SOURCE_DIR}/include/backend/BundledLanguages.hpp.in ${CMA
 
 add_executable(${SC_LAUNCHER_BINARY}
   ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/BackendBridge.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/SingleInstance.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/logging/logger/custom_logger/custom_logger.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/resources/resources.qrc
@@ -113,6 +114,7 @@ endif()
 
 target_link_libraries(${SC_LAUNCHER_BINARY} PRIVATE
   Qt6::Quick
+  Qt6::Network
   nlohmann_json::nlohmann_json
   CURL::libcurl
 )

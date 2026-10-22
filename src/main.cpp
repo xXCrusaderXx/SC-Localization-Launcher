@@ -8,6 +8,7 @@
 #include <QTranslator>
 
 #include "frontend/BackendBridge.hpp"
+#include "frontend/SingleInstance.hpp"
 #include "logging/logger/custom_logger/custom_logger.h"
 #include "logging/logging.h"
 
@@ -28,6 +29,10 @@ int main (int argc, char *argv[])
     QTranslator translator;
     if(translator.load(QLocale(), "sc-localization-launcher", "_", ":/i18n")) app.installTranslator(&translator);
 
+    // A second start only brings the running launcher to the front, before any backend work starts
+    SingleInstance instance(SC_APP_ID);
+    if(!instance.isPrimary()) return instance.activatePrimary() ? 0 : 1;
+
     // Declared before the engine, so QML is torn down before the backend
     BackendBridge backend;
 
@@ -36,6 +41,18 @@ int main (int argc, char *argv[])
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app, [] { QCoreApplication::exit(-1); }, Qt::QueuedConnection);
     engine.addImportPath("qrc:/qt/qml");
     engine.load(QUrl("qrc:/qt/qml/SCLauncher/Main.qml"));
+
+    if(!engine.rootObjects().isEmpty())
+    {
+        auto* window = qobject_cast<QQuickWindow*>(engine.rootObjects().first());
+        QObject::connect(&instance, &SingleInstance::activationRequested, window,
+                         [window]
+                         {
+                             window->showNormal();
+                             window->raise();
+                             window->requestActivate();
+                         });
+    }
 
     // Dev helper: SC_SCREENSHOT=<file.png> saves the window after startup and quits
     if(const QString screenshot = qEnvironmentVariable("SC_SCREENSHOT"); !screenshot.isEmpty() && !engine.rootObjects().isEmpty())
