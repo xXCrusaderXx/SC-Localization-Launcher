@@ -20,7 +20,7 @@ git commit -s -m "Your message"
 
 **Per PR:** put one `Signed-off-by: Your Name <your@email>` line in the pull request description, or tick the sign-off box in the PR template. PRs are squash-merged, so that one sign-off covers the whole PR.
 
-The `DCO` check enforces this. Use your real identity and a reachable email address. Never sign off for someone else.
+The `DCO` check enforces this. PRs opened from the repository owner's account are exempt: the owner certifies them as a standing decision. Use your real identity and a reachable email address. Never sign off for someone else.
 
 ## AI-assisted contributions
 
