@@ -8,7 +8,7 @@ Hobbyists wrote this document, not lawyers. It is not legal advice; it describes
 
 ## No affiliation
 
-StarCitizen Deutsch Launcher is an unofficial, non-commercial fan project. It is **not affiliated with, endorsed by, or sponsored by Cloud Imperium Games (CIG) or Roberts Space Industries (RSI)**.
+SC Localization Launcher is an unofficial, non-commercial fan project. It is **not affiliated with, endorsed by, or sponsored by Cloud Imperium Games (CIG) or Roberts Space Industries (RSI)**.
 
 *Star Citizen®*, *Squadron 42®*, *Roberts Space Industries®*, and *Cloud Imperium®* are trademarks of Cloud Imperium Rights LLC and Cloud Imperium Rights Ltd. All other trademarks belong to their owners. This project uses these names only to describe which game the launcher works with.
 
@@ -27,12 +27,17 @@ Contributions that would change any of these points will not be accepted.
 
 ## Translation texts
 
-The translation texts are **not part of this repository** and are not covered by its license. The launcher downloads them at runtime:
+The translation texts are **not part of this repository** and are not covered by its license. They are made by independent community projects. [`languages.json`](languages.json) only lists where each project publishes its files, and the launcher downloads them from there at runtime. For example, the German translation comes from [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI), licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
-- the channel/version list from `https://www.sc-deutsch-launcher.de/`,
-- the texts from the community project [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI), licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+- We **link, we don't host**: no translation file is stored in, mirrored to, or redistributed through this repository or its releases.
+- A language is only listed when its maintainers publish it themselves and its license allows this. The launcher shows the project and license of every translation it installs.
+- The launcher does not use the servers of other launchers or projects beyond the files their maintainers publish for download.
+- Additions the launcher writes into the installed `global.ini` on the player's computer (item values, blueprint details) turn it into a modified copy. That copy stays on the player's computer, is never redistributed, and remains under the translation's license.
+- The original English game texts belong to CIG.
 
-The launcher never bundles or relicenses translation texts. The original English game texts belong to CIG.
+## Game data
+
+Item values, blueprint and mission data come from the [Star Citizen Wiki API](https://api.star-citizen.wiki). Wiki content is licensed under CC BY-SA; the launcher credits the source wherever it shows or uses this data. Data about the player's own progress (earned blueprints, statistics) is read from the local `Game.log` and never leaves the computer.
 
 ## Forbidden content
 
@@ -46,7 +51,7 @@ Don't add any of the following to this repository, and don't base a contribution
 
 ## Privacy
 
-The launcher only sends HTTPS requests to fetch the channel list and translation files. It has no telemetry, collects no personal data, and has no accounts. Settings are stored locally.
+The launcher only sends HTTPS requests to fetch the language list, the channel lists and translation files, and (once those features exist) game data from the Star Citizen Wiki API and its own update information from GitHub. It has no telemetry, collects no personal data, and has no accounts. Settings, logs and anything read from `Game.log` stay on the computer.
 
 ## License and warranty
 
@@ -56,7 +61,7 @@ The launcher's source code is licensed under the [GNU General Public License v3.
 
 If you believe this repository contains material that infringes your rights, or that violates the rules above:
 
-- Open a public [issue](https://github.com/xXCrusaderXx/StarCitizenDeutschLinux/issues) for non-sensitive concerns.
+- Open a public [issue](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues) for non-sensitive concerns.
 - Use private vulnerability reporting as described in [SECURITY.md](SECURITY.md) if the report contains confidential or personal details.
 
 Please name the affected files or commits and the basis of your claim. The maintainers will reply promptly and remove infringing material.
