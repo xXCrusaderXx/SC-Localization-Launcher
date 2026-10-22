@@ -20,7 +20,7 @@ git commit -s -m "Your message"
 
 **Per PR:** put one `Signed-off-by: Your Name <your@email>` line in the pull request description, or tick the sign-off box in the PR template. PRs are squash-merged, so that one sign-off covers the whole PR.
 
-The `DCO` check enforces this. Use your real identity and a reachable email address. Never sign off for someone else.
+The `DCO` check enforces this. PRs opened from the repository owner's account are exempt: the owner certifies them as a standing decision. Use your real identity and a reachable email address. Never sign off for someone else.
 
 ## AI-assisted contributions
 
@@ -114,13 +114,13 @@ The launcher's own interface is English by default and follows the system langua
 
 ### How a PR gets merged
 
-Every PR gets **auto-merge (squash)** enabled automatically. GitHub merges it once:
+A PR can only be merged when all required checks are green (`format`, `build (ubuntu)`, `build (arch)` including the tests, `DCO sign-off`) and the branch is up to date with `main`. PRs are always squash-merged.
 
-- all required checks are green (`format`, `build (ubuntu)`, `build (arch)` including the tests, `DCO sign-off`),
-- a maintainer has approved it, and
-- the branch is up to date with `main`.
+- **Contributors' PRs:** a maintainer reviews the change. When it is good, the maintainer merges it, or enables auto-merge so GitHub merges it as soon as the checks are green. Nothing from outside is merged without a maintainer looking at it.
+- **Maintainers' own PRs:** auto-merge is enabled automatically. Ticking the sign-off box in the PR description is the maintainer's one action; the PR merges once the checks are green.
+- **Dependabot:** minor and patch updates of GitHub Actions merge automatically once CI is green. Major updates wait for a maintainer.
 
-New pushes dismiss earlier approvals. Draft PRs are never merged; mark the PR "Ready for review" when you are done. Dependabot updates for GitHub Actions merge without a human review once CI is green.
+Draft PRs are never merged; mark the PR "Ready for review" when you are done.
 
 ---
 
