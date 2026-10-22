@@ -80,7 +80,7 @@ Switch {
                     Text {
                         id: badge
                         anchors.centerIn: parent
-                        text: "BALD"
+                        text: qsTr("SOON")
                         color: Theme.muted
                         font.pixelSize: 9
                         font.bold: true

@@ -8,7 +8,7 @@
 #include "backend/utils/TaskQueue.hpp"
 #include "backend/utils/paths.hpp"
 #include "database/DataBase.hpp"
-#include "jsonParser/ChannelsJsonParser.hpp"
+#include "jsonParser/LanguageCatalogParser.hpp"
 #include "jsonParser/SettingsJsonParser.hpp"
 #include "logging/logging.h"
 #include "managers/UpdateManager.hpp"
@@ -29,12 +29,12 @@ class BackEnd
     LoggerFramework::LogEx lg;
     Database::BackendData data;
     SettingsJsonParser settingsJsonParser;
-    ChannelsJsonParser channelsJsonParser;
+    LanguageCatalogParser languageCatalogParser;
     UpdateManager updateManager;
     DirectoryFinder directoryFinder;
     StateCallback stateCallback;
 
-    std::thread channelInfoJob;
+    std::thread languagesJob;
     std::thread updateJob;
     std::thread searchJob;
 
@@ -49,20 +49,24 @@ class BackEnd
         job = std::thread(std::move(function));
     }
 
-    static std::vector<Protocol::Language> availableLanguages (const Database::WebInfo& info)
+    const Database::AvailableLanguage* findLanguage (const std::string& code) const
     {
-        std::vector<Protocol::Language> languages{Protocol::Language::English};
-        if(info.active != 0 && !info.server1.empty()) languages.push_back(Protocol::Language::German);
-        if(info.active != 0 && !info.server3.empty()) languages.push_back(Protocol::Language::GermanFull);
-        return languages;
+        auto it = std::find_if(data.languages.begin(), data.languages.end(), [&] (const auto& l) { return l.code == code; });
+        return it != data.languages.end() ? &*it : nullptr;
     }
 
-    // A choice the server does not offer (anymore) is treated as English, without forgetting the choice
-    static Protocol::Language effectiveLanguage (const Database::ChannelData& channel)
+    std::vector<std::string> availableLanguages (const std::string& channel) const
     {
-        auto languages = availableLanguages(channel.info);
-        bool available = std::find(languages.begin(), languages.end(), channel.language) != languages.end();
-        return available ? channel.language : Protocol::Language::English;
+        std::vector<std::string> codes{Protocol::ENGLISH};
+        for(const auto& language : data.languages)
+            if(language.urls.contains(channel)) codes.push_back(language.code);
+        return codes;
+    }
+
+    bool isAvailable (const std::string& channel, const std::string& code) const
+    {
+        auto codes = availableLanguages(channel);
+        return std::find(codes.begin(), codes.end(), code) != codes.end();
     }
 
     Database::ChannelData* findChannel (const std::string& name)
@@ -77,7 +81,10 @@ class BackEnd
     {
         Protocol::State state;
 
-        // Known channels in display order, then whatever else the server lists
+        state.languages.push_back({Protocol::ENGLISH, "English", {}});
+        for(const auto& language : data.languages) state.languages.push_back({language.code, language.name, language.credit});
+
+        // Known channels in display order, then whatever else the sources list
         std::vector<std::string> names = Protocol::CHANNEL_NAMES;
         for(const auto& [name, channel] : data.channels)
             if(std::find(names.begin(), names.end(), name) == names.end()) names.push_back(name);
@@ -85,7 +92,7 @@ class BackEnd
         for(const auto& name : names)
         {
             const auto& channel = data.channels.at(name);
-            state.channels.push_back({name, channel.installPath.string(), effectiveLanguage(channel), availableLanguages(channel.info)});
+            state.channels.push_back({name, channel.installPath.string(), channel.language, availableLanguages(name)});
         }
 
         state.rsiLauncherPath = data.rsiLauncherPath.string();
@@ -114,6 +121,8 @@ class BackEnd
         }
         data.rsiLauncherPath = file.rsiLauncherPath;
         data.options = file.options;
+        // Moves settings of the former SC Deutsch Launcher to the new location right away
+        saveSettings();
     }
 
     void saveSettings ()
@@ -125,21 +134,19 @@ class BackEnd
         settingsJsonParser.save(file);
     }
 
-    void loadChannelInfo ()
+    void loadLanguages ()
     {
-        startJob(channelInfoJob,
+        startJob(languagesJob,
                  [this]
                  {
-                     auto channels = channelsJsonParser.getChannels();
-                     if(!channels)
-                     {
-                         LOG_ERROR(lg) << "no channel information, translations cannot be downloaded";
-                         return;
-                     }
+                     auto languages = languageCatalogParser.getLanguages();
                      queue.post(
-                         [this, channels = std::move(*channels)]
+                         [this, languages = std::move(languages)]
                          {
-                             for(const auto& [name, info] : channels) data.channels[name].info = info;
+                             data.languages = languages;
+                             // Channels only a source knows about (e.g. a new test channel) get a row too
+                             for(const auto& language : data.languages)
+                                 for(const auto& [channel, urls] : language.urls) data.channels[channel];
                              publish();
                          });
                  });
@@ -149,6 +156,11 @@ class BackEnd
 
     void handle (const Protocol::SetLanguage& command)
     {
+        if(command.language != Protocol::ENGLISH && !findLanguage(command.language))
+        {
+            LOG_ERROR(lg) << "unknown language: " << command.language;
+            return;
+        }
         if(auto* channel = findChannel(command.channel)) channel->language = command.language;
     }
 
@@ -180,14 +192,35 @@ class BackEnd
             return;
         }
 
+        std::vector<std::string> managedFolders;
+        for(const auto& language : data.languages)
+            if(std::find(managedFolders.begin(), managedFolders.end(), language.folder) == managedFolders.end())
+                managedFolders.push_back(language.folder);
+
         // The job works on a copy, the user may change settings while it runs
         std::vector<UpdateManager::Job> jobs;
         for(const auto& [name, channel] : data.channels)
-            if(!channel.installPath.empty()) jobs.push_back({name, channel.installPath, effectiveLanguage(channel), channel.info});
+        {
+            if(channel.installPath.empty()) continue;
+            // Offline or not offered right now: leave the installed translation alone instead of removing it
+            if(!isAvailable(name, channel.language))
+            {
+                LOG_DEBUG(lg) << "startUpdate - " << name << ": " << channel.language << " is not available, channel skipped";
+                continue;
+            }
+
+            UpdateManager::Job job{name, channel.installPath, channel.language, "", {}, managedFolders};
+            if(const auto* language = findLanguage(channel.language))
+            {
+                job.folder = language->folder;
+                job.urls = language->urls.at(name);
+            }
+            jobs.push_back(std::move(job));
+        }
 
         if(jobs.empty())
         {
-            LOG_DEBUG(lg) << "startUpdate - no install path set";
+            LOG_DEBUG(lg) << "startUpdate - nothing to update";
             return;
         }
 
@@ -244,13 +277,13 @@ class BackEnd
         , updateManager(data.shuttingDown)
         , stateCallback(std::move(stateCallback))
     {
-        // Settings first, so the GUI can show them while channels.json is still downloading
+        // Settings first, so the GUI can show them while the language list is still downloading
         queue.post(
             [this]
             {
                 loadSettings();
                 publish();
-                loadChannelInfo();
+                loadLanguages();
             });
         LOG_DEBUG(lg) << "instanziated";
     }
@@ -260,7 +293,7 @@ class BackEnd
         data.shuttingDown = true;
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
-        for(auto* job : {&channelInfoJob, &updateJob, &searchJob})
+        for(auto* job : {&languagesJob, &updateJob, &searchJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }

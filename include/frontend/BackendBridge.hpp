@@ -50,15 +50,10 @@ class BackendBridge : public QObject
 
     QVariantMap state () const { return currentState; }
 
+    // language is a code from state.languages, the backend rejects unknown codes
     Q_INVOKABLE void setLanguage (const QString& channel, const QString& language)
     {
-        auto parsed = Protocol::languageFromString(language.toStdString());
-        if(!parsed)
-        {
-            LOG_ERROR(lg) << "setLanguage() - unknown language: " << language.toStdString();
-            return;
-        }
-        backEnd.execute(Protocol::SetLanguage{.channel = channel.toStdString(), .language = *parsed});
+        backEnd.execute(Protocol::SetLanguage{.channel = channel.toStdString(), .language = language.toStdString()});
     }
 
     Q_INVOKABLE void setInstallPath (const QString& channel, const QUrl& folder)

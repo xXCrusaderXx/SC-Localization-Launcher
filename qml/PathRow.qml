@@ -36,7 +36,7 @@ Rectangle {
 
             Text {
                 Layout.fillWidth: true
-                text: row.path !== "" ? row.path : "Nicht gesetzt"
+                text: row.path !== "" ? row.path : qsTr("Not set")
                 color: row.path !== "" ? Theme.muted : Theme.disabled
                 font.pixelSize: 11
                 elide: Text.ElideMiddle

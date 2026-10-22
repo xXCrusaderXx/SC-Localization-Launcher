@@ -30,7 +30,7 @@ ApplicationWindow {
     maximumHeight: height
     visible: true
     flags: Qt.Window | Qt.FramelessWindowHint
-    title: "SC Deutsch Launcher"
+    title: "SC Localization Launcher"
     color: Theme.background
 
     Image {
@@ -94,14 +94,14 @@ ApplicationWindow {
                 spacing: 0
 
                 Text {
-                    text: "SC Deutsch Launcher"
+                    text: "SC Localization Launcher"
                     color: Theme.text
                     font.pixelSize: 21
                     font.bold: true
                 }
 
                 Text {
-                    text: "COMMUNITY EDITION FÜR LINUX"
+                    text: qsTr("COMMUNITY TRANSLATIONS FOR LINUX")
                     color: Theme.accent
                     font.pixelSize: 10
                     font.letterSpacing: 2
@@ -145,7 +145,7 @@ ApplicationWindow {
             Layout.fillWidth: true
 
             Text {
-                text: "SPIELVERSIONEN"
+                text: qsTr("GAME CHANNELS")
                 color: Theme.muted
                 font.pixelSize: 11
                 font.bold: true
@@ -157,7 +157,7 @@ ApplicationWindow {
             }
 
             Text {
-                text: window.searchBusy ? "Suche läuft …" : "Automatisch suchen"
+                text: window.searchBusy ? qsTr("Searching …") : qsTr("Search automatically")
                 color: searchMouse.containsMouse ? Theme.text : Theme.accent
                 font.pixelSize: 11
                 font.bold: true
@@ -182,6 +182,7 @@ ApplicationWindow {
                 required property int index
 
                 channel: window.channels[index] || ({})
+                languages: window.appState.languages || []
                 locked: window.updateBusy
                 onLanguagePicked: language => backend.setLanguage(channel.name, language)
                 onPathRequested: window.choosePath(channel.name)
@@ -209,7 +210,7 @@ ApplicationWindow {
                 spacing: 6
 
                 Toggle {
-                    text: "Star Citizen danach starten"
+                    text: qsTr("Start Star Citizen afterwards")
                     checked: window.launchAfterUpdate
                     onSwitched: on => backend.setOption("launchGameAfterUpdate", on)
                 }
@@ -239,7 +240,7 @@ ApplicationWindow {
                     }
 
                     Text {
-                        text: window.updateBusy ? "Übersetzungen werden heruntergeladen …" : window.searchBusy ? "Suche nach Star Citizen Installationen …" : window.updateFailed ? "Update fehlgeschlagen, Details im Log" : window.appState.update === "succeeded" ? "Übersetzungen aktualisiert" : window.updateReady ? "Bereit" : "Wähle einen Spielpfad oder nutze die automatische Suche"
+                        text: window.updateBusy ? qsTr("Downloading translations …") : window.searchBusy ? qsTr("Searching for Star Citizen installations …") : window.updateFailed ? qsTr("Update failed, see the log for details") : window.appState.update === "succeeded" ? qsTr("Translations updated") : window.updateReady ? qsTr("Ready") : qsTr("Choose a game folder or use the automatic search")
                         color: Theme.muted
                         font.pixelSize: 11
                     }
@@ -298,7 +299,7 @@ ApplicationWindow {
 
                 Text {
                     anchors.centerIn: parent
-                    text: window.updateBusy ? "Aktualisiere …" : !window.updateReady ? "Kein Spielpfad gesetzt" : window.launchAfterUpdate ? "Aktualisieren & starten" : "Übersetzung aktualisieren"
+                    text: window.updateBusy ? qsTr("Updating …") : !window.updateReady ? qsTr("No game folder set") : window.launchAfterUpdate ? qsTr("Update & start") : qsTr("Update translations")
                     color: "white"
                     font.pixelSize: 15
                     font.bold: true
@@ -345,7 +346,7 @@ ApplicationWindow {
 
         // Found by the GUI test
         objectName: "folderDialog"
-        title:target === "RSI" ? "Ordner des RSI Launchers" : "Installationsordner für " + target
+        title: target === "RSI" ? qsTr("RSI Launcher folder") : qsTr("Install folder for %1").arg(target)
         onAccepted: target === "RSI" ? backend.setRsiLauncherPath(selectedFolder) : backend.setInstallPath(target, selectedFolder)
     }
 }
