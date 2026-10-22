@@ -24,9 +24,11 @@ if [ ! -d "$QT_DIR" ]; then
     python3 -m aqt install-qt linux desktop "$QT_VERSION" linux_gcc_64 -O /opt/qt
 fi
 
+# SC_VERSION_OVERRIDE (optional): release version set by the CI
 cmake -S "$SRC" -B "$BUILD" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_PREFIX_PATH="$QT_DIR"
+    -DCMAKE_PREFIX_PATH="$QT_DIR" \
+    -DSC_VERSION_OVERRIDE="${SC_VERSION_OVERRIDE:-}"
 cmake --build "$BUILD" --target appimage
 
 # Give the files back to the user who started the container

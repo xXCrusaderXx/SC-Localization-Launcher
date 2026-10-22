@@ -1,46 +1,38 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Adds a menu entry for the AppImage where it is, without copying it (install.sh copies it to ~/Applications).
+# Expects SC-Localization-Launcher.AppImage next to this script.
+set -euo pipefail
 
-# Basisverzeichnis bestimmen (Verzeichnis, in dem dieses Skript liegt)
+APP_ID="io.github.xXCrusaderXx.SCLocalizationLauncher"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# AppImage und Icon annehmen
-APPIMAGE="${SCRIPT_DIR}/SC-Deutsch-Launcher.AppImage"
-ICON="${SCRIPT_DIR}/resources/logo.png"  # Falls AppImage kein eingebettetes Icon hat
-
-# Name und Zielpfad der Desktop-Datei
-APP_ID="starcitizen-deutsch-launcher"
-APP_NAME="SC-Deutsch-Launcher"
+APPIMAGE="${SCRIPT_DIR}/SC-Localization-Launcher.AppImage"
 DESKTOP_FILE="$HOME/.local/share/applications/${APP_ID}.desktop"
 
-# Prüfen, ob AppImage existiert
 if [[ ! -f "$APPIMAGE" ]]; then
-    echo "❌ AppImage nicht gefunden: $APPIMAGE"
+    echo "AppImage not found: $APPIMAGE" >&2
     exit 1
 fi
 
-# Desktop-Datei schreiben
-mkdir -p ~/.local/share/applications
+chmod +x "$APPIMAGE"
+mkdir -p "$(dirname "$DESKTOP_FILE")"
+
+ICON="${SCRIPT_DIR}/logo.png"
+[[ -f "$ICON" ]] || ICON="$APP_ID"
 
 cat > "$DESKTOP_FILE" <<EOF
 [Desktop Entry]
-Name=${APP_NAME}
-Comment=Launcher für Star Citizen Übersetzungen
-Exec="${APPIMAGE}"
-Icon=${APPIMAGE}  # oder: Icon=${ICON}
-Terminal=false
 Type=Application
-Categories=Game;Utility;
+Name=SC Localization Launcher
+Comment=Installs and updates community translations for Star Citizen
+Comment[de]=Installiert und aktualisiert Community-Übersetzungen für Star Citizen
+Exec="${APPIMAGE}"
+Icon=${ICON}
+Terminal=false
 StartupNotify=true
+StartupWMClass=sc-localization-launcher
+Categories=Game;
 EOF
 
-# Rechte setzen
-chmod +x "$DESKTOP_FILE"
-chmod +x "$APPIMAGE"
+update-desktop-database "$HOME/.local/share/applications" &>/dev/null || true
 
-
-echo "✅ Desktop-Datei installiert:"
-echo "   $DESKTOP_FILE"
-echo "👉 Das Programm sollte nun im Startmenü erscheinen."
-
-# Optional: Desktop-Datenbank neu laden (meist nicht nötig)
-update-desktop-database ~/.local/share/applications/ &> /dev/null
+echo "Menu entry: $DESKTOP_FILE"

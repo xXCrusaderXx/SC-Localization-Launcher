@@ -22,15 +22,15 @@ elif command -v pacman >/dev/null; then
     pacman -S --noconfirm --needed xorg-server-xvfb xorg-xauth ttf-dejavu >/dev/null
 fi
 
-test -f /usr/share/applications/io.github.xXCrusaderXx.StarCitizenDeutschLinux.desktop
-test -f /usr/share/icons/hicolor/256x256/apps/io.github.xXCrusaderXx.StarCitizenDeutschLinux.png
-test -f /usr/share/metainfo/io.github.xXCrusaderXx.StarCitizenDeutschLinux.metainfo.xml
+test -f /usr/share/applications/io.github.xXCrusaderXx.SCLocalizationLauncher.desktop
+test -f /usr/share/icons/hicolor/256x256/apps/io.github.xXCrusaderXx.SCLocalizationLauncher.png
+test -f /usr/share/metainfo/io.github.xXCrusaderXx.SCLocalizationLauncher.metainfo.xml
 
 export HOME="$(mktemp -d)"
 export QT_QUICK_BACKEND=software
 export QT_FORCE_STDERR_LOGGING=1
 export SC_SCREENSHOT="$SCREENSHOT"
 
-xvfb-run -a -s "-screen 0 1280x800x24" timeout 60 SC-Deutsch-Launcher
+xvfb-run -a -s "-screen 0 1280x800x24" timeout 60 sc-localization-launcher
 test -s "$SCREENSHOT"
 echo "OK: $SCREENSHOT"

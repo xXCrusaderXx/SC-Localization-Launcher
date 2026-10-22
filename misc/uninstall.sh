@@ -1,29 +1,24 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Removes what install.sh added: the AppImage in ~/Applications, the menu entry and the icon.
+# Settings, cache and logs are kept (see the paths printed at the end).
+set -euo pipefail
 
-APP_ID="starcitizen-deutsch-launcher"
-APP_NAME="SC-Deutsch-Launcher"
-TARGET_DIR="$HOME/SC-Deutsch-Launcher"
+APP_ID="io.github.xXCrusaderXx.SCLocalizationLauncher"
+TARGET_APPIMAGE="$HOME/Applications/SC-Localization-Launcher.AppImage"
 DESKTOP_FILE="$HOME/.local/share/applications/${APP_ID}.desktop"
+ICON_FILE="$HOME/.local/share/icons/hicolor/256x256/apps/${APP_ID}.png"
 
-echo "🗑️  Deinstalliere ${APP_NAME}..."
+for file in "$TARGET_APPIMAGE" "$DESKTOP_FILE" "$ICON_FILE"; do
+    if [[ -f "$file" ]]; then
+        rm "$file"
+        echo "Removed: $file"
+    fi
+done
 
-# .desktop-Datei entfernen
-if [[ -f "$DESKTOP_FILE" ]]; then
-    rm "$DESKTOP_FILE"
-    echo "✅ Desktop-Datei entfernt: $DESKTOP_FILE"
-else
-    echo "ℹ️  Keine Desktop-Datei gefunden: $DESKTOP_FILE"
-fi
+update-desktop-database "$HOME/.local/share/applications" &>/dev/null || true
+gtk-update-icon-cache "$HOME/.local/share/icons/hicolor" &>/dev/null || true
 
-# AppImage-Verzeichnis entfernen
-if [[ -d "$TARGET_DIR" ]]; then
-    rm -rf "$TARGET_DIR"
-    echo "✅ Verzeichnis entfernt: $TARGET_DIR"
-else
-    echo "ℹ️  Kein Installationsverzeichnis gefunden: $TARGET_DIR"
-fi
-
-# Desktop-Datenbank aktualisieren
-update-desktop-database ~/.local/share/applications/ &> /dev/null
-
-echo "✅ ${APP_NAME} wurde vollständig deinstalliert."
+echo "Your settings and logs were kept. Delete them by hand if you no longer need them:"
+echo "  ${XDG_CONFIG_HOME:-$HOME/.config}/sc-localization-launcher"
+echo "  ${XDG_CACHE_HOME:-$HOME/.cache}/sc-localization-launcher"
+echo "  ${XDG_STATE_HOME:-$HOME/.local/state}/sc-localization-launcher"
