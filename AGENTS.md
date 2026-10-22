@@ -18,7 +18,12 @@ Read [LEGAL.md](LEGAL.md). In particular, never add:
 - code copied from sources whose license is not compatible with GPL-3.0-or-later,
 - anything that touches game executables, anti-cheat, or account data.
 
-Translation texts belong to [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI), not to this repository.
+Translation texts belong to their community projects (e.g. [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI)), not to this repository. `languages.json` only links to them:
+
+- Add a language only with HTTPS URLs that the translation's own maintainers publish, and only when its license allows that. Name project, maintainers and license in the PR. Never copy or mirror translation files into the repository.
+- Do not use servers of other launchers (e.g. `sc-deutsch-launcher.de`) as a data source.
+- External game data (item values, blueprints) comes from the [Star Citizen Wiki API](https://api.star-citizen.wiki) only, with credit. Do not scrape other sites.
+- The full format and rules are in CONTRIBUTING.md, "Adding a game language".
 
 ## Architecture
 
@@ -27,6 +32,9 @@ Translation texts belong to [StarCitizen-Deutsch-INI](https://github.com/rjcncpt
 - `include/frontend/BackendBridge.hpp`: the Qt bridge. It exposes `state` to QML and turns QML calls into protocol commands.
 - `qml/`: the Qt Quick UI. `Theme.qml` is a singleton for colours and sizes; register new QML files in `SC_QML_FILES` in `CMakeLists.txt` (the GUI test uses the same list).
 - `packaging/`, `flatpak/`, `misc/`: AppImage, Flatpak, desktop file, and install scripts.
+- `languages.json`: the catalogue of game languages. The launcher loads it from `main`, so changes reach users without a release; keep it valid JSON and backwards compatible (`"version": 1`).
+- `translations/*.ts`: translations of the launcher's own interface. Every user-visible QML string goes through `qsTr()`; the English text is the source.
+- [ROADMAP.md](ROADMAP.md): phases and milestones. Each closed milestone becomes a release. Work on a roadmap item references its issue, and a change to a phase updates ROADMAP.md in the same PR.
 
 ## Code
 

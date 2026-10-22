@@ -1,0 +1,98 @@
+name: Milestone release
+
+# Closing a roadmap milestone named "vX.Y.Z – Name" publishes release vX.Y.Z.
+# The milestone's closed issues and merged PRs become the release notes.
+# See ROADMAP.md.
+on:
+  milestone:
+    types: [closed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.milestone.number }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: check milestone
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      notes: ${{ steps.notes.outputs.notes }}
+    steps:
+      - name: Check title, open issues and tag
+        id: check
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          # Milestone fields reach the shell only through the environment.
+          TITLE: ${{ github.event.milestone.title }}
+          NUMBER: ${{ github.event.milestone.number }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TITLE" =~ ^v?([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)([[:space:]]|$) ]]; then
+            echo "::notice::Milestone '$TITLE' has no version in its title; no release."
+            echo "version=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          version="${BASH_REMATCH[1]}"
+
+          # Read the live count: the event payload may predate a last-second change.
+          open="$(gh api "repos/$GH_REPO/milestones/$NUMBER" --jq .open_issues)"
+          if [ "$open" != "0" ]; then
+            echo "::error::Milestone '$TITLE' still has $open open issue(s) or PR(s). Reopen it, finish them, and close it again."
+            exit 1
+          fi
+
+          if gh api "repos/$GH_REPO/git/ref/tags/v$version" >/dev/null 2>&1; then
+            echo "::error::Tag v$version already exists."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Collect release notes
+        id: notes
+        if: steps.check.outputs.version != ''
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: ${{ github.event.milestone.title }}
+          DESCRIPTION: ${{ github.event.milestone.description }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## $TITLE"
+            if [ -n "$DESCRIPTION" ]; then echo; echo "$DESCRIPTION"; fi
+            echo
+            echo "### Features and fixes"
+            gh issue list --milestone "$TITLE" --state closed --limit 500 \
+              --json number,title --jq '.[] | "- \(.title) (#\(.number))"'
+            echo
+            echo "### Merged pull requests"
+            gh pr list --search "milestone:\"$TITLE\" is:merged" --state merged --limit 500 \
+              --json number,title,author --jq '.[] | "- \(.title) (#\(.number), @\(.author.login))"'
+          } > notes.md
+          # Random delimiter: issue titles are user-controlled and must not end the block.
+          delim="NOTES_$(openssl rand -hex 16)"
+          { echo "notes<<$delim"; cat notes.md; echo "$delim"; } >> "$GITHUB_OUTPUT"
+
+  release:
+    name: release
+    needs: prepare
+    if: needs.prepare.outputs.version != ''
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+      notes: ${{ needs.prepare.outputs.notes }}
+    secrets: inherit
