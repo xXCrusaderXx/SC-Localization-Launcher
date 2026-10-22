@@ -103,10 +103,7 @@ QCheckBox::indicator:checked {
     void clicked_Close ()
     {
         LOG_DEBUG(lg) << "clicked_Close()";
-        if(this)
-        {
-            this->close();
-        }
+        this->close();
 
         Protocol::SettingsPayload request;
         request.paths.liveInstallPath = settingsData.liveInstallPath;
@@ -200,8 +197,8 @@ QCheckBox::indicator:checked {
    public:
     explicit SettingsWindow (QWidget *parent, SettingsData &settingsData)
         : QWidget(parent)
-        , settingsData(settingsData)
         , lg("SettingsWindow")
+        , settingsData(settingsData)
     {
         this->setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
         resize(600, 500);

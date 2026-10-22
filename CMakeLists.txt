@@ -1,43 +1,44 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_VERBOSE_MAKEFILE ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
 message(STATUS "#### StarCitizen-Launcher ####")
-project(SC-Deutsch-Launcher)
+project(SC-Deutsch-Launcher LANGUAGES CXX)
 
 set(SC_LAUNCHER_BINARY ${PROJECT_NAME})
 set(SC_LAUNCHER_APPIMAGE "${PROJECT_NAME}-AppImage")
-set(SC_LAUNCHER_FLATPAK "${PROJECT_NAME}-Flatpak")
 
-set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/release" CACHE PATH "Install path prefix." FORCE)
+option(SC_BUILD_APPIMAGE "Add the 'appimage' target to the default build" OFF)
 
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/release" CACHE PATH "Install path prefix." FORCE)
+endif()
+
+# Prefer Qt6, fall back to Qt5
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
+find_package(Qt${QT_VERSION_MAJOR} 5.15 REQUIRED COMPONENTS Widgets)
+message(STATUS "Using Qt ${QT_VERSION}")
+
 find_package(nlohmann_json REQUIRED)
 find_package(CURL REQUIRED)
 
-set(INCLUDES
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-
-qt_wrap_cpp(MOC_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/include/MainWindow.hpp)
-qt_wrap_cpp(MOC_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/Update/Update.hpp)
-qt_wrap_cpp(MOC_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/Settings/Settings.hpp)
-qt_wrap_cpp(MOC_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/Settings/SettingsWindow.hpp)
-
 set(SOURCES
-  ${MOC_SRCS}
+  # Headers with Q_OBJECT, listed so AUTOMOC finds them outside of src/
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/MainWindow.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/Update/Update.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/Settings/Settings.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/Settings/SettingsWindow.hpp
+
   ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/MainWindow.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/frontend/Settings/SettingsWindow.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/frontend/Settings/Settings.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/resources/resources.qrc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/logging/logger/custom_logger/custom_logger.cpp
-
+  ${CMAKE_CURRENT_SOURCE_DIR}/resources/resources.qrc
 )
 
 #############################################################
@@ -47,40 +48,26 @@ set(SOURCES
 add_executable(${SC_LAUNCHER_BINARY} ${SOURCES})
 
 target_link_libraries(${SC_LAUNCHER_BINARY}
-  Qt5::Widgets
-  nlohmann_json
+  Qt::Widgets
+  nlohmann_json::nlohmann_json
   CURL::libcurl
 )
 
 target_include_directories(${SC_LAUNCHER_BINARY} PRIVATE
-  ${INCLUDES}
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-qt5_add_resources(RESOURCES resources/resources.qrc)
-target_sources(${SC_LAUNCHER_BINARY} PRIVATE ${RESOURCES})
-
-configure_file(
-  "${CMAKE_SOURCE_DIR}/resources/logo.png"
-  "${CMAKE_BINARY_DIR}/resources/logo.png"
-  COPYONLY
+set(RUNTIME_RESOURCES
+  ${CMAKE_SOURCE_DIR}/resources/logo.png
+  ${CMAKE_SOURCE_DIR}/resources/sc-deutsch.png
+  ${CMAKE_SOURCE_DIR}/resources/background2_main.png
+  ${CMAKE_SOURCE_DIR}/resources/background2_settings.png
 )
 
-configure_file(
-  "${CMAKE_SOURCE_DIR}/resources/sc-deutsch.png"
-  "${CMAKE_BINARY_DIR}/resources/sc-deutsch.png"
-  COPYONLY
-)
-
-configure_file(
-  "${CMAKE_SOURCE_DIR}/resources/background2_main.png"
-  "${CMAKE_BINARY_DIR}/resources/background2_main.png"
-  COPYONLY
-)
-configure_file(
-  "${CMAKE_SOURCE_DIR}/resources/background2_settings.png"
-  "${CMAKE_BINARY_DIR}/resources/background2_settings.png"
-  COPYONLY
-)
+foreach(resource ${RUNTIME_RESOURCES})
+  get_filename_component(resource_name ${resource} NAME)
+  configure_file(${resource} "${CMAKE_BINARY_DIR}/resources/${resource_name}" COPYONLY)
+endforeach()
 
 configure_file(
   "${CMAKE_SOURCE_DIR}/misc/settings.json"
@@ -94,125 +81,72 @@ configure_file(
   COPYONLY
 )
 
-install(TARGETS ${SC_LAUNCHER_BINARY} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-
-install(FILES
-  "${CMAKE_SOURCE_DIR}/resources/logo.png"
-  "${CMAKE_SOURCE_DIR}/resources/sc-deutsch.png"
-  "${CMAKE_SOURCE_DIR}/resources/background2_main.png"
-  "${CMAKE_SOURCE_DIR}/resources/background2_settings.png"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/resources
-)
-
-install(FILES
-  "${CMAKE_SOURCE_DIR}/misc/settings.json"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/local
-)
-
-install(FILES
-  "${CMAKE_SOURCE_DIR}/misc/starcitizen-launcher.desktop"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
-)
+install(TARGETS ${SC_LAUNCHER_BINARY} DESTINATION bin)
+install(FILES ${RUNTIME_RESOURCES} DESTINATION bin/resources)
+install(FILES "${CMAKE_SOURCE_DIR}/misc/settings.json" DESTINATION bin/local)
+install(FILES "${CMAKE_SOURCE_DIR}/misc/starcitizen-launcher.desktop" DESTINATION bin)
 
 #############################################################
 # --- APPIMAGE ---
 #############################################################
+# Packs the same binary; at runtime paths.hpp detects the AppImage via $APPDIR.
+# appimagetool is downloaded into the build dir on first use (not tracked in git).
 
-add_executable(${SC_LAUNCHER_APPIMAGE} ${SOURCES})
-target_link_libraries(${SC_LAUNCHER_APPIMAGE}
-  Qt5::Widgets
-  nlohmann_json
-  CURL::libcurl
-)
-
-target_include_directories(${SC_LAUNCHER_APPIMAGE} PRIVATE
-  ${INCLUDES}
-)
-
-qt5_add_resources(RESOURCES resources/resources.qrc)
-target_sources(${SC_LAUNCHER_APPIMAGE} PRIVATE ${RESOURCES})
-
-target_compile_definitions(${SC_LAUNCHER_APPIMAGE} PRIVATE APPIMAGE)
-
-# AppDir Pfade
 set(APPDIR ${CMAKE_BINARY_DIR}/${SC_LAUNCHER_APPIMAGE}.AppDir)
 set(APPDIR_BIN ${APPDIR}/usr/bin)
 set(APPDIR_ICON_DIR ${APPDIR}/usr/share/icons/hicolor/256x256/apps)
 set(APP_DESKTOP ${APPDIR}/${SC_LAUNCHER_APPIMAGE}.desktop)
-set(APP_ICON ${CMAKE_BINARY_DIR}/resources/logo.png)
-set(APP_SETTINGS ${CMAKE_BINARY_DIR}/local/settings.json)
+set(APP_ICON ${CMAKE_SOURCE_DIR}/resources/logo.png)
+set(APPIMAGE_FILE ${CMAKE_BINARY_DIR}/${SC_LAUNCHER_APPIMAGE}-x86_64.AppImage)
 
-# Ressourcenliste
-list(APPEND APP_RESOURCES
-  ${CMAKE_BINARY_DIR}/resources/logo.png
-  ${CMAKE_BINARY_DIR}/resources/sc-deutsch.png
-  ${CMAKE_BINARY_DIR}/resources/background2_main.png
-  ${CMAKE_BINARY_DIR}/resources/background2_settings.png
-)
+set(APPIMAGETOOL_URL "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
+    CACHE STRING "Download URL for appimagetool")
+set(APPIMAGETOOL ${CMAKE_BINARY_DIR}/tools/appimagetool-x86_64.AppImage)
 
 file(WRITE ${APP_DESKTOP}
   "[Desktop Entry]\n"
   "Name=${SC_LAUNCHER_APPIMAGE}\n"
-  "Exec=${SC_LAUNCHER_APPIMAGE}\n"
+  "Exec=${SC_LAUNCHER_BINARY}\n"
   "Icon=${SC_LAUNCHER_APPIMAGE}\n"
   "Type=Application\n"
   "Categories=Utility;\n"
 )
 
-set(LINUXDEPLOY ${CMAKE_SOURCE_DIR}/misc/linuxdeploy-x86_64.appimage)
-set(LINUXDEPLOY_QT_PLUGIN ${CMAKE_SOURCE_DIR}/misc/linuxdeploy-plugin-qt-x86_64.appimage)
-set(APPIMAGETOOL ${CMAKE_SOURCE_DIR}/misc/appimagetool-x86_64.appimage)
+add_custom_command(
+  OUTPUT ${APPIMAGETOOL}
+  COMMAND ${CMAKE_COMMAND} -DURL=${APPIMAGETOOL_URL} -DDEST=${APPIMAGETOOL} -P ${CMAKE_SOURCE_DIR}/misc/download.cmake
+  COMMENT "Download appimagetool"
+)
 
 add_custom_target(appimage_prepare
-  DEPENDS ${SC_LAUNCHER_APPIMAGE}
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${APPDIR_BIN}
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${APPDIR}/resources
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${APPDIR}/local
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${APPDIR_ICON_DIR}
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${SC_LAUNCHER_APPIMAGE}> ${APPDIR_BIN}/
-  COMMAND ${CMAKE_COMMAND} -E create_symlink usr/bin/${SC_LAUNCHER_APPIMAGE} ${APPDIR}/AppRun
-  COMMAND ${CMAKE_COMMAND} -E copy ${APP_SETTINGS} ${APPDIR}/local/settings.json
+  DEPENDS ${SC_LAUNCHER_BINARY}
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${APPDIR_BIN} ${APPDIR}/resources ${APPDIR}/local ${APPDIR_ICON_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${SC_LAUNCHER_BINARY}> ${APPDIR_BIN}/
+  COMMAND ${CMAKE_COMMAND} -E create_symlink usr/bin/${SC_LAUNCHER_BINARY} ${APPDIR}/AppRun
+  COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/misc/settings.json ${APPDIR}/local/settings.json
   COMMAND ${CMAKE_COMMAND} -E copy ${APP_ICON} ${APPDIR_ICON_DIR}/${SC_LAUNCHER_APPIMAGE}.png
   COMMAND ${CMAKE_COMMAND} -E copy ${APP_ICON} ${APPDIR}/${SC_LAUNCHER_APPIMAGE}.png
-  COMMAND ${CMAKE_COMMAND} -E copy ${APP_RESOURCES} ${APPDIR}/resources/
+  COMMAND ${CMAKE_COMMAND} -E copy ${RUNTIME_RESOURCES} ${APPDIR}/resources/
   COMMENT "Prepare AppDir for AppImage"
 )
 
-add_custom_target(appimage ALL
-  DEPENDS appimage_prepare ${SC_LAUNCHER_APPIMAGE}
-  COMMAND chmod +x ${APPIMAGETOOL}
-  COMMAND ${CMAKE_COMMAND} -E env ARCH=x86_64 DISABLE_STRIP=1 ${APPIMAGETOOL} ${APPDIR}
+if(SC_BUILD_APPIMAGE)
+  set(APPIMAGE_ALL ALL)
+endif()
+
+add_custom_target(appimage ${APPIMAGE_ALL}
+  DEPENDS appimage_prepare ${APPIMAGETOOL}
+  COMMAND ${CMAKE_COMMAND} -E env ARCH=x86_64 DISABLE_STRIP=1 ${APPIMAGETOOL} ${APPDIR} ${APPIMAGE_FILE}
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   COMMENT "Create AppImage"
 )
 
-install(FILES
-  "${CMAKE_BINARY_DIR}/${SC_LAUNCHER_APPIMAGE}-x86_64.AppImage"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/appimage
-)
-install(CODE "
-  file(RENAME
-    \"${CMAKE_INSTALL_PREFIX}/appimage/${SC_LAUNCHER_APPIMAGE}-x86_64.AppImage\"
-    \"${CMAKE_INSTALL_PREFIX}/appimage/${PROJECT_NAME}.AppImage\"
-  )
-")
-
+# The AppImage is only installed when it was built (cmake --build . --target appimage)
+install(FILES ${APPIMAGE_FILE} DESTINATION appimage RENAME ${PROJECT_NAME}.AppImage OPTIONAL)
 install(FILES
   "${CMAKE_SOURCE_DIR}/misc/AppImageIntegration.sh"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/appimage
-)
-
-install(FILES
   "${CMAKE_SOURCE_DIR}/misc/install.sh"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/appimage
-)
-
-install(FILES
   "${CMAKE_SOURCE_DIR}/misc/uninstall.sh"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/appimage
-)
-
-install(FILES
   "${CMAKE_SOURCE_DIR}/resources/logo.png"
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/appimage
+  DESTINATION appimage
 )
