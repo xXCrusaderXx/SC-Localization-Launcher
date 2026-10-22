@@ -1,9 +1,9 @@
 {
-    "id": "io.github.xXCrusaderXx.StarCitizenDeutschLinux",
+    "id": "io.github.xXCrusaderXx.SCLocalizationLauncher",
     "runtime": "org.kde.Platform",
     "runtime-version": "6.10",
     "sdk": "org.kde.Sdk",
-    "command": "SC-Deutsch-Launcher",
+    "command": "sc-localization-launcher",
     "finish-args": [
         "--share=network",
         "--share=ipc",
@@ -35,7 +35,7 @@
             ]
         },
         {
-            "name": "sc-deutsch-launcher",
+            "name": "sc-localization-launcher",
             "buildsystem": "cmake-ninja",
             "config-opts": [
                 "-DCMAKE_BUILD_TYPE=Release",

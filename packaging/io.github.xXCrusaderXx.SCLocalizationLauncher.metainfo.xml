@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.xXCrusaderXx.SCLocalizationLauncher</id>
+  <name>SC Localization Launcher</name>
+  <summary>Community translations for Star Citizen on Linux</summary>
+  <summary xml:lang="de">Community-Übersetzungen für Star Citizen unter Linux</summary>
+  <developer id="io.github.xxcrusaderxx">
+    <name>Marko Klein</name>
+  </developer>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <description>
+    <p>
+      Installs and updates community translations for Star Citizen in installations made with
+      the LUG Helper, Lutris or any other Wine prefix.
+    </p>
+    <ul>
+      <li>Choose the language per game channel: LIVE, PTU, EPTU, HOTFIX and TECH-PREVIEW</li>
+      <li>Finds Star Citizen installations automatically</li>
+      <li>Optionally starts the game right after the update</li>
+    </ul>
+    <p>
+      This is a community project. It is not affiliated with Cloud Imperium Games.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.xXCrusaderXx.SCLocalizationLauncher.desktop</launchable>
+  <url type="homepage">https://github.com/xXCrusaderXx/SC-Localization-Launcher</url>
+  <url type="bugtracker">https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues</url>
+  <url type="vcs-browser">https://github.com/xXCrusaderXx/SC-Localization-Launcher</url>
+
+  <content_rating type="oars-1.1"/>
+
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+
+  <categories>
+    <category>Game</category>
+  </categories>
+
+  <releases>
+    <release version="0.1.0" date="2026-10-22">
+      <description>
+        <p>First Linux release with the new interface.</p>
+      </description>
+    </release>
+  </releases>
+</component>

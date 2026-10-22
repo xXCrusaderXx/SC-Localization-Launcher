@@ -1,22 +1,23 @@
 # Maintainer: Marko Klein <55139200+xXCrusaderXx@users.noreply.github.com>
-pkgname=sc-deutsch-launcher
+pkgname=sc-localization-launcher
 pkgver=0.1.0
 pkgrel=1
-pkgdesc="Deutsche Übersetzung für Star Citizen unter Linux"
+pkgdesc="Installs community translations for Star Citizen on Linux"
 arch=('x86_64')
-url="https://github.com/xXCrusaderXx/StarCitizenDeutschLinux"
+url="https://github.com/xXCrusaderXx/SC-Localization-Launcher"
 license=('GPL-3.0-or-later')
 depends=('qt6-declarative' 'qt6-wayland' 'curl' 'hicolor-icon-theme')
-makedepends=('cmake' 'ninja' 'nlohmann-json')
+makedepends=('cmake' 'ninja' 'nlohmann-json' 'qt6-tools')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
 # Replace with the real checksum when publishing a tag: updpkgsums
 sha256sums=('SKIP')
 
 build() {
-    cmake -S "StarCitizenDeutschLinux-$pkgver" -B build -G Ninja \
+    cmake -S "SC-Localization-Launcher-$pkgver" -B build -G Ninja \
         -DCMAKE_BUILD_TYPE=None \
         -DCMAKE_INSTALL_PREFIX=/usr \
-        -DSC_SYSTEM_INSTALL=ON
+        -DSC_SYSTEM_INSTALL=ON \
+        -DSC_VERSION_OVERRIDE="${pkgver//_/-}"
     cmake --build build
 }
 
