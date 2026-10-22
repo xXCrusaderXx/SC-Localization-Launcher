@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include "logging/core/SeverityLevel.h"
 #include "logging/logger/custom_logger/custom_logger.h"

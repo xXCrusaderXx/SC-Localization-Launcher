@@ -1,0 +1,40 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: analyze (c-cpp)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      # build-mode none analyses the sources without compiling, so CodeQL
+      # needs none of the Qt build dependencies.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4.39.1
+        with:
+          languages: c-cpp
+          build-mode: none
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4.39.1

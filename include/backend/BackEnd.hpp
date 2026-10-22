@@ -1,213 +1,280 @@
 #pragma once
 
-#include <nlohmann/json.hpp>
+#include <algorithm>
+#include <functional>
 #include <thread>
 
+#include "backend/DirectoryFinder.hpp"
+#include "backend/utils/TaskQueue.hpp"
 #include "backend/utils/paths.hpp"
 #include "database/DataBase.hpp"
 #include "jsonParser/ChannelsJsonParser.hpp"
 #include "jsonParser/SettingsJsonParser.hpp"
 #include "logging/logging.h"
-#include "managers/ChannelManager.hpp"
-#include "managers/SettingsManager.hpp"
 #include "managers/UpdateManager.hpp"
-#include "protocol/Protocol.hpp"
-#include "protocol/UpdateButtonPayload.hpp"
+#include "protocol/Commands.hpp"
+#include "protocol/State.hpp"
 
+// Commands go in, the complete state comes out.
+//
+// All backend data lives on one thread (the TaskQueue): commands run there one after another,
+// so no locking is needed. Slow work (downloads, disk search) runs in a background job that only
+// sees copies of the data and posts its result back to the queue.
 class BackEnd
 {
+   public:
+    using StateCallback = std::function<void(const Protocol::State&)>;
+
    private:
     LoggerFramework::LogEx lg;
-    Database::BackendData backendData;
-    ChannelsJsonParser channelsJsonParser;
+    Database::BackendData data;
     SettingsJsonParser settingsJsonParser;
-    ChannelManager channelManager;
-    UpdateManager updateHandler;
-    SettingsManager settingsManager;
+    ChannelsJsonParser channelsJsonParser;
+    UpdateManager updateManager;
+    DirectoryFinder directoryFinder;
+    StateCallback stateCallback;
 
-    using Callback = std::function<void(const nlohmann::json&)>;
-    std::map<std::string, Callback> guiCallbacks;
+    std::thread channelInfoJob;
+    std::thread updateJob;
+    std::thread searchJob;
+
+    // Declared last: its thread uses all members above
+    TaskQueue queue;
+
+    // Only called on the backend thread. A job that is not running anymore is joined right away,
+    // it never waits for the backend thread.
+    void startJob (std::thread& job, std::function<void()> function)
+    {
+        if(job.joinable()) job.join();
+        job = std::thread(std::move(function));
+    }
+
+    static std::vector<Protocol::Language> availableLanguages (const Database::WebInfo& info)
+    {
+        std::vector<Protocol::Language> languages{Protocol::Language::English};
+        if(info.active != 0 && !info.server1.empty()) languages.push_back(Protocol::Language::German);
+        if(info.active != 0 && !info.server3.empty()) languages.push_back(Protocol::Language::GermanFull);
+        return languages;
+    }
+
+    // A choice the server does not offer (anymore) is treated as English, without forgetting the choice
+    static Protocol::Language effectiveLanguage (const Database::ChannelData& channel)
+    {
+        auto languages = availableLanguages(channel.info);
+        bool available = std::find(languages.begin(), languages.end(), channel.language) != languages.end();
+        return available ? channel.language : Protocol::Language::English;
+    }
+
+    Database::ChannelData* findChannel (const std::string& name)
+    {
+        auto it = data.channels.find(name);
+        if(it != data.channels.end()) return &it->second;
+        LOG_ERROR(lg) << "unknown channel: " << name;
+        return nullptr;
+    }
+
+    Protocol::State snapshot () const
+    {
+        Protocol::State state;
+
+        // Known channels in display order, then whatever else the server lists
+        std::vector<std::string> names = Protocol::CHANNEL_NAMES;
+        for(const auto& [name, channel] : data.channels)
+            if(std::find(names.begin(), names.end(), name) == names.end()) names.push_back(name);
+
+        for(const auto& name : names)
+        {
+            const auto& channel = data.channels.at(name);
+            state.channels.push_back({name, channel.installPath.string(), effectiveLanguage(channel), availableLanguages(channel.info)});
+        }
+
+        state.rsiLauncherPath = data.rsiLauncherPath.string();
+        state.options = data.options;
+        state.update = data.update;
+        state.searching = data.searching;
+        return state;
+    }
+
+    void publish ()
+    {
+        if(data.shuttingDown) return;
+        Protocol::State state = snapshot();
+        LOG_DEBUG(lg) << "publish() - state:\n" << nlohmann::json(state).dump(4);
+        stateCallback(state);
+    }
+
+    void loadSettings ()
+    {
+        SettingsFile file = settingsJsonParser.load();
+        for(const auto& name : Protocol::CHANNEL_NAMES) data.channels[name];
+        for(const auto& [name, settings] : file.channels)
+        {
+            data.channels[name].installPath = settings.installPath;
+            data.channels[name].language = settings.language;
+        }
+        data.rsiLauncherPath = file.rsiLauncherPath;
+        data.options = file.options;
+    }
+
+    void saveSettings ()
+    {
+        SettingsFile file;
+        for(const auto& [name, channel] : data.channels) file.channels[name] = {channel.installPath.string(), channel.language};
+        file.rsiLauncherPath = data.rsiLauncherPath.string();
+        file.options = data.options;
+        settingsJsonParser.save(file);
+    }
+
+    void loadChannelInfo ()
+    {
+        startJob(channelInfoJob,
+                 [this]
+                 {
+                     auto channels = channelsJsonParser.getChannels();
+                     if(!channels)
+                     {
+                         LOG_ERROR(lg) << "no channel information, translations cannot be downloaded";
+                         return;
+                     }
+                     queue.post(
+                         [this, channels = std::move(*channels)]
+                         {
+                             for(const auto& [name, info] : channels) data.channels[name].info = info;
+                             publish();
+                         });
+                 });
+    }
+
+    // --- Command handlers, all on the backend thread ---
+
+    void handle (const Protocol::SetLanguage& command)
+    {
+        if(auto* channel = findChannel(command.channel)) channel->language = command.language;
+    }
+
+    void handle (const Protocol::SetInstallPath& command)
+    {
+        if(auto* channel = findChannel(command.channel)) channel->installPath = command.path;
+    }
+
+    void handle (const Protocol::SetRsiLauncherPath& command) { data.rsiLauncherPath = command.path; }
+
+    void handle (const Protocol::SetOption& command)
+    {
+        // The field names of Options are the valid option names
+        nlohmann::json options = data.options;
+        if(!options.contains(command.option))
+        {
+            LOG_ERROR(lg) << "unknown option: " << command.option;
+            return;
+        }
+        options[command.option] = command.value;
+        data.options = options.get<Protocol::Options>();
+    }
+
+    void handle (const Protocol::StartUpdate&)
+    {
+        if(data.update == Protocol::UpdateStatus::Running)
+        {
+            LOG_DEBUG(lg) << "startUpdate - update already running";
+            return;
+        }
+
+        // The job works on a copy, the user may change settings while it runs
+        std::vector<UpdateManager::Job> jobs;
+        for(const auto& [name, channel] : data.channels)
+            if(!channel.installPath.empty()) jobs.push_back({name, channel.installPath, effectiveLanguage(channel), channel.info});
+
+        if(jobs.empty())
+        {
+            LOG_DEBUG(lg) << "startUpdate - no install path set";
+            return;
+        }
+
+        data.update = Protocol::UpdateStatus::Running;
+        bool launchGame = data.options.launchGameAfterUpdate;
+        startJob(updateJob,
+                 [this, jobs, launchGame, rsiLauncherPath = data.rsiLauncherPath]
+                 {
+                     bool success = updateManager.update(jobs);
+                     // Also after a partial failure, the other channels are still playable
+                     if(launchGame && !data.shuttingDown) updateManager.startGame(rsiLauncherPath);
+                     queue.post(
+                         [this, success]
+                         {
+                             data.update = success ? Protocol::UpdateStatus::Succeeded : Protocol::UpdateStatus::Failed;
+                             publish();
+                         });
+                 });
+    }
+
+    void handle (const Protocol::AutoSearch&)
+    {
+        if(data.searching)
+        {
+            LOG_DEBUG(lg) << "autoSearch - search already running";
+            return;
+        }
+
+        data.searching = true;
+        startJob(searchJob,
+                 [this]
+                 {
+                     auto result = directoryFinder.findRsiInstallation(data.shuttingDown);
+                     queue.post(
+                         [this, result]
+                         {
+                             if(result)
+                             {
+                                 data.rsiLauncherPath = result->rsiLauncherPath;
+                                 for(const auto& [name, path] : result->channelPaths) data.channels[name].installPath = path;
+                                 saveSettings();
+                             }
+                             data.searching = false;
+                             publish();
+                         });
+                 });
+    }
 
    public:
-    BackEnd ()
-        : settingsJsonParser(PATHS::JSON_FILES::SETTINGS_USER)
-        , lg("BackEnd")
-        , settingsManager(backendData)
+    // The callback is called on the backend thread
+    explicit BackEnd (StateCallback stateCallback)
+        : lg("BackEnd")
+        , settingsJsonParser(PATHS::JSON_FILES::SETTINGS_USER)
+        , updateManager(data.shuttingDown)
+        , stateCallback(std::move(stateCallback))
     {
-        settingsJsonParser.getChannelSettings(backendData);
-        channelsJsonParser.getChannels(backendData);
-
-        channelManager.initialSetup(backendData);
-
+        // Settings first, so the GUI can show them while channels.json is still downloading
+        queue.post(
+            [this]
+            {
+                loadSettings();
+                publish();
+                loadChannelInfo();
+            });
         LOG_DEBUG(lg) << "instanziated";
     }
-    virtual ~BackEnd ()
+
+    ~BackEnd ()
     {
-        settingsJsonParser.saveChannelSettings(backendData);
+        data.shuttingDown = true;
+        // Runs the commands still waiting, then no one starts new jobs
+        queue.stop();
+        for(auto* job : {&channelInfoJob, &updateJob, &searchJob})
+            if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }
 
-    void setGuiCallback (const std::string& key, Callback cb) { guiCallbacks[key] = cb; };
-
-    void processMassage (const nlohmann::json& msg)
+    // Thread safe, returns immediately
+    void execute (Protocol::Command command)
     {
-        LOG_DEBUG(lg) << "processMassage() - msg:\n" << msg.dump(4);
-
-        Protocol::Request request;
-        request.fromJson(msg);
-
-        if(request.type == Protocol::PayloadType::ChannelLive || request.type == Protocol::PayloadType::ChannelPTU ||
-           request.type == Protocol::PayloadType::ChannelEPTU || request.type == Protocol::PayloadType::ChannelHotfix ||
-           request.type == Protocol::PayloadType::ChannelTechPeview)
-        {
-            auto response = channelManager.processRequest(backendData, request);
-
-            std::string key = "";
-            if(request.type == Protocol::PayloadType::ChannelLive)
+        queue.post(
+            [this, command = std::move(command)]
             {
-                key = "LIVE";
-            }
-            else if(request.type == Protocol::PayloadType::ChannelPTU)
-            {
-                key = "PTU";
-            }
-            else if(request.type == Protocol::PayloadType::ChannelEPTU)
-            {
-                key = "EPTU";
-            }
-            else if(request.type == Protocol::PayloadType::ChannelHotfix)
-            {
-                key = "HOTFIX";
-            }
-            else if(request.type == Protocol::PayloadType::ChannelTechPeview)
-            {
-                key = "TECH-PREVIEW";
-            }
-            if(guiCallbacks[key]) guiCallbacks[key](response->toJson());
-        }
-
-        if(request.type == Protocol::PayloadType::Settings)
-        {
-            settingsManager.processRequest(request);
-        }
-
-        if(request.type == Protocol::PayloadType::UpdateButton)
-        {
-            Protocol::Response response;
-            Protocol::UpdateButtonPayload::Response updateButtonResponse;
-
-            updateButtonResponse.updateButton.busy = true;
-            updateButtonResponse.updateButton.enabled = true;
-            updateButtonResponse.updateButton.LaunchScAfterTranslation = backendData.settings.checkboxes.LaunchScAfterTranslation;
-
-            response.payload = updateButtonResponse.to_json();
-            response.type = Protocol::PayloadType::UpdateButton;
-            guiCallbacks["UPDATE"](response.toJson());
-
-            updateHandler.processRequest(backendData, request);
-
-            updateButtonResponse.updateButton.busy = false;
-            updateButtonResponse.updateButton.enabled = true;
-            response.payload = updateButtonResponse.to_json();
-            guiCallbacks["UPDATE"](response.toJson());
-
-            if(backendData.settings.checkboxes.LaunchScAfterTranslation)
-            {
-                bool lutris_installation = true;
-                bool lug_installation = true;
-
-                if(lutris_installation)
-                {
-                    chdir(backendData.rsiLauncherInstallPath.string().c_str());
-                    LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << backendData.rsiLauncherInstallPath.string().c_str();
-                    std::string command = "/usr/bin/lutris lutris:rungame/star-citizen";
-                    std::system(command.c_str());
-                    chdir(PATHS::ROOT.c_str());
-                }
-
-                if(lug_installation)
-                {
-                    std::string bashPath = backendData.rsiLauncherInstallPath.parent_path().parent_path().parent_path().parent_path().string();
-                    chdir(bashPath.c_str());
-                    LOG_DEBUG(lg) << "processMassage() - EXEC_PATH: " << bashPath << "/sc-launch.sh";
-                    std::string command = "sh " + bashPath + "/sc-launch.sh";
-                    std::system(command.c_str());
-                    chdir(PATHS::ROOT.c_str());
-                }
-
-                LOG_DEBUG(lg) << "processMassage() - SC_LAUNCH - FINISHED!";
-            }
-        }
-    }
-
-    void initGui ()
-    {
-        LOG_DEBUG(lg) << "initGui()";
-        bool readyForUpdate = false;
-
-        nlohmann::json updateButtonInit;
-        nlohmann::json updateSettingsInit;
-
-        for(const auto& [channel, data] : backendData.channelData)
-        {
-            Protocol::Response response;
-            Protocol::ChannelPayload::Response channelResponse;
-
-            if(!backendData.channelData[channel].installPath.empty())
-            {
-                readyForUpdate = true;
-                channelResponse.buttonChannel.enabled = true;
-                channelResponse.buttonChannel.acitve = false;
-                channelResponse.buttonEng.enabled = true;
-                channelResponse.buttonEng.selected = true;
-                channelResponse.buttonDe.enabled = backendData.channelData[channel].buttonDe.enabled;
-                channelResponse.buttonDe.selected = backendData.channelData[channel].buttonDe.selected;
-                channelResponse.buttonDeFull.enabled = backendData.channelData[channel].buttonDeFull.enabled;
-                channelResponse.buttonDeFull.selected = backendData.channelData[channel].buttonDeFull.selected;
-            }
-            else
-            {
-                channelResponse.buttonChannel.enabled = backendData.channelData[channel].buttonChannel.enabled;
-            }
-
-            channelResponse.installPathIsSet = !backendData.channelData[channel].installPath.empty();
-            response.payload = channelResponse.to_json();
-            response.type = Protocol::payloadTypeFromString(channel);
-            if(guiCallbacks[channel]) guiCallbacks[channel](response.toJson());
-        }
-
-        if(readyForUpdate)
-        {
-            Protocol::Response response;
-            Protocol::UpdateButtonPayload::Response updateButtonResponse;
-            updateButtonResponse.updateButton.enabled = true;
-            updateButtonResponse.updateButton.busy = false;
-            updateButtonResponse.updateButton.LaunchScAfterTranslation = backendData.settings.checkboxes.LaunchScAfterTranslation;
-            if(guiCallbacks["UPDATE"]) guiCallbacks["UPDATE"](updateButtonResponse.to_json());
-        }
-
-        Protocol::Response response;
-        Protocol::SettingsPayload::Response settingsResponse;
-        settingsResponse.autoSearchButton.enabled = true;
-        settingsResponse.autoSearchButton.busy = false;
-        settingsResponse.paths.liveInstallPath = backendData.channelData["LIVE"].installPath;
-        settingsResponse.paths.ptuInstallPath = backendData.channelData["PTU"].installPath;
-        settingsResponse.paths.eptuInstallPath = backendData.channelData["EPTU"].installPath;
-        settingsResponse.paths.hotfixInstallPath = backendData.channelData["HOTFIX"].installPath;
-        settingsResponse.paths.techprevieInstallPath = backendData.channelData["TECH-PREVIEW"].installPath;
-        settingsResponse.paths.rsiLauncherInstallPath = backendData.rsiLauncherInstallPath;
-
-        settingsResponse.settings.autoTranslationAtStart = backendData.settings.checkboxes.autoTranslationAtStart;
-        settingsResponse.settings.autoNewTranslation = backendData.settings.checkboxes.autoNewTranslation;
-        settingsResponse.settings.minimizeScdAfterUpdate = backendData.settings.checkboxes.minimizeScdAfterUpdate;
-        settingsResponse.settings.LaunchScAfterTranslation = backendData.settings.checkboxes.LaunchScAfterTranslation;
-        settingsResponse.settings.startScdWithSystemStart = backendData.settings.checkboxes.startScdWithSystemStart;
-        settingsResponse.settings.showUpdateStatus = backendData.settings.checkboxes.showUpdateStatus;
-        response.payload = settingsResponse.to_json();
-        response.type = Protocol::PayloadType::Settings;
-
-        if(guiCallbacks["SETTINGS"]) guiCallbacks["SETTINGS"](response.toJson());
-
-        LOG_DEBUG(lg) << "initGui() - finished";
+                LOG_DEBUG(lg) << "execute() - " << Protocol::toString(command);
+                std::visit([this] (const auto& c) { handle(c); }, command);
+                saveSettings();
+                publish();
+            });
     }
 };
