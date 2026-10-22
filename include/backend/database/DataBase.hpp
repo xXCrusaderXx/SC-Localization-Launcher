@@ -3,10 +3,10 @@
 #include <atomic>
 #include <filesystem>
 #include <map>
-#include <mutex>
-#include <optional>
 #include <nlohmann/json.hpp>
 #include <string>
+
+#include "protocol/State.hpp"
 
 namespace Database
 {
@@ -28,54 +28,27 @@ struct WebInfo
     std::string server4_fallback;
 };
 
-struct ChannelButton
-{
-    std::optional<bool> enabled;
-    std::optional<bool> active;
-};
-
-struct TranslationTargetButton
-{
-    bool enabled = false;
-    bool selected = false;
-};
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(WebInfo, description, folder, active, server1, server2, server3, server4, server1_fallback,
+                                                server2_fallback, server3_fallback, server4_fallback)
 
 struct ChannelData
 {
     WebInfo info;
-    std::filesystem::path installPath = "";
-    ChannelButton buttonChannel;
-    TranslationTargetButton buttonEng;
-    TranslationTargetButton buttonDe;
-    TranslationTargetButton buttonDeFull;
+    std::filesystem::path installPath;
+    // The user's choice. It is kept even while the server does not offer it, see BackEnd::effectiveLanguage()
+    Protocol::Language language = Protocol::Language::English;
 };
 
-struct Checkboxes
-{
-    bool autoTranslationAtStart = false;
-    bool autoNewTranslation = false;
-    bool minimizeScdAfterUpdate = false;
-    bool LaunchScAfterTranslation = false;
-    bool startScdWithSystemStart = false;
-    bool showUpdateStatus = false;
-};
-
-struct Settings
-{
-    Checkboxes checkboxes;
-};
-
+// Only touched by the backend thread, see BackEnd
 struct BackendData
 {
-    std::map<std::string, ChannelData> channelData;
-    Settings settings;
-    std::filesystem::path rsiLauncherInstallPath = "";
-    bool anyChannelPathSet = false;
+    std::map<std::string, ChannelData> channels;
+    std::filesystem::path rsiLauncherPath;
+    Protocol::Options options;
+    Protocol::UpdateStatus update = Protocol::UpdateStatus::Idle;
+    bool searching = false;
 
-    // Guards all fields above. Recursive, because manager callbacks re-enter the backend
-    // (e.g. initGui()) while processMassage() holds the lock.
-    std::recursive_mutex mutex;
-    // Set when the app closes; workers stop early and skip GUI callbacks
+    // Set when the app closes; background jobs read it to stop early
     std::atomic<bool> shuttingDown{false};
 };
 

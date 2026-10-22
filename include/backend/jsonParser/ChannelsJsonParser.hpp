@@ -1,11 +1,13 @@
 #pragma once
 
 #include <curl/curl.h>
+#include <cstdlib>
 #include <exception>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <sstream>
 #include <string>
 
@@ -15,11 +17,23 @@
 
 class ChannelsJsonParser
 {
+   public:
+    using Channels = std::map<std::string, Database::WebInfo>;
+
    private:
     LoggerFramework::LogEx lg;
     nlohmann::json newJson;
 
     inline static const std::string CHANNELS_URL = "https://www.sc-deutsch-launcher.de/inc/channels.json";
+
+    static std::string channelsUrl ()
+    {
+#ifdef SC_TESTING
+        // Test builds only: the tests serve channels.json from a local server
+        if(const char* url = std::getenv("SC_CHANNELS_URL")) return url;
+#endif
+        return CHANNELS_URL;
+    }
 
     // Some server channel names differ from the installation folder names
     inline static const std::map<std::string, std::string> CHANNEL_ALIASES{{"TECH-PREV", "TECH-PREVIEW"}};
@@ -44,7 +58,8 @@ class ChannelsJsonParser
         if(!curl) return false;
 
         std::string jsonData;
-        curl_easy_setopt(curl, CURLOPT_URL, CHANNELS_URL.c_str());
+        std::string url = channelsUrl();
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &jsonData);
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
@@ -111,23 +126,14 @@ class ChannelsJsonParser
         }
     }
 
-    void readChannel (const nlohmann::json& channel, Database::BackendData& backendData)
+    static void readChannel (const nlohmann::json& channel, const std::string& fallbackName, Channels& channels)
     {
-        std::string channelName = normalizeChannelName(channel.value("description", ""));
-        if(channelName.empty()) return;
+        auto info = channel.get<Database::WebInfo>();
+        std::string channelName = normalizeChannelName(info.description.empty() ? fallbackName : info.description);
+        if(channelName.empty() || channels.contains(channelName)) return;
 
-        auto& info = backendData.channelData[channelName].info;
         info.description = channelName;
-        info.folder = channel.value("folder", "");
-        info.active = channel.value("active", 0);
-        info.server1 = channel.value("server1", "");
-        info.server2 = channel.value("server2", "");
-        info.server3 = channel.value("server3", "");
-        info.server4 = channel.value("server4", "");
-        info.server1_fallback = channel.value("server1_fallback", "");
-        info.server2_fallback = channel.value("server2_fallback", "");
-        info.server3_fallback = channel.value("server3_fallback", "");
-        info.server4_fallback = channel.value("server4_fallback", "");
+        channels[channelName] = info;
     }
 
    public:
@@ -138,35 +144,37 @@ class ChannelsJsonParser
     };
     ~ChannelsJsonParser () { LOG_DEBUG(lg) << "destructed"; };
 
-    // Returns false if neither the server nor the cache is available. The app stays usable,
+    // Returns nullopt if neither the server nor the cache is available. The app stays usable,
     // only translations cannot be downloaded.
-    bool getChannels (Database::BackendData& backendData)
+    std::optional<Channels> getChannels ()
     {
         if(!loadJsonFromWeb() && !loadCache())
         {
             LOG_ERROR(lg) << "getChannels() - no channel information available";
-            return false;
+            return std::nullopt;
         }
 
         if(!newJson.contains("channels") || !newJson.at("channels").is_array())
         {
             LOG_ERROR(lg) << "getChannels() - channels not found in JSON";
-            return false;
+            return std::nullopt;
         }
 
         LOG_DEBUG(lg) << "getChannels() - channels found, processing";
-        for(const auto& channel : newJson.at("channels")) readChannel(channel, backendData);
-
-        // Channels the server currently does not offer (e.g. EPTU) are listed under "backup"
-        if(newJson.contains("backup") && newJson.at("backup").is_object())
+        Channels channels;
+        try
         {
-            for(const auto& [key, channel] : newJson.at("backup").items())
-            {
-                std::string channelName = normalizeChannelName(channel.value("description", key));
-                if(!backendData.channelData[channelName].info.description.empty()) continue;
-                readChannel(channel, backendData);
-            }
+            for(const auto& channel : newJson.at("channels")) readChannel(channel, "", channels);
+
+            // Channels the server currently does not offer (e.g. EPTU) are listed under "backup"
+            if(newJson.contains("backup") && newJson.at("backup").is_object())
+                for(const auto& [key, channel] : newJson.at("backup").items()) readChannel(channel, key, channels);
         }
-        return true;
+        catch(const std::exception& e)
+        {
+            LOG_ERROR(lg) << "getChannels() - unexpected channels.json format: " << e.what();
+            return std::nullopt;
+        }
+        return channels;
     }
 };
