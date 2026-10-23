@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Own translation source per channel: any `global.ini` link (HTTPS) can be chosen as "Own source" in the channel's language list, for example to test a translation.
 - Translation projects can show a short notice per channel and language, set in `languages.json`.
 - Own signed Flatpak repository: the Flatpak installs with one click (`.flatpakref`) and then updates through `flatpak update` or the software centre.
+- The launcher updates itself in the Flatpak (from the project's Flatpak repository; bundle installs switch to it once) and on Linux Mint, Pop!_OS, LMDE, Nobara and other systems based on Ubuntu 24.04, Debian 12 or Fedora.
 - The update button follows the game. It shows "Start" when every translation is current and "Update & start" only when a channel needs an update. During the start it shows "Starting game …", then "Running" while the RSI Launcher is open and "Game running" while Star Citizen runs. This also works when the game was started without the launcher.
 - The status line reports when the RSI Launcher did not start, with a link to the log, or when neither the LUG Helper's `sc-launch.sh` nor Lutris was found. The end of `sc-launch.log` is written to the launcher's log.
 
