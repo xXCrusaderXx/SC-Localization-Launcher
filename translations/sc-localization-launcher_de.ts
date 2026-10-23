@@ -4,6 +4,18 @@
 <context>
     <name>ChannelRow</name>
     <message>
+        <source>Own source</source>
+        <translation>Eigene Quelle</translation>
+    </message>
+    <message>
+        <source>Change own source …</source>
+        <translation>Eigene Quelle ändern …</translation>
+    </message>
+    <message>
+        <source>Own source …</source>
+        <translation>Eigene Quelle …</translation>
+    </message>
+    <message>
         <source>No install path set</source>
         <translation>Kein Installationspfad gesetzt</translation>
     </message>
@@ -38,6 +50,37 @@
     <message>
         <source>Repair</source>
         <translation>Reparieren</translation>
+    </message>
+</context>
+<context>
+    <name>CustomSourceDialog</name>
+    <message>
+        <source>Own source for %1</source>
+        <translation>Eigene Quelle für %1</translation>
+    </message>
+    <message>
+        <source>Link to a global.ini, e.g. a translation you are testing. Only use sources you trust: the file replaces the game texts.</source>
+        <translation>Link zu einer global.ini, z. B. einer Übersetzung, die du testest. Nutze nur Quellen, denen du vertraust: Die Datei ersetzt die Spieltexte.</translation>
+    </message>
+    <message>
+        <source>Address (HTTPS)</source>
+        <translation>Adresse (HTTPS)</translation>
+    </message>
+    <message>
+        <source>Language folder in the game</source>
+        <translation>Sprachordner im Spiel</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Entfernen</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <source>Save and use</source>
+        <translation>Speichern und verwenden</translation>
     </message>
 </context>
 <context>
@@ -181,8 +224,20 @@
         <translation>Übersetzungen werden heruntergeladen …</translation>
     </message>
     <message>
+        <source>Starting the RSI Launcher …</source>
+        <translation>RSI Launcher wird gestartet …</translation>
+    </message>
+    <message>
         <source>Searching for Star Citizen installations …</source>
         <translation>Suche nach Star-Citizen-Installationen …</translation>
+    </message>
+    <message>
+        <source>The RSI Launcher did not start. &lt;a href=&quot;log&quot;&gt;Open the log&lt;/a&gt;</source>
+        <translation>Der RSI Launcher ist nicht gestartet. &lt;a href=&quot;log&quot;&gt;Log öffnen&lt;/a&gt;</translation>
+    </message>
+    <message>
+        <source>Cannot start the game: install it with the LUG Helper or Lutris</source>
+        <translation>Spiel kann nicht gestartet werden: Installiere es mit dem LUG Helper oder Lutris</translation>
     </message>
     <message>
         <source>Translations updated</source>
@@ -208,6 +263,14 @@
         <translation>Update fehlgeschlagen. &lt;a href=&quot;log&quot;&gt;Log öffnen&lt;/a&gt;</translation>
     </message>
     <message>
+        <source>Star Citizen is running</source>
+        <translation>Star Citizen läuft</translation>
+    </message>
+    <message>
+        <source>RSI Launcher is running</source>
+        <translation>RSI Launcher läuft</translation>
+    </message>
+    <message>
         <source>Updating …</source>
         <translation>Aktualisiere …</translation>
     </message>
@@ -216,12 +279,28 @@
         <translation>Kein Spielordner gesetzt</translation>
     </message>
     <message>
+        <source>Game running</source>
+        <translation>Spiel läuft</translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation>Läuft</translation>
+    </message>
+    <message>
         <source>Update &amp; start</source>
         <translation>Aktualisieren &amp; starten</translation>
     </message>
     <message>
         <source>Update translations</source>
         <translation>Übersetzungen aktualisieren</translation>
+    </message>
+    <message>
+        <source>Starting game …</source>
+        <translation>Spiel wird gestartet …</translation>
+    </message>
+    <message>
+        <source>Start</source>
+        <translation>Starten</translation>
     </message>
     <message>
         <source>RSI Launcher folder</source>

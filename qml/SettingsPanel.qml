@@ -19,6 +19,11 @@ Item {
     // Languages with a credit, i.e. every translation (English is the original game text)
     readonly property var translations: (appState.languages || []).filter(l => l.credit && l.credit.project)
 
+    // Credits come from languages.json on the internet; inside StyledText they must not be read as markup
+    function escapeHtml(text) {
+        return String(text || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
     visible: open || sheet.x < width
 
     // Dimmed backdrop, closes the panel on click
@@ -242,6 +247,7 @@ Item {
                                 Text {
                                     width: parent.width
                                     text: modelData.name
+                                    textFormat: Text.PlainText
                                     color: Theme.text
                                     font.pixelSize: 12
                                     font.bold: true
@@ -249,7 +255,7 @@ Item {
 
                                 Text {
                                     width: parent.width
-                                    text: qsTr("%1 by %2").arg("<a href=\"%1\">%2</a>".arg(modelData.credit.url).arg(modelData.credit.project)).arg(modelData.credit.authors)
+                                    text: qsTr("%1 by %2").arg("<a href=\"%1\">%2</a>".arg(panel.escapeHtml(modelData.credit.url)).arg(panel.escapeHtml(modelData.credit.project))).arg(panel.escapeHtml(modelData.credit.authors))
                                     textFormat: Text.StyledText
                                     linkColor: Theme.accent
                                     color: Theme.muted
@@ -260,7 +266,7 @@ Item {
 
                                 Text {
                                     width: parent.width
-                                    text: modelData.credit.licenseUrl ? qsTr("License: %1").arg("<a href=\"%1\">%2</a>".arg(modelData.credit.licenseUrl).arg(modelData.credit.license)) : qsTr("License: %1").arg(modelData.credit.license)
+                                    text: modelData.credit.licenseUrl ? qsTr("License: %1").arg("<a href=\"%1\">%2</a>".arg(panel.escapeHtml(modelData.credit.licenseUrl)).arg(panel.escapeHtml(modelData.credit.license))) : qsTr("License: %1").arg(panel.escapeHtml(modelData.credit.license))
                                     textFormat: Text.StyledText
                                     linkColor: Theme.accent
                                     color: Theme.muted

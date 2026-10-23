@@ -1,5 +1,4 @@
 #include <QProcess>
-#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
 #include <algorithm>
@@ -13,6 +12,7 @@
 #include "logging/logger/custom_logger/custom_logger.h"
 
 using Protocol::ChannelStatus;
+using Protocol::GameStart;
 using Protocol::UpdateStatus;
 using Codes = std::vector<std::string>;
 
@@ -26,6 +26,8 @@ class BackendTest : public QObject
     std::unique_ptr<BackEnd> backEnd;
     std::mutex mutex;
     std::vector<Protocol::State> states;
+    // The tests run without PATH so nothing real is started; restored after tests that need bash
+    QByteArray testPath = qgetenv("PATH");
 
     static Protocol::Channel channel (const Protocol::State& state, const std::string& name)
     {
@@ -166,6 +168,37 @@ class BackendTest : public QObject
         return path;
     }
 
+    // Fake LUG Helper installation: the Wine prefix holds sc-launch.sh with these commands; returns the RSI Launcher folder
+    static std::filesystem::path lugPrefix (const QTemporaryDir& prefix, const std::string& commands)
+    {
+        auto root = std::filesystem::path(prefix.path().toStdString());
+        auto rsiLauncher = root / "drive_c/Program Files/Roberts Space Industries/RSI Launcher";
+        std::filesystem::create_directories(rsiLauncher);
+        std::ofstream(root / "sc-launch.sh") << "#!/usr/bin/env bash\n" << commands;
+        return rsiLauncher;
+    }
+
+    // Updates LIVE with "Update & start" and returns how the start of the RSI Launcher ended
+    std::optional<GameStart> updateAndStartGame (const std::filesystem::path& rsiLauncher)
+    {
+        QTemporaryDir game;
+        if(!start()) return std::nullopt;
+        backEnd->execute(Protocol::SetOption{"launchGameAfterUpdate", true});
+        backEnd->execute(Protocol::SetRsiLauncherPath{rsiLauncher.string()});
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        if(!setLanguage("LIVE", "de") || runUpdate() != UpdateStatus::Succeeded) return std::nullopt;
+        if(!waitForState([] (const auto& s) { return s.game == GameStart::Starting; })) return std::nullopt;
+        auto done = waitForState([] (const auto& s) { return s.game != GameStart::Starting && s.game != GameStart::Idle; });
+        if(!done) return std::nullopt;
+        std::lock_guard lock(mutex);
+        return states[*done].game;
+    }
+
+    // Wine names the process after the Windows program; the fake one only sleeps.
+    // The tests watch for this name instead of "RSI Launcher.exe" (SC_RSI_LAUNCHER_PROGRAM in tests/CMakeLists.txt).
+    static constexpr const char* FAKE_RSI_LAUNCHER =
+        "exec -a 'C:\\Program Files\\Roberts Space Industries\\RSI Launcher\\RSI Test Launcher.exe' sleep 30\n";
+
    private slots:
     void initTestCase () { LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>()); }
 
@@ -183,7 +216,11 @@ class BackendTest : public QObject
         states.clear();
     }
 
-    void cleanup () { backEnd.reset(); }
+    void cleanup ()
+    {
+        backEnd.reset();
+        qputenv("PATH", testPath);
+    }
 
     void startsWithDefaultsWithoutSettingsFile ()
     {
@@ -418,6 +455,62 @@ class BackendTest : public QObject
         QVERIFY(!SelfUpdateManager::isNewer("nightly", "0.6.0"));
     }
 
+    // os-release values of real distributions
+    void picksThePackageForDerivatives ()
+    {
+        using OS = std::map<std::string, std::string>;
+        auto variant = [] (const std::string& type, const OS& os, bool imageBased = false)
+        { return SelfUpdateManager::packageVariant(type, os, imageBased); };
+
+        QCOMPARE(variant("deb", OS{{"ID", "ubuntu"}, {"VERSION_ID", "24.04"}, {"UBUNTU_CODENAME", "noble"}}), std::string("ubuntu24.04"));
+        // Linux Mint 22, Pop!_OS 24.04
+        QCOMPARE(variant("deb", OS{{"ID", "linuxmint"}, {"ID_LIKE", "ubuntu debian"}, {"VERSION_ID", "22"}, {"UBUNTU_CODENAME", "noble"}}),
+                 std::string("ubuntu24.04"));
+        QCOMPARE(variant("deb", OS{{"ID", "pop"}, {"ID_LIKE", "ubuntu debian"}, {"VERSION_ID", "24.04"}, {"UBUNTU_CODENAME", "noble"}}),
+                 std::string("ubuntu24.04"));
+        // Ubuntu 25.04 and Mint 21 (Ubuntu 22.04) have other library versions
+        QCOMPARE(variant("deb", OS{{"ID", "ubuntu"}, {"VERSION_ID", "25.04"}, {"UBUNTU_CODENAME", "plucky"}}), std::string());
+        QCOMPARE(variant("deb", OS{{"ID", "linuxmint"}, {"ID_LIKE", "ubuntu debian"}, {"UBUNTU_CODENAME", "jammy"}}), std::string());
+
+        QCOMPARE(variant("deb", OS{{"ID", "debian"}, {"VERSION_ID", "12"}, {"VERSION_CODENAME", "bookworm"}}), std::string("debian12"));
+        // LMDE 6 names its Debian base separately
+        QCOMPARE(variant("deb", OS{{"ID", "linuxmint"}, {"ID_LIKE", "debian"}, {"VERSION_CODENAME", "faye"}, {"DEBIAN_CODENAME", "bookworm"}}),
+                 std::string("debian12"));
+        QCOMPARE(variant("deb", OS{{"ID", "debian"}, {"VERSION_ID", "13"}, {"VERSION_CODENAME", "trixie"}}), std::string());
+
+        QCOMPARE(variant("rpm", OS{{"ID", "fedora"}, {"VERSION_ID", "42"}}), std::string("fedora"));
+        QCOMPARE(variant("rpm", OS{{"ID", "nobara"}, {"ID_LIKE", "rhel centos fedora"}}), std::string("fedora"));
+        // Fedora Atomic / Bazzite: no dnf install on an image-based system
+        QCOMPARE(variant("rpm", OS{{"ID", "fedora"}, {"VERSION_ID", "42"}}, true), std::string());
+        QCOMPARE(variant("rpm", OS{{"ID", "opensuse-tumbleweed"}, {"ID_LIKE", "opensuse suse"}}), std::string());
+
+        QCOMPARE(variant("arch", OS{{"ID", "cachyos"}, {"ID_LIKE", "arch"}}), std::string("arch"));
+        QCOMPARE(variant("source", OS{{"ID", "ubuntu"}, {"VERSION_ID", "24.04"}}), std::string());
+    }
+
+    // Output of `flatpak info` and `flatpak remotes --columns=name,url` with LC_ALL=C
+    void readsFlatpakInformation ()
+    {
+        std::string info =
+            "\nSC Localization Launcher - Community translations for Star Citizen on Linux\n\n"
+            "          ID: io.github.xXCrusaderXx.SCLocalizationLauncher\n"
+            "         Ref: app/io.github.xXCrusaderXx.SCLocalizationLauncher/x86_64/stable\n"
+            "     Version: 0.7.0\n"
+            "      Origin: sc-localization-launcher\n"
+            "Installation: user\n";
+        QCOMPARE(SelfUpdateManager::flatpakInfoField(info, "Version"), std::string("0.7.0"));
+        QCOMPARE(SelfUpdateManager::flatpakInfoField(info, "Installation"), std::string("user"));
+        QCOMPARE(SelfUpdateManager::flatpakInfoField(info, "Origin"), std::string("sc-localization-launcher"));
+        QCOMPARE(SelfUpdateManager::flatpakInfoField(info, "Missing"), std::string());
+
+        std::string remotes =
+            "flathub\thttps://dl.flathub.org/repo/\n"
+            "sc-localization-launcher\thttps://xxcrusaderxx.github.io/SC-Localization-Launcher/repo/\n";
+        QCOMPARE(SelfUpdateManager::flatpakRemoteUrl(remotes, "sc-localization-launcher"),
+                 std::string("https://xxcrusaderxx.github.io/SC-Localization-Launcher/repo/"));
+        QCOMPARE(SelfUpdateManager::flatpakRemoteUrl(remotes, "sclocalizationlauncher-origin"), std::string());
+    }
+
     void findsNewerLauncherRelease ()
     {
         QVERIFY(start());
@@ -519,11 +612,11 @@ class BackendTest : public QObject
         qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
         publishAppImageRelease(server, releaseKey, "new version");
 
-        // A process named like the game: a copy of sleep
-        auto game = std::filesystem::path(dir.path().toStdString()) / "StarCitizen.exe";
-        std::filesystem::copy_file(QStandardPaths::findExecutable("sleep", {"/usr/bin", "/bin"}).toStdString(), game);
+        // A process named like the game under Wine (SC_GAME_PROGRAM in tests/CMakeLists.txt)
+        qputenv("PATH", "/usr/bin:/bin");
         QProcess running;
-        running.start(QString::fromStdString(game.string()), {"30"});
+        running.start("/bin/bash",
+                      {"-c", "exec -a 'C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\Bin64\\StarCitizen Test.exe' sleep 30"});
         QVERIFY(running.waitForStarted());
 
         QVERIFY(start());
@@ -622,6 +715,191 @@ class BackendTest : public QObject
         QVERIFY(setLanguage("LIVE", "de"));
         QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
         QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::Installed);
+    }
+
+    void noticesPerChannelAndLanguage ()
+    {
+        QVERIFY(start());
+        auto live = channel(latest(), "LIVE");
+        auto ptu = channel(latest(), "PTU");
+
+        QCOMPARE(live.notices.at("de"), std::string("Wird vorbereitet"));
+        QCOMPARE(ptu.notices.at("de"), std::string("Allgemeiner Hinweis"));
+        // Shown as plain text: the markup stays visible as characters, the line break becomes a space
+        QCOMPARE(live.notices.at("fr"), std::string("<b>Bêta</b> zweite Zeile"));
+        QCOMPARE(live.notices.at("de-full"), std::string(120, 'x') + "…");
+        QVERIFY(!live.notices.contains("en"));
+    }
+
+    // Waits until the LIVE row shows this own source
+    bool setCustomSource (const std::string& url, const std::string& folder)
+    {
+        size_t from = published();
+        backEnd->execute(Protocol::SetCustomSource{"LIVE", url, folder});
+        return waitForState([&] (const auto& s) { return channel(s, "LIVE").custom.url == url; }, from).has_value();
+    }
+
+    void customSourceIsInstalledLikeALanguage ()
+    {
+        QTemporaryDir game;
+        auto gamePath = std::filesystem::path(game.path().toStdString());
+        server.setFile("/custom.ini", "custom_key=Eigene Quelle\n");
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", gamePath.string()});
+        QVERIFY(setCustomSource(server.url("/custom.ini").toStdString(), "french_(france)"));
+        auto live = channel(latest(), "LIVE");
+        QVERIFY(std::find(live.availableLanguages.begin(), live.availableLanguages.end(), Protocol::CUSTOM) != live.availableLanguages.end());
+        // Only this channel offers it
+        auto ptu = channel(latest(), "PTU").availableLanguages;
+        QVERIFY(std::find(ptu.begin(), ptu.end(), Protocol::CUSTOM) == ptu.end());
+
+        QVERIFY(setLanguage("LIVE", Protocol::CUSTOM));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QCOMPARE(readFile(gamePath / "data/Localization/french_(france)/global.ini"), std::string("custom_key=Eigene Quelle\n"));
+        QVERIFY(readFile(gamePath / "user.cfg").find("g_language = french_(france)") != std::string::npos);
+        QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::Installed);
+        QCOMPARE(jsonText(readSettingsFile()["channels"]["LIVE"]["custom"]["folder"]), jsonText("french_(france)"));
+
+        // Back to English removes the files of the own source
+        QVERIFY(setLanguage("LIVE", Protocol::ENGLISH));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QVERIFY(!std::filesystem::exists(gamePath / "data"));
+    }
+
+    void changedCustomFolderRemovesTheOldOne ()
+    {
+        QTemporaryDir game;
+        auto gamePath = std::filesystem::path(game.path().toStdString());
+        server.setFile("/custom.ini", "custom_key=Eigene Quelle\n");
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", gamePath.string()});
+        QVERIFY(setCustomSource(server.url("/custom.ini").toStdString(), "french_(france)"));
+        QVERIFY(setLanguage("LIVE", Protocol::CUSTOM));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+
+        size_t from = published();
+        backEnd->execute(Protocol::SetCustomSource{"LIVE", server.url("/custom.ini").toStdString(), "spanish_(spain)"});
+        QVERIFY(waitForState([] (const auto& s) { return channel(s, "LIVE").custom.folder == "spanish_(spain)"; }, from));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QVERIFY(std::filesystem::exists(gamePath / "data/Localization/spanish_(spain)/global.ini"));
+        QVERIFY(!std::filesystem::exists(gamePath / "data/Localization/french_(france)"));
+    }
+
+    void rejectsUnsafeCustomSources ()
+    {
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetCustomSource{"LIVE", "http://example.com/global.ini", "german_(germany)"});
+        backEnd->execute(Protocol::SetCustomSource{"LIVE", server.url("/custom.ini").toStdString(), "../../outside"});
+        backEnd->execute(Protocol::SetCustomSource{"LIVE", server.url("/custom.ini").toStdString(), ""});
+        // Without a valid source "custom" cannot be chosen either
+        backEnd->execute(Protocol::SetLanguage{"LIVE", Protocol::CUSTOM});
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(channel(latest(), "LIVE").custom.url, std::string());
+        QCOMPARE(channel(latest(), "LIVE").language, Protocol::ENGLISH);
+    }
+
+    void removingTheChosenSourceFallsBackToEnglish ()
+    {
+        QVERIFY(start());
+        QVERIFY(setCustomSource(server.url("/custom.ini").toStdString(), "german_(germany)"));
+        QVERIFY(setLanguage("LIVE", Protocol::CUSTOM));
+
+        size_t from = published();
+        backEnd->execute(Protocol::SetCustomSource{"LIVE", "", ""});
+        QVERIFY(waitForState([] (const auto& s) { return channel(s, "LIVE").custom.url.empty(); }, from));
+        QCOMPARE(channel(latest(), "LIVE").language, Protocol::ENGLISH);
+    }
+
+    void startsTheRsiLauncherWithoutElectronNodeMode ()
+    {
+        // VS Code and other Electron apps pass this on; the RSI Launcher would then quit with "bad option"
+        qputenv("ELECTRON_RUN_AS_NODE", "1");
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir prefix;
+        auto root = std::filesystem::path(prefix.path().toStdString());
+        auto rsiLauncher =
+            lugPrefix(prefix, std::string("echo \"${ELECTRON_RUN_AS_NODE-unset}\" > electron-env\necho $$ > pid\n") + FAKE_RSI_LAUNCHER);
+
+        auto result = updateAndStartGame(rsiLauncher);
+        QProcess::execute("kill", {QString::fromStdString(readFile(root / "pid")).trimmed()});
+        qunsetenv("ELECTRON_RUN_AS_NODE");
+        QCOMPARE(result, std::optional(GameStart::Running));
+        QCOMPARE(readFile(root / "electron-env"), std::string("unset\n"));
+        // Once it quits, the launcher is ready to start it again
+        QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Idle; }, published() - 1));
+    }
+
+    void startsTheGameWithoutUpdate ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir prefix;
+        auto root = std::filesystem::path(prefix.path().toStdString());
+        auto rsiLauncher = lugPrefix(prefix, std::string("echo $$ > pid\n") + FAKE_RSI_LAUNCHER);
+
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetRsiLauncherPath{rsiLauncher.string()});
+        backEnd->execute(Protocol::StartGame{});
+        auto running = waitForState([] (const auto& s) { return s.game == GameStart::Running; });
+        QProcess::execute("kill", {QString::fromStdString(readFile(root / "pid")).trimmed()});
+        QVERIFY(running);
+        // Nothing was downloaded
+        QCOMPARE(latest().update, UpdateStatus::Idle);
+    }
+
+    void noticesAnRsiLauncherStartedElsewhere ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QVERIFY(start());
+        QProcess rsiLauncher;
+        rsiLauncher.start("/bin/bash", {"-c", FAKE_RSI_LAUNCHER});
+        QVERIFY(rsiLauncher.waitForStarted());
+        auto running = waitForState([] (const auto& s) { return s.game == GameStart::Running; });
+        rsiLauncher.kill();
+        rsiLauncher.waitForFinished();
+        QVERIFY(running);
+        QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Idle; }, *running));
+    }
+
+    void doesNotUpdateWhileTheGameRuns ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir gameFolder;
+        QVERIFY(installGerman(gameFolder));
+        QProcess game;
+        game.start("/bin/bash",
+                   {"-c", "exec -a 'C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\Bin64\\StarCitizen Test.exe' sleep 30"});
+        QVERIFY(game.waitForStarted());
+        auto playing = waitForState([] (const auto& s) { return s.game == GameStart::Playing; });
+
+        // Ignored while the game reads the files; the marker shows the command has been handled
+        size_t from = published();
+        backEnd->execute(Protocol::StartUpdate{});
+        QVERIFY(waitForPreviousCommands());
+        bool updated = false;
+        {
+            std::lock_guard lock(mutex);
+            for(size_t i = from; i < states.size(); ++i) updated |= states[i].update == UpdateStatus::Running;
+        }
+        game.kill();
+        game.waitForFinished();
+        QVERIFY(playing);
+        QVERIFY(!updated);
+        QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Idle; }, *playing));
+    }
+
+    void reportsWhenTheRsiLauncherQuitsAtOnce ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir prefix;
+        auto rsiLauncher = lugPrefix(prefix, "echo 'RSI Launcher.exe: bad option: --in-process-gpu' > sc-launch.log\nexit 1\n");
+        QCOMPARE(updateAndStartGame(rsiLauncher), std::optional(GameStart::Failed));
+    }
+
+    void reportsWhenNothingCanStartTheGame ()
+    {
+        // No sc-launch.sh, and without PATH no Lutris either
+        QTemporaryDir folder;
+        QCOMPARE(updateAndStartGame(folder.path().toStdString()), std::optional(GameStart::NoStarter));
     }
 };
 

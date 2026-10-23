@@ -6,7 +6,7 @@ import QtQuick.Controls.Basic
 ComboBox {
     id: control
 
-    property var languages: [] // [{ code, name, credit, available }]
+    property var languages: [] // [{ code, name, credit, notice, available, action }]; an action entry opens something instead of choosing
     property string currentCode: ""
 
     signal picked(string code)
@@ -46,6 +46,7 @@ ComboBox {
     contentItem: Text {
         // Not displayText: ComboBox resets currentIndex whenever the model changes
         text: control.currentLanguageIndex >= 0 ? control.languages[control.currentLanguageIndex].name : control.currentCode
+        textFormat: Text.PlainText
         color: Theme.text
         font.pixelSize: 12
         font.bold: true
@@ -77,7 +78,8 @@ ComboBox {
             Text {
                 width: parent.width
                 text: entry.modelData.available ? entry.modelData.name : qsTr("%1 (not available)").arg(entry.modelData.name)
-                color: entry.index === control.currentLanguageIndex ? Theme.accent : entry.enabled ? Theme.text : Theme.disabled
+                textFormat: Text.PlainText
+                color: entry.index === control.currentLanguageIndex || entry.modelData.action ? Theme.accent : entry.enabled ? Theme.text : Theme.disabled
                 font.pixelSize: 12
                 font.bold: entry.index === control.currentLanguageIndex
                 elide: Text.ElideRight
@@ -86,9 +88,21 @@ ComboBox {
             // Credit of the translation, required by the licenses of the community projects
             Text {
                 width: parent.width
-                visible: (entry.modelData.credit.project || "") !== ""
-                text: entry.modelData.credit.project + " · " + entry.modelData.credit.license
+                visible: ((entry.modelData.credit || {}).project || "") !== ""
+                text: entry.modelData.credit.project + (entry.modelData.credit.license ? " · " + entry.modelData.credit.license : "")
+                textFormat: Text.PlainText
                 color: Theme.muted
+                font.pixelSize: 10
+                elide: Text.ElideRight
+            }
+
+            // Notice of the translation project for this channel, e.g. "in preparation"
+            Text {
+                width: parent.width
+                visible: (entry.modelData.notice || "") !== ""
+                text: entry.modelData.notice || ""
+                textFormat: Text.PlainText
+                color: Theme.warning
                 font.pixelSize: 10
                 elide: Text.ElideRight
             }
@@ -102,8 +116,10 @@ ComboBox {
 
     popup: Popup {
         y: control.height + 4
-        width: control.width
-        implicitHeight: Math.min(contentItem.implicitHeight + 8, 260)
+        // Wider than the button, so credit and notice lines fit
+        width: Math.max(control.width, 300)
+        // As tall as the entries need, but never past the bottom of the window
+        implicitHeight: Math.min(contentItem.implicitHeight + 8, control.Window.height - control.mapToItem(null, 0, control.height).y - 12)
         padding: 4
 
         contentItem: ListView {

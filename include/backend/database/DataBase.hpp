@@ -33,9 +33,11 @@ struct LanguageDefinition
     std::string folder;
     LanguageSource source;
     Protocol::Credit credit;
+    // Short notice per channel, e.g. "translation in preparation"; "*" applies to every channel
+    std::map<std::string, std::string> notices;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(LanguageDefinition, code, name, folder, source, credit)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(LanguageDefinition, code, name, folder, source, credit, notices)
 
 struct LanguageCatalog
 {
@@ -53,6 +55,8 @@ struct AvailableLanguage
     std::string folder;
     std::map<std::string, std::vector<std::string>> urls;
     Protocol::Credit credit;
+    // Channel name or "*" -> notice, already checked and shortened
+    std::map<std::string, std::string> notices;
 };
 
 // What the launcher last installed into a channel. Empty language: nothing, the game shows English.
@@ -63,9 +67,11 @@ struct InstalledTranslation
     std::string etag;
     // SHA-256 of the installed global.ini, to notice when something else changed it
     std::string fileHash;
+    // Localization folder it went into; needed to remove an own source after its folder changed
+    std::string folder;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(InstalledTranslation, language, etag, fileHash)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(InstalledTranslation, language, etag, fileHash, folder)
 
 struct ChannelData
 {
@@ -79,6 +85,8 @@ struct ChannelData
     bool damaged = false;
     // The last update of this channel failed
     bool lastUpdateFailed = false;
+    // The user's own source, offered as language Protocol::CUSTOM
+    Protocol::CustomSource custom;
 };
 
 // What SelfUpdateManager::install() needs from a release; filled by its check() when a matching signed package exists
@@ -100,6 +108,20 @@ struct Installation
     std::string variant;
     // The AppImage file itself, only for type appimage
     std::filesystem::path appImage;
+    // Flatpak only: "user" or "system", and whether it updates from the project's Flatpak repository
+    // (otherwise it was installed from a bundle and is switched to the repository on its first update)
+    std::string flatpakInstallation;
+    bool flatpakFromRepository = false;
+};
+
+// What of Star Citizen is running, see UpdateManager::runningGameProcess()
+enum class GameProcess
+{
+    None,
+    // Only the RSI Launcher is open
+    Launcher,
+    // StarCitizen.exe runs and reads the translation files
+    Game
 };
 
 // Only touched by the backend thread, see BackEnd
@@ -111,6 +133,9 @@ struct BackendData
     std::filesystem::path rsiLauncherPath;
     Protocol::Options options;
     Protocol::UpdateStatus update = Protocol::UpdateStatus::Idle;
+    Protocol::GameStart game = Protocol::GameStart::Idle;
+    // Last seen by the game watcher
+    GameProcess gameProcess = GameProcess::None;
     bool searching = false;
     Protocol::SelfUpdate selfUpdate;
     // Set by the last check; what an installation of the launcher update needs

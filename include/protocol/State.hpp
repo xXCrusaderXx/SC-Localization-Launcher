@@ -1,4 +1,5 @@
 #pragma once
+#include <map>
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
@@ -11,8 +12,20 @@ namespace Protocol
 // Channels in display order
 inline const std::vector<std::string> CHANNEL_NAMES{"LIVE", "PTU", "EPTU", "HOTFIX", "TECH-PREVIEW"};
 
-// The original game text: no translation installed. Every other language code comes from languages.json.
+// The original game text: no translation installed. Every other language code comes from languages.json,
+// except CUSTOM: the source the user entered for one channel.
 inline const std::string ENGLISH = "en";
+inline const std::string CUSTOM = "custom";
+
+// A global.ini the user chose for one channel instead of a catalogue language; empty url = none
+struct CustomSource
+{
+    std::string url;
+    // Star Citizen localization folder the file goes into, e.g. "german_(germany)"
+    std::string folder;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CustomSource, url, folder)
 
 // Who made a translation and under which license; shown wherever the translation is offered
 struct Credit
@@ -33,9 +46,11 @@ struct Language
     std::string name;
     // Empty for ENGLISH, the original game text
     Credit credit;
+    // Star Citizen localization folder, empty for ENGLISH
+    std::string folder;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Language, code, name, credit)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Language, code, name, credit, folder)
 
 enum class UpdateStatus
 {
@@ -49,6 +64,28 @@ NLOHMANN_JSON_SERIALIZE_ENUM(UpdateStatus, {{UpdateStatus::Idle, "idle"},
                                             {UpdateStatus::Running, "running"},
                                             {UpdateStatus::Succeeded, "succeeded"},
                                             {UpdateStatus::Failed, "failed"}})
+
+// The RSI Launcher: started by this launcher, or seen running
+enum class GameStart
+{
+    Idle,
+    Starting,
+    // The RSI Launcher is open, also when started without this launcher
+    Running,
+    // StarCitizen.exe runs; translations are not updated meanwhile
+    Playing,
+    // Started, but the RSI Launcher did not appear or quit right away
+    Failed,
+    // Neither the LUG Helper's sc-launch.sh nor Lutris was found
+    NoStarter
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(GameStart, {{GameStart::Idle, "idle"},
+                                         {GameStart::Starting, "starting"},
+                                         {GameStart::Running, "running"},
+                                         {GameStart::Playing, "playing"},
+                                         {GameStart::Failed, "failed"},
+                                         {GameStart::NoStarter, "noStarter"}})
 
 struct Options
 {
@@ -96,9 +133,13 @@ struct Channel
     // independent of the install path
     std::vector<std::string> availableLanguages;
     ChannelStatus status = ChannelStatus::NoPath;
+    // Language code -> short notice of the translation project for this channel; plain text
+    std::map<std::string, std::string> notices;
+    // The user's own source for this channel, offered as language CUSTOM when set
+    CustomSource custom;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status, notices, custom)
 
 // Updates of the launcher itself, from the GitHub releases of the project
 enum class SelfUpdateStatus
@@ -152,10 +193,11 @@ struct State
     std::string rsiLauncherPath;
     Options options;
     UpdateStatus update = UpdateStatus::Idle;
+    GameStart game = GameStart::Idle;
     bool searching = false;
     SelfUpdate selfUpdate;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, searching, selfUpdate)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, selfUpdate)
 
 }  // namespace Protocol

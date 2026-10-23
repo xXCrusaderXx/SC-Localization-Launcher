@@ -12,8 +12,27 @@ ApplicationWindow {
     // The main page only lists channels with an install folder; all of them stay in the settings
     readonly property var visibleChannels: channels.filter(c => c.installPath !== "")
 
+    // Folders offered for an own source: the catalogue's, then the other languages Star Citizen knows
+    readonly property var localizationFolders: {
+        const folders = [];
+        for (const language of appState.languages || [])
+            if (language.folder && folders.indexOf(language.folder) < 0)
+                folders.push(language.folder);
+        for (const folder of ["german_(germany)", "french_(france)", "spanish_(spain)", "italian_(italy)", "polish_(poland)", "portuguese_(brazil)"])
+            if (folders.indexOf(folder) < 0)
+                folders.push(folder);
+        return folders;
+    }
+
     readonly property bool updateBusy: appState.update === "running"
     readonly property bool updateFailed: appState.update === "failed"
+    // The button stays busy until the RSI Launcher runs or failed
+    readonly property bool gameStarting: appState.game === "starting"
+    // The RSI Launcher or the game is open, started here or elsewhere
+    readonly property bool gameRunning: appState.game === "running" || appState.game === "playing"
+    // StarCitizen.exe runs; translations can't be updated meanwhile
+    readonly property bool gamePlaying: appState.game === "playing"
+    readonly property bool gameFailed: appState.game === "failed" || appState.game === "noStarter"
     readonly property bool updateReady: channels.some(c => c.installPath !== "")
     // Channels whose translation is missing, outdated or still has to be removed
     readonly property int pendingUpdates: channels.filter(c => ["notInstalled", "updateAvailable", "damaged", "failed"].indexOf(c.status) >= 0).length
@@ -211,10 +230,12 @@ ApplicationWindow {
 
                 channel: window.visibleChannels[index] || ({})
                 languages: window.appState.languages || []
-                locked: window.updateBusy
+                // The running game reads the translation files
+                locked: window.updateBusy || window.gamePlaying
                 onLanguagePicked: language => backend.setLanguage(channel.name, language)
                 onPathRequested: window.choosePath(channel.name)
                 onRepairRequested: backend.repairChannel(channel.name)
+                onCustomSourceRequested: customSourceDialog.openFor(channel.name, channel.custom, window.localizationFolders)
             }
         }
 
@@ -343,10 +364,10 @@ ApplicationWindow {
                         width: 6
                         height: 6
                         radius: 3
-                        color: window.updateBusy || window.searchBusy ? Theme.accent : window.updateFailed ? Theme.danger : window.pendingUpdates > 0 ? Theme.warning : window.updateReady ? Theme.success : Theme.disabled
+                        color: window.updateBusy || window.gameStarting || window.searchBusy ? Theme.accent : window.updateFailed || window.gameFailed ? Theme.danger : window.pendingUpdates > 0 ? Theme.warning : window.updateReady ? Theme.success : Theme.disabled
 
                         SequentialAnimation on opacity {
-                            running: window.updateBusy || window.searchBusy
+                            running: window.updateBusy || window.gameStarting || window.searchBusy
                             loops: Animation.Infinite
                             alwaysRunToEnd: true
                             NumberAnimation {
@@ -361,7 +382,29 @@ ApplicationWindow {
                     }
 
                     Text {
-                        text: window.updateBusy ? qsTr("Downloading translations …") : window.searchBusy ? qsTr("Searching for Star Citizen installations …") : window.updateFailed ? qsTr("Update failed. <a href=\"log\">Open the log</a>") : window.pendingUpdates > 0 ? qsTr("%n channel(s) need an update", "", window.pendingUpdates) : window.appState.update === "succeeded" ? qsTr("Translations updated") : window.updateReady ? qsTr("Ready") : qsTr("Choose a game folder or use the automatic search")
+                        text: {
+                            if (window.updateBusy)
+                                return qsTr("Downloading translations …");
+                            if (window.gameStarting)
+                                return qsTr("Starting the RSI Launcher …");
+                            if (window.searchBusy)
+                                return qsTr("Searching for Star Citizen installations …");
+                            if (window.updateFailed)
+                                return qsTr("Update failed. <a href=\"log\">Open the log</a>");
+                            if (window.appState.game === "failed")
+                                return qsTr("The RSI Launcher did not start. <a href=\"log\">Open the log</a>");
+                            if (window.appState.game === "noStarter")
+                                return qsTr("Cannot start the game: install it with the LUG Helper or Lutris");
+                            if (window.pendingUpdates > 0)
+                                return qsTr("%n channel(s) need an update", "", window.pendingUpdates);
+                            if (window.gamePlaying)
+                                return qsTr("Star Citizen is running");
+                            if (window.gameRunning)
+                                return qsTr("RSI Launcher is running");
+                            if (window.appState.update === "succeeded")
+                                return qsTr("Translations updated");
+                            return window.updateReady ? qsTr("Ready") : qsTr("Choose a game folder or use the automatic search");
+                        }
                         color: Theme.muted
                         textFormat: Text.StyledText
                         linkColor: Theme.accent
@@ -378,13 +421,18 @@ ApplicationWindow {
             Rectangle {
                 id: updateButton
 
-                readonly property bool clickable: window.updateReady && !window.updateBusy
+                readonly property bool busy: window.updateBusy || window.gameStarting
+                // With the game start switched on, the button only updates when something is outdated, otherwise it just starts
+                readonly property bool startsOnly: window.launchAfterUpdate && window.pendingUpdates === 0
+                // Starting again while the RSI Launcher is open would do nothing; updating translations still works
+                // until the game itself runs
+                readonly property bool clickable: window.updateReady && !busy && !window.gamePlaying && !(window.launchAfterUpdate && window.gameRunning)
 
                 Layout.preferredWidth: 270
                 Layout.preferredHeight: 52
                 radius: 26
                 clip: true
-                opacity: clickable || window.updateBusy ? 1 : 0.45
+                opacity: clickable || busy || window.gameRunning ? 1 : 0.45
                 scale: updateMouse.pressed ? 0.97 : updateMouse.containsMouse && clickable ? 1.03 : 1
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
@@ -404,16 +452,16 @@ ApplicationWindow {
                     }
                 }
 
-                // Shimmer while the update is running
+                // Shimmer while the update or the game start is running
                 Rectangle {
-                    visible: window.updateBusy
+                    visible: updateButton.busy
                     width: parent.width * 0.35
                     height: parent.height
                     radius: parent.radius
                     color: Qt.rgba(1, 1, 1, 0.25)
 
                     NumberAnimation on x {
-                        running: window.updateBusy
+                        running: updateButton.busy
                         loops: Animation.Infinite
                         from: -updateButton.width * 0.35
                         to: updateButton.width
@@ -423,7 +471,21 @@ ApplicationWindow {
 
                 Text {
                     anchors.centerIn: parent
-                    text: window.updateBusy ? qsTr("Updating …") : !window.updateReady ? qsTr("No game folder set") : window.launchAfterUpdate ? qsTr("Update & start") : qsTr("Update translations")
+                    text: {
+                        if (window.updateBusy)
+                            return qsTr("Updating …");
+                        if (window.gameStarting)
+                            return qsTr("Starting game …");
+                        if (!window.updateReady)
+                            return qsTr("No game folder set");
+                        if (window.gamePlaying)
+                            return qsTr("Game running");
+                        if (!window.launchAfterUpdate)
+                            return qsTr("Update translations");
+                        if (window.gameRunning)
+                            return qsTr("Running");
+                        return updateButton.startsOnly ? qsTr("Start") : qsTr("Update & start");
+                    }
                     color: "white"
                     font.pixelSize: 15
                     font.bold: true
@@ -435,7 +497,7 @@ ApplicationWindow {
                     hoverEnabled: true
                     enabled: updateButton.clickable
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: backend.startUpdate()
+                    onClicked: updateButton.startsOnly ? backend.startGame() : backend.startUpdate()
                 }
             }
         }
@@ -456,6 +518,16 @@ ApplicationWindow {
         appState: window.appState
         locked: window.updateBusy
         onPathChangeRequested: target => window.choosePath(target)
+    }
+
+    CustomSourceDialog {
+        id: customSourceDialog
+
+        onSaved: (url, folder) => {
+            backend.setCustomSource(channelName, url, folder);
+            backend.setLanguage(channelName, "custom");
+        }
+        onRemoved: backend.setCustomSource(channelName, "", "")
     }
 
     LauncherUpdateDialog {

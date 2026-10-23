@@ -16,9 +16,6 @@ int main (int argc, char *argv[])
 {
     LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>());
 
-    LoggerFramework::LogEx lg("main");
-    LOG_DEBUG(lg) << "Start SC Localization Launcher " << SC_VERSION;
-
     QGuiApplication app(argc, argv);
     app.setWindowIcon(QIcon(":/logo.png"));
     app.setApplicationVersion(SC_VERSION);
@@ -33,6 +30,9 @@ int main (int argc, char *argv[])
     // After an update the old launcher is still quitting; wait for it instead of activating it
     SingleInstance instance(SC_APP_ID, app.arguments().contains("--after-update") ? 10000 : 100);
     if(!instance.isPrimary()) return instance.activatePrimary() ? 0 : 1;
+
+    LoggerFramework::LogEx lg("main");
+    LOG_DEBUG(lg) << "Start SC Localization Launcher " << SC_VERSION;
 
     // Declared before the engine, so QML is torn down before the backend
     BackendBridge backend;
