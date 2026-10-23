@@ -29,10 +29,11 @@ class GuiTest : public QObject
 
     QQuickItem* findButton (const QString& text) const
     {
-        // Popup contents hang below the window's root object, the rest below its content item
+        // Popup contents hang below the window's root object, the rest below its content item.
+        // Disabled buttons don't count: a click on one is lost, e.g. "Check again" while a check is running
         for(QObject* root : {static_cast<QObject*>(window->contentItem()), engine->rootObjects().first()})
             for(auto* item : root->findChildren<QQuickItem*>())
-                if(item->inherits("QQuickAbstractButton") && item->isVisible() && item->property("text") == text) return item;
+                if(item->inherits("QQuickAbstractButton") && item->isVisible() && item->isEnabled() && item->property("text") == text) return item;
         return nullptr;
     }
 
@@ -125,6 +126,19 @@ class GuiTest : public QObject
         // QML first, it still references the bridge
         engine.reset();
         bridge.reset();
+    }
+
+    // A failed test may leave a modal dialog open, which would swallow the clicks of the next test
+    void cleanup ()
+    {
+        for(const char* name : {"launcherUpdateDialog", "customSourceDialog"})
+        {
+            auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
+            if(!dialog || !dialog->property("visible").toBool()) continue;
+            QMetaObject::invokeMethod(dialog, "close");
+            QTRY_VERIFY(!dialog->property("visible").toBool());
+        }
+        qunsetenv("APPIMAGE");
     }
 
     void toggleShowsBackendState ()
