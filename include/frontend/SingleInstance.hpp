@@ -42,11 +42,8 @@ class SingleInstance : public QObject
         // A lock of a crashed launcher is taken over, QLockFile checks whether its process still runs
         lockFile.setStaleLockTime(0);
         primary = lockFile.tryLock(waitMs);
-        if(!primary)
-        {
-            LOG_DEBUG(lg) << "another launcher is running";
-            return;
-        }
+        // Nothing logged for a second start, it would leave a log file behind for every click on the menu entry
+        if(!primary) return;
 
         server = std::make_unique<QLocalServer>();
         server->setSocketOptions(QLocalServer::UserAccessOption);
