@@ -105,9 +105,11 @@ qt_add_qml_module(${SC_LAUNCHER_BINARY}
 find_package(Qt6 QUIET COMPONENTS LinguistTools)
 if(Qt6LinguistTools_FOUND)
   qt_add_translations(${SC_LAUNCHER_BINARY}
-    # _en only holds the English plural forms of %n texts
+    # _en only translates the English plural forms of %n texts; everything else stays unfinished and uses the source text
     TS_FILES translations/sc-localization-launcher_de.ts translations/sc-localization-launcher_en.ts
     RESOURCE_PREFIX /i18n
+    # No line numbers in the .ts files, otherwise every QML change touches them and PRs conflict
+    LUPDATE_OPTIONS -locations none
   )
 else()
   message(STATUS "Qt LinguistTools not found, the UI will be English only")

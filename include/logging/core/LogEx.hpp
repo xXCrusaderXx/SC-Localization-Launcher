@@ -43,7 +43,8 @@ class LogEx
     {
         std::unique_lock<std::mutex> lock(m_Mutex);
 
-        logger->write(channel, message, level);
+        // Without a registered logger (e.g. a small tool using the backend) the line is dropped
+        if(logger) logger->write(channel, message, level);
 
         m_bOccupied = false;
         m_Signal.notify_one();
