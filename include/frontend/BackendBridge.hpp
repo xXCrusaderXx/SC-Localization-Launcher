@@ -80,6 +80,7 @@ class BackendBridge : public QObject
     }
 
     Q_INVOKABLE void startUpdate () { backEnd.execute(Protocol::StartUpdate{}); }
+    Q_INVOKABLE void startGame () { backEnd.execute(Protocol::StartGame{}); }
 
     // An empty url removes the channel's own source; the backend checks url and folder again
     Q_INVOKABLE void setCustomSource (const QString& channel, const QString& url, const QString& folder)

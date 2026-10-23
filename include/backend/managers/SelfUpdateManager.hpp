@@ -18,6 +18,7 @@
 #include <string>
 
 #include "backend/database/DataBase.hpp"
+#include "backend/managers/UpdateManager.hpp"
 #include "backend/utils/Minisign.hpp"
 #include "backend/utils/paths.hpp"
 #include "logging/logging.h"
@@ -203,19 +204,6 @@ class SelfUpdateManager
         std::array<char, crypto_hash_sha256_BYTES * 2 + 1> hex;
         sodium_bin2hex(hex.data(), hex.size(), hash.data(), hash.size());
         return std::string(hex.data());
-    }
-
-    // The game reads its files while running and the launcher must not be replaced under a running update
-    static bool gameIsRunning ()
-    {
-        std::error_code ec;
-        for(const auto& entry : std::filesystem::directory_iterator("/proc", ec))
-        {
-            std::ifstream comm(entry.path() / "comm");
-            std::string name;
-            if(std::getline(comm, name) && name == "StarCitizen.exe") return true;
-        }
-        return false;
     }
 
     // Runs a package manager through pkexec, which asks for the password
@@ -422,7 +410,8 @@ class SelfUpdateManager
                                         const ProgressCallback& progress)
     {
         if(!signingKey) return "no signing key";
-        if(gameIsRunning()) return "Star Citizen is running";
+        // The game reads its files while running and the launcher must not be replaced under it
+        if(UpdateManager::runningGameProcess() == UpdateManager::GameProcess::Game) return "Star Citizen is running";
 
         std::string userAgent = "sc-localization-launcher/" + currentVersion;
         std::string checksums;

@@ -110,6 +110,16 @@ struct Installation
     std::filesystem::path appImage;
 };
 
+// What of Star Citizen is running, see UpdateManager::runningGameProcess()
+enum class GameProcess
+{
+    None,
+    // Only the RSI Launcher is open
+    Launcher,
+    // StarCitizen.exe runs and reads the translation files
+    Game
+};
+
 // Only touched by the backend thread, see BackEnd
 struct BackendData
 {
@@ -119,6 +129,9 @@ struct BackendData
     std::filesystem::path rsiLauncherPath;
     Protocol::Options options;
     Protocol::UpdateStatus update = Protocol::UpdateStatus::Idle;
+    Protocol::GameStart game = Protocol::GameStart::Idle;
+    // Last seen by the game watcher
+    GameProcess gameProcess = GameProcess::None;
     bool searching = false;
     Protocol::SelfUpdate selfUpdate;
     // Set by the last check; what an installation of the launcher update needs
