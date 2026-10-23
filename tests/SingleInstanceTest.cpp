@@ -1,3 +1,4 @@
+#include <QDir>
 #include <QSignalSpy>
 #include <QTest>
 #include <memory>
@@ -26,6 +27,20 @@ class SingleInstanceTest : public QObject
         QVERIFY(!second.isPrimary());
         QVERIFY(second.activatePrimary());
         QTRY_COMPARE(activated.count(), 1);
+    }
+
+    void secondStartLeavesNoLogFile ()
+    {
+        auto logFiles = [] { return QDir(QString::fromStdString((PATHS::LOGPATH_USER / "logs").string())).entryList({"*.log"}, QDir::Files).size(); };
+        SingleInstance first(name);
+        auto before = logFiles();
+
+        // Like main(): the logger comes first, then the second start only hands over to the running launcher
+        LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>());
+        SingleInstance second(name);
+        QVERIFY(!second.isPrimary());
+        QVERIFY(second.activatePrimary());
+        QCOMPARE(logFiles(), before);
     }
 
     void lockIsFreeAgainAfterTheFirstEnds ()

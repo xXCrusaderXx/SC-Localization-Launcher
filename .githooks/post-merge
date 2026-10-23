@@ -11,6 +11,8 @@ git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads |
     while read -r branch track; do
         [ "$track" = "[gone]" ] || continue
         [ "$branch" = "$current" ] && continue
+        # Long-lived branches are never deleted, even if their remote is gone
+        case "$branch" in main|dev) continue ;; esac
         # Path of a worktree that has this branch checked out, if any
         worktree="$(git worktree list --porcelain | awk -v ref="refs/heads/$branch" '
             /^worktree / { path = substr($0, 10) }

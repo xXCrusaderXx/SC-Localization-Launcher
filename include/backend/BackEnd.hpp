@@ -42,6 +42,8 @@ class BackEnd
     std::thread searchJob;
     std::thread versionCheckJob;
     std::thread selfUpdateJob;
+    std::thread gameJob;
+    std::thread gameWatchJob;
 
     // Declared last: its thread uses all members above
     TaskQueue queue;
@@ -69,11 +71,26 @@ class BackEnd
         return it != data.languages.end() ? &*it : nullptr;
     }
 
+    // A catalogue language, or for Protocol::CUSTOM the channel's own source as a language of this channel only
+    std::optional<Database::AvailableLanguage> languageFor (const std::string& channel, const std::string& code) const
+    {
+        if(code == Protocol::CUSTOM)
+        {
+            auto it = data.channels.find(channel);
+            if(it == data.channels.end() || it->second.custom.url.empty()) return std::nullopt;
+            const auto& custom = it->second.custom;
+            return Database::AvailableLanguage{Protocol::CUSTOM, "", custom.folder, {{channel, {custom.url}}}, {}, {}};
+        }
+        if(const auto* language = findLanguage(code)) return *language;
+        return std::nullopt;
+    }
+
     std::vector<std::string> availableLanguages (const std::string& channel) const
     {
         std::vector<std::string> codes{Protocol::ENGLISH};
         for(const auto& language : data.languages)
             if(language.urls.contains(channel)) codes.push_back(language.code);
+        if(languageFor(channel, Protocol::CUSTOM)) codes.push_back(Protocol::CUSTOM);
         return codes;
     }
 
@@ -91,11 +108,18 @@ class BackEnd
         return nullptr;
     }
 
-    std::vector<std::string> managedFolders () const
+    // Folders the launcher may have installed into on this channel: all catalogue folders and its own source's
+    std::vector<std::string> managedFolders (const Database::ChannelData& channel) const
     {
         std::vector<std::string> folders;
-        for(const auto& language : data.languages)
-            if(std::find(folders.begin(), folders.end(), language.folder) == folders.end()) folders.push_back(language.folder);
+        auto add = [&] (const std::string& folder)
+        {
+            if(!folder.empty() && std::find(folders.begin(), folders.end(), folder) == folders.end()) folders.push_back(folder);
+        };
+        for(const auto& language : data.languages) add(language.folder);
+        add(channel.custom.folder);
+        // A former own source of this channel may still be installed
+        if(channel.installed.language == Protocol::CUSTOM) add(channel.installed.folder);
         return folders;
     }
 
@@ -105,7 +129,7 @@ class BackEnd
         return std::filesystem::exists(installPath / "data" / "Localization" / folder / "global.ini", ec);
     }
 
-    Protocol::ChannelStatus channelStatus (const Database::ChannelData& channel) const
+    Protocol::ChannelStatus channelStatus (const std::string& name, const Database::ChannelData& channel) const
     {
         using Protocol::ChannelStatus;
         if(channel.installPath.empty()) return ChannelStatus::NoPath;
@@ -114,13 +138,13 @@ class BackEnd
         if(channel.language == Protocol::ENGLISH)
         {
             // English means no translation files; any left over still has to be removed
-            auto folders = managedFolders();
+            auto folders = managedFolders(channel);
             bool leftOver =
                 std::any_of(folders.begin(), folders.end(), [&] (const auto& folder) { return hasTranslationFile(channel.installPath, folder); });
             return leftOver ? ChannelStatus::UpdateAvailable : ChannelStatus::Installed;
         }
 
-        const auto* language = findLanguage(channel.language);
+        auto language = languageFor(name, channel.language);
         if(!language || !hasTranslationFile(channel.installPath, language->folder)) return ChannelStatus::NotInstalled;
         // Installed by hand, by the former SC Deutsch Launcher or as another language of the same folder: version unknown
         if(channel.installed.language != channel.language) return ChannelStatus::UpdateAvailable;
@@ -145,7 +169,7 @@ class BackEnd
         for(const auto& [name, channel] : data.channels)
         {
             if(channel.installPath.empty() || channel.language == Protocol::ENGLISH) continue;
-            const auto* language = findLanguage(channel.language);
+            auto language = languageFor(name, channel.language);
             if(!language) continue;
             checkedLanguage[name] = channel.language;
             if(isAvailable(name, channel.language)) urls[name] = language->urls.at(name);
@@ -189,8 +213,8 @@ class BackEnd
 
         // Same language as installed and intact: the source can answer "not modified" instead of sending the file again
         bool reuse = !force && !channel.damaged && channel.installed.language == channel.language;
-        UpdateManager::Job job{name, channel.installPath, channel.language, "", {}, managedFolders(), reuse ? channel.installed.etag : ""};
-        if(const auto* language = findLanguage(channel.language))
+        UpdateManager::Job job{name, channel.installPath, channel.language, "", {}, managedFolders(channel), reuse ? channel.installed.etag : ""};
+        if(auto language = languageFor(name, channel.language))
         {
             job.folder = language->folder;
             job.urls = language->urls.at(name);
@@ -198,17 +222,78 @@ class BackEnd
         return job;
     }
 
+    void startGame ()
+    {
+        data.game = Protocol::GameStart::Starting;
+        startJob(gameJob,
+                 [this, rsiLauncherPath = data.rsiLauncherPath]
+                 {
+                     auto result = updateManager.startGame(rsiLauncherPath);
+                     queue.post(
+                         [this, result]
+                         {
+                             // It may have quit again or the game may run already; the watcher saw that
+                             data.game = result == Protocol::GameStart::Running ? gameStatus() : result;
+                             publish();
+                         });
+                 });
+    }
+
+    // Notices when the RSI Launcher or the game starts and quits, also when it was started without this launcher
+    void watchGame ()
+    {
+        startJob(gameWatchJob,
+                 [this]
+                 {
+                     auto seen = Database::GameProcess::None;
+                     while(!data.shuttingDown)
+                     {
+                         if(auto now = UpdateManager::runningGameProcess(); now != seen)
+                         {
+                             seen = now;
+                             queue.post([this, now] { gameProcessChanged(now); });
+                         }
+                         for(int i = 0; i < 8 && !data.shuttingDown; ++i) std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                     }
+                 });
+    }
+
+    // What the watcher saw, as shown to the user
+    Protocol::GameStart gameStatus () const
+    {
+        switch(data.gameProcess)
+        {
+            case Database::GameProcess::Game:
+                return Protocol::GameStart::Playing;
+            case Database::GameProcess::Launcher:
+                return Protocol::GameStart::Running;
+            default:
+                return Protocol::GameStart::Idle;
+        }
+    }
+
+    void gameProcessChanged (Database::GameProcess process)
+    {
+        data.gameProcess = process;
+        // A start in progress decides itself whether the RSI Launcher keeps running; a failed start stays visible
+        bool shownRunning = data.game == Protocol::GameStart::Running || data.game == Protocol::GameStart::Playing;
+        if(data.game != Protocol::GameStart::Starting && (process != Database::GameProcess::None || shownRunning)) data.game = gameStatus();
+        publish();
+    }
+
+    bool gamePlaying () const { return data.gameProcess == Database::GameProcess::Game; }
+
     void runUpdate (std::vector<UpdateManager::Job> jobs, bool launchGame)
     {
         data.update = Protocol::UpdateStatus::Running;
+        // A repair may run while the RSI Launcher is still starting; that start reports its own result
+        if(data.game != Protocol::GameStart::Starting) data.game = Protocol::GameStart::Idle;
         startJob(updateJob,
-                 [this, jobs, launchGame, rsiLauncherPath = data.rsiLauncherPath]
+                 [this, jobs, launchGame]
                  {
                      auto results = updateManager.update(jobs);
-                     // Also after a partial failure, the other channels are still playable
-                     if(launchGame && !data.shuttingDown) updateManager.startGame(rsiLauncherPath);
                      queue.post(
-                         [this, results, jobCount = jobs.size()]
+                         [this, results, launchGame, jobCount = jobs.size()]
                          {
                              bool success = results.size() == jobCount;
                              for(const auto& result : results)
@@ -218,23 +303,39 @@ class BackEnd
                                  channel.lastUpdateFailed = !result.success;
                                  if(!result.success) continue;
                                  bool english = result.language == Protocol::ENGLISH;
-                                 channel.installed = {english ? "" : result.language, result.etag, result.fileHash};
+                                 channel.installed = {english ? "" : result.language, result.etag, result.fileHash, result.folder};
                                  channel.damaged = false;
                                  if(channel.language == result.language) channel.remoteEtag = result.etag;
                              }
                              data.update = success ? Protocol::UpdateStatus::Succeeded : Protocol::UpdateStatus::Failed;
+                             // Also after a partial failure, the other channels are still playable
+                             if(launchGame && !data.shuttingDown) startGame();
                              saveSettings();
                              publish();
                          });
                  });
     }
 
+    // Language code -> notice for this channel; a channel's own notice wins over the one for all channels
+    std::map<std::string, std::string> notices (const std::string& channel) const
+    {
+        std::map<std::string, std::string> result;
+        for(const auto& language : data.languages)
+        {
+            if(auto it = language.notices.find(channel); it != language.notices.end())
+                result[language.code] = it->second;
+            else if(auto all = language.notices.find("*"); all != language.notices.end())
+                result[language.code] = all->second;
+        }
+        return result;
+    }
+
     Protocol::State snapshot () const
     {
         Protocol::State state;
 
-        state.languages.push_back({Protocol::ENGLISH, "English", {}});
-        for(const auto& language : data.languages) state.languages.push_back({language.code, language.name, language.credit});
+        state.languages.push_back({Protocol::ENGLISH, "English", {}, ""});
+        for(const auto& language : data.languages) state.languages.push_back({language.code, language.name, language.credit, language.folder});
 
         // Known channels in display order, then whatever else the sources list
         std::vector<std::string> names = Protocol::CHANNEL_NAMES;
@@ -244,12 +345,14 @@ class BackEnd
         for(const auto& name : names)
         {
             const auto& channel = data.channels.at(name);
-            state.channels.push_back({name, channel.installPath.string(), channel.language, availableLanguages(name), channelStatus(channel)});
+            state.channels.push_back({name, channel.installPath.string(), channel.language, availableLanguages(name), channelStatus(name, channel),
+                                      notices(name), channel.custom});
         }
 
         state.rsiLauncherPath = data.rsiLauncherPath.string();
         state.options = data.options;
         state.update = data.update;
+        state.game = data.game;
         state.searching = data.searching;
         state.selfUpdate = data.selfUpdate;
         return state;
@@ -272,6 +375,7 @@ class BackEnd
             data.channels[name].installPath = settings.installPath;
             data.channels[name].language = settings.language;
             data.channels[name].installed = settings.installed;
+            data.channels[name].custom = settings.custom;
         }
         data.rsiLauncherPath = file.rsiLauncherPath;
         data.options = file.options;
@@ -282,7 +386,8 @@ class BackEnd
     void saveSettings ()
     {
         SettingsFile file;
-        for(const auto& [name, channel] : data.channels) file.channels[name] = {channel.installPath.string(), channel.language, channel.installed};
+        for(const auto& [name, channel] : data.channels)
+            file.channels[name] = {channel.installPath.string(), channel.language, channel.installed, channel.custom};
         file.rsiLauncherPath = data.rsiLauncherPath.string();
         file.options = data.options;
         settingsJsonParser.save(file);
@@ -311,7 +416,7 @@ class BackEnd
 
     void handle (const Protocol::SetLanguage& command)
     {
-        if(command.language != Protocol::ENGLISH && !findLanguage(command.language))
+        if(command.language != Protocol::ENGLISH && !languageFor(command.channel, command.language))
         {
             LOG_ERROR(lg) << "unknown language: " << command.language;
             return;
@@ -356,9 +461,15 @@ class BackEnd
 
     void handle (const Protocol::StartUpdate&)
     {
-        if(data.update == Protocol::UpdateStatus::Running)
+        if(data.update == Protocol::UpdateStatus::Running || data.game == Protocol::GameStart::Starting)
         {
-            LOG_DEBUG(lg) << "startUpdate - update already running";
+            LOG_DEBUG(lg) << "startUpdate - update or game start already running";
+            return;
+        }
+        // The running game reads the translation files
+        if(gamePlaying())
+        {
+            LOG_DEBUG(lg) << "startUpdate - Star Citizen is running";
             return;
         }
 
@@ -375,11 +486,42 @@ class BackEnd
         runUpdate(std::move(jobs), data.options.launchGameAfterUpdate);
     }
 
+    void handle (const Protocol::StartGame&)
+    {
+        if(data.update == Protocol::UpdateStatus::Running || data.game == Protocol::GameStart::Starting ||
+           data.gameProcess != Database::GameProcess::None)
+        {
+            LOG_DEBUG(lg) << "startGame - update, game start or game already running";
+            return;
+        }
+        startGame();
+    }
+
+    void handle (const Protocol::SetCustomSource& command)
+    {
+        auto* channel = findChannel(command.channel);
+        if(!channel) return;
+        if(!command.url.empty() && (command.url.size() > 2048 || !LanguageCatalogParser::isAllowedUrl(command.url) ||
+                                    !LanguageCatalogParser::isSafeFolderName(command.folder)))
+        {
+            LOG_ERROR(lg) << "setCustomSource - rejected: " << command.url << " -> " << command.folder;
+            return;
+        }
+
+        channel->custom = {command.url, command.url.empty() ? "" : command.folder};
+        if(channel->language != Protocol::CUSTOM) return;
+        // Removing the source while it is chosen falls back to English, so the next update removes its files
+        if(command.url.empty()) channel->language = Protocol::ENGLISH;
+        channel->remoteEtag.clear();
+        channel->damaged = false;
+        channel->lastUpdateFailed = false;
+    }
+
     void handle (const Protocol::RepairChannel& command)
     {
-        if(data.update == Protocol::UpdateStatus::Running)
+        if(data.update == Protocol::UpdateStatus::Running || gamePlaying())
         {
-            LOG_DEBUG(lg) << "repairChannel - an update is running";
+            LOG_DEBUG(lg) << "repairChannel - an update or Star Citizen is running";
             return;
         }
         const auto* channel = findChannel(command.channel);
@@ -503,6 +645,7 @@ class BackEnd
                 loadSettings();
                 publish();
                 loadLanguages();
+                watchGame();
                 if(data.options.checkLauncherUpdatesAtStart) handle(Protocol::CheckForUpdate{});
             });
         LOG_DEBUG(lg) << "instanziated";
@@ -513,7 +656,7 @@ class BackEnd
         data.shuttingDown = true;
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
-        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob})
+        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }

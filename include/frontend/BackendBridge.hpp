@@ -2,6 +2,7 @@
 
 #include <QCoreApplication>
 #include <QDesktopServices>
+#include <QFile>
 #include <QGuiApplication>
 #include <QJsonDocument>
 #include <QObject>
@@ -80,6 +81,14 @@ class BackendBridge : public QObject
     }
 
     Q_INVOKABLE void startUpdate () { backEnd.execute(Protocol::StartUpdate{}); }
+    Q_INVOKABLE void startGame () { backEnd.execute(Protocol::StartGame{}); }
+
+    // An empty url removes the channel's own source; the backend checks url and folder again
+    Q_INVOKABLE void setCustomSource (const QString& channel, const QString& url, const QString& folder)
+    {
+        backEnd.execute(Protocol::SetCustomSource{
+            .channel = channel.toStdString(), .url = url.trimmed().toStdString(), .folder = folder.trimmed().toStdString()});
+    }
     Q_INVOKABLE void repairChannel (const QString& channel) { backEnd.execute(Protocol::RepairChannel{.channel = channel.toStdString()}); }
     Q_INVOKABLE void autoSearch () { backEnd.execute(Protocol::AutoSearch{}); }
     Q_INVOKABLE void checkForUpdate () { backEnd.execute(Protocol::CheckForUpdate{}); }
@@ -89,7 +98,14 @@ class BackendBridge : public QObject
     Q_INVOKABLE void restartLauncher ()
     {
         QString program = qEnvironmentVariableIsSet("APPIMAGE") ? qEnvironmentVariable("APPIMAGE") : QCoreApplication::applicationFilePath();
-        if(!QProcess::startDetached(program, {"--after-update"}))
+        QStringList arguments{"--after-update"};
+        // A process started inside this sandbox would still run the old version, so the host starts the new one
+        if(QFile::exists("/.flatpak-info"))
+        {
+            program = "flatpak-spawn";
+            arguments = QStringList{"--host", "flatpak", "run", SelfUpdateManager::FLATPAK_APP_ID} + arguments;
+        }
+        if(!QProcess::startDetached(program, arguments))
         {
             LOG_ERROR(lg) << "restartLauncher() - cannot start " << program.toStdString();
             return;

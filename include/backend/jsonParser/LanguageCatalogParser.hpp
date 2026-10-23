@@ -40,21 +40,6 @@ class LanguageCatalogParser
         return LANGUAGES_URL;
     }
 
-    static bool isAllowedUrl (const std::string& url)
-    {
-#ifdef SC_TESTING
-        if(url.starts_with("http://127.0.0.1:")) return true;
-#endif
-        return url.starts_with("https://");
-    }
-
-    // The folder becomes a path component inside the game directory, which is written and deleted
-    static bool isSafeFolderName (const std::string& folder)
-    {
-        static const std::regex allowed("[A-Za-z0-9_()-]+");
-        return std::regex_match(folder, allowed);
-    }
-
     static std::string normalizeChannelName (const std::string& name)
     {
         auto it = CHANNEL_ALIASES.find(name);
@@ -181,6 +166,25 @@ class LanguageCatalogParser
         return channels;
     }
 
+    // Notices come from the internet and are shown in the UI: plain text, one line, short
+    static std::string cleanNotice (std::string text)
+    {
+        for(char& c : text)
+            if(c == '\n' || c == '\r' || c == '\t') c = ' ';
+        text.erase(0, text.find_first_not_of(' '));
+        text.erase(text.find_last_not_of(' ') + 1);
+        constexpr size_t maxLength = 120;
+        if(text.size() > maxLength)
+        {
+            text.resize(maxLength);
+            // Do not cut a UTF-8 character in half
+            while(!text.empty() && (static_cast<unsigned char>(text.back()) & 0xC0) == 0x80) text.pop_back();
+            if(!text.empty() && (static_cast<unsigned char>(text.back()) & 0x80)) text.pop_back();
+            text += "…";
+        }
+        return text;
+    }
+
     std::vector<std::string> allowedUrls (const std::vector<std::string>& urls) const
     {
         std::vector<std::string> result;
@@ -196,6 +200,22 @@ class LanguageCatalogParser
     }
 
    public:
+    // Also used for the sources users enter themselves
+    static bool isAllowedUrl (const std::string& url)
+    {
+#ifdef SC_TESTING
+        if(url.starts_with("http://127.0.0.1:")) return true;
+#endif
+        return url.starts_with("https://");
+    }
+
+    // The folder becomes a path component inside the game directory, which is written and deleted
+    static bool isSafeFolderName (const std::string& folder)
+    {
+        static const std::regex allowed("[A-Za-z0-9_()-]+");
+        return std::regex_match(folder, allowed);
+    }
+
     LanguageCatalogParser ()
         : lg("LanguageCatalogParser")
     {
@@ -212,7 +232,9 @@ class LanguageCatalogParser
         for(const auto& definition : loadCatalog().languages)
         {
             if(!isValid(definition, languages)) continue;
-            Database::AvailableLanguage language{definition.code, definition.name, definition.folder, {}, definition.credit};
+            Database::AvailableLanguage language{definition.code, definition.name, definition.folder, {}, definition.credit, {}};
+            for(const auto& [channel, notice] : definition.notices)
+                if(auto text = cleanNotice(notice); !text.empty()) language.notices[channel == "*" ? channel : normalizeChannelName(channel)] = text;
 
             if(!definition.source.channelList.empty())
             {

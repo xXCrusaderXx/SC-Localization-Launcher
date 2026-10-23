@@ -24,8 +24,6 @@ CustomLogger::CustomLogger ()
             throw std::runtime_error(std::string("Fehler beim erstellen bei: " + logPath.string() + "") + e.what());
         }
     }
-    cleanOffOldLogs();
-    init();
 }
 
 CustomLogger::~CustomLogger ()
@@ -90,6 +88,12 @@ void CustomLogger::write (const std::string& m_Channel, const std::string& messa
     // std::cout << "[" << getFormattedTimestamp() << "]" << "<" << m_Severity << ">\t" << "[" << m_Channel << "]" << "\t: " << message <<
     // std::endl;
 
+    std::call_once(m_FileOpened,
+                   [this]
+                   {
+                       cleanOffOldLogs();
+                       init();
+                   });
     if(m_LogFile.is_open())
     {
         m_LogFile << logEntry << std::endl;

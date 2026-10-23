@@ -29,11 +29,15 @@ class GuiTest : public QObject
 
     QQuickItem* findButton (const QString& text) const
     {
-        for(auto* item : window->contentItem()->findChildren<QQuickItem*>())
-            if(item->inherits("QQuickAbstractButton") && item->isVisible() && item->property("text") == text) return item;
+        // Popup contents hang below the window's root object, the rest below its content item.
+        // Disabled buttons don't count: a click on one is lost, e.g. "Check again" while a check is running
+        for(QObject* root : {static_cast<QObject*>(window->contentItem()), engine->rootObjects().first()})
+            for(auto* item : root->findChildren<QQuickItem*>())
+                if(item->inherits("QQuickAbstractButton") && item->isVisible() && item->isEnabled() && item->property("text") == text) return item;
         return nullptr;
     }
 
+    // Not inside QTRY_*: those evaluate their expression once more after it succeeded, which would click twice
     bool clickButton (const QString& text)
     {
         QQuickItem* button = findButton(text);
@@ -124,6 +128,19 @@ class GuiTest : public QObject
         bridge.reset();
     }
 
+    // A failed test may leave a modal dialog open, which would swallow the clicks of the next test
+    void cleanup ()
+    {
+        for(const char* name : {"launcherUpdateDialog", "customSourceDialog"})
+        {
+            auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
+            if(!dialog || !dialog->property("visible").toBool()) continue;
+            QMetaObject::invokeMethod(dialog, "close");
+            QTRY_VERIFY(!dialog->property("visible").toBool());
+        }
+        qunsetenv("APPIMAGE");
+    }
+
     void toggleShowsBackendState ()
     {
         QVERIFY(launchGameOption());
@@ -153,6 +170,8 @@ class GuiTest : public QObject
         QVERIFY(findText("Test-INI · CC BY-NC-SA 4.0"));
         QVERIFY(click("Deutsch"));
         QTRY_COMPARE(channel("LIVE")["language"].toString(), QString("de"));
+        // The notice of the chosen language replaces the path in the row
+        QTRY_VERIFY(findText("Wird vorbereitet"));
         QCOMPARE(jsonText(readSettingsFile()["channels"]["LIVE"]["language"]), jsonText("de"));
 
         // The picker shows the confirmed choice, and opening it again highlights it
@@ -248,6 +267,22 @@ class GuiTest : public QObject
         QVERIFY(QFile::exists(liveDir.filePath("data/Localization/german_(germany)/global.ini")));
     }
 
+    void showsWhenTheGameCannotStart ()
+    {
+        // Everything is up to date after runUpdate(), so the button only starts the game
+        // The RSI Launcher folder has no LUG script, and without PATH there is no Lutris either
+        QTemporaryDir rsiLauncher;
+        bridge->setRsiLauncherPath(QUrl::fromLocalFile(rsiLauncher.path()));
+        bridge->setOption("launchGameAfterUpdate", true);
+        QTRY_VERIFY(launchGameOption());
+
+        QTRY_VERIFY(findText("Start"));
+        QVERIFY(click("Start"));
+        QTRY_VERIFY_WITH_TIMEOUT(findText("Cannot start the game: install it with the LUG Helper or Lutris"), 30000);
+        bridge->setOption("launchGameAfterUpdate", false);
+        QTRY_VERIFY(!launchGameOption());
+    }
+
     void launcherUpdateButton ()
     {
         auto* button = engine->rootObjects().first()->findChild<QQuickItem*>("launcherUpdateButton");
@@ -284,7 +319,8 @@ class GuiTest : public QObject
         QTRY_VERIFY(dialog->property("opened").toBool());
 
         // The earlier check knew no package for this installation; checking again finds the signed AppImage
-        QTRY_VERIFY(clickButton("Check again"));
+        QTRY_VERIFY(findButton("Check again"));
+        QVERIFY(clickButton("Check again"));
         QTRY_VERIFY(findButton("Install update"));
         QVERIFY(clickButton("Install update"));
         QTRY_VERIFY_WITH_TIMEOUT(findButton("Restart now"), 30000);
@@ -324,6 +360,43 @@ class GuiTest : public QObject
         QPointF center = repair->mapToScene(QPointF(repair->width() / 2, repair->height() / 2));
         QTest::mouseClick(window, Qt::LeftButton, {}, center.toPoint());
         QTRY_COMPARE_WITH_TIMEOUT(QByteArray::fromStdString(readFile(ini)), TRANSLATION, 30000);
+        // The file is written before the update reports back; until then the channel rows stay locked
+        QTRY_COMPARE(bridge->state()["update"].toString(), QString("succeeded"));
+    }
+
+    void ownSourceThroughTheDialog ()
+    {
+        // The dialog only accepts HTTPS; nothing is downloaded in this test
+        QString url = "https://example.org/test/global.ini";
+
+        // Open the LIVE picker (the topmost one) and choose the entry for an own source
+        QQuickItem* picker = languagePicker();
+        QVERIFY(picker);
+        // Locked while an update runs, a click would be lost
+        QTRY_VERIFY(picker->isEnabled());
+        QPointF center = picker->mapToScene(QPointF(picker->width() / 2, picker->height() / 2));
+        QTest::mouseClick(window, Qt::LeftButton, {}, center.toPoint());
+        QTRY_VERIFY(findText("Own source …"));
+        QVERIFY(click("Own source …"));
+
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("customSourceDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QCOMPARE(dialog->property("channelName").toString(), QString("LIVE"));
+
+        // The address field takes the keyboard focus when the dialog opens
+        auto* urlField = engine->rootObjects().first()->findChild<QQuickItem*>("customSourceUrl");
+        QVERIFY(urlField);
+        QTRY_VERIFY(urlField->hasActiveFocus());
+        // keyClicks() only exists for widgets
+        for(QChar character : url) QTest::keyClick(window, character.toLatin1());
+        QTRY_COMPARE(urlField->property("text").toString(), url);
+        QTRY_VERIFY(findButton("Save and use"));
+        QVERIFY(clickButton("Save and use"));
+        QTRY_COMPARE(channel("LIVE")["language"].toString(), QString("custom"));
+        QCOMPARE(channel("LIVE")["custom"].toMap()["url"].toString(), url);
+        QCOMPARE(channel("LIVE")["custom"].toMap()["folder"].toString(), QString("german_(germany)"));
+        QTRY_VERIFY(!dialog->property("visible").toBool());
     }
 };
 

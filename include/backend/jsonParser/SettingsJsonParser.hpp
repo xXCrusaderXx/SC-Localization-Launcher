@@ -19,9 +19,10 @@ struct ChannelSettings
     // A language code from languages.json or Protocol::ENGLISH
     std::string language = Protocol::ENGLISH;
     Database::InstalledTranslation installed;
+    Protocol::CustomSource custom;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelSettings, installPath, language, installed)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelSettings, installPath, language, installed, custom)
 
 struct SettingsFile
 {

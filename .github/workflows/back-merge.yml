@@ -1,0 +1,53 @@
+name: Back-merge main into dev
+
+# After every change on main (a release merge or a hotfix), opens a PR that
+# merges main back into dev, so dev always contains everything that was
+# released. The PR comes from a throwaway branch at main's commit and is opened
+# with AUTOMERGE_TOKEN, so it counts as the owner's
+# PR: CI runs and it merges into dev by itself once green.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  back-merge:
+    name: open back-merge PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Open a PR from main into dev if dev lacks commits of main
+        run: |
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::Secret AUTOMERGE_TOKEN is missing, no back-merge PR is opened."
+            exit 0
+          fi
+          missing="$(gh api "repos/$GH_REPO/compare/dev...main" --jq .ahead_by)"
+          if [ "$missing" = "0" ]; then
+            echo "dev already contains main."
+            exit 0
+          fi
+          if [ -n "$(gh pr list --base dev --state open --json headRefName --jq '.[] | select(.headRefName | startswith("back-merge/")) | .headRefName')" ]; then
+            echo "A back-merge PR is already open."
+            exit 0
+          fi
+          # Never use main itself as the PR head: a merged head branch can get
+          # deleted, and main must never be. A throwaway branch at main's commit
+          # is deleted by the cleanup workflow after the merge instead.
+          sha="$(gh api "repos/$GH_REPO/git/ref/heads/main" --jq .object.sha)"
+          branch="back-merge/${sha:0:7}"
+          gh api -X POST "repos/$GH_REPO/git/refs" -f ref="refs/heads/$branch" -f sha="$sha" --silent
+          gh pr create --base dev --head "$branch" \
+            --title "Merge main back into dev" \
+            --body "Automatic back-merge: \`main\` has $missing commit(s) that \`dev\` does not contain yet (a release merge or a hotfix). Merges by itself once CI is green."
