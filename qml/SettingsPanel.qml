@@ -130,6 +130,13 @@ Item {
                     }
 
                     Toggle {
+                        text: qsTr("Check for launcher updates on start")
+                        description: qsTr("Asks GitHub for a newer version of this launcher")
+                        checked: panel.options.checkLauncherUpdatesAtStart === true
+                        onSwitched: on => backend.setOption("checkLauncherUpdatesAtStart", on)
+                    }
+
+                    Toggle {
                         text: qsTr("Update translations on start")
                         comingSoon: true
                         checked: panel.options.updateAtStart === true

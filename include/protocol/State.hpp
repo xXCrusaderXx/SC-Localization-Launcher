@@ -58,10 +58,12 @@ struct Options
     bool minimizeAfterUpdate = false;
     bool startWithSystem = false;
     bool showUpdateProgress = false;
+    // Asks GitHub for a newer launcher version at start
+    bool checkLauncherUpdatesAtStart = false;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Options, launchGameAfterUpdate, updateAtStart, installNewTranslations, minimizeAfterUpdate,
-                                                startWithSystem, showUpdateProgress)
+                                                startWithSystem, showUpdateProgress, checkLauncherUpdatesAtStart)
 
 enum class ChannelStatus
 {
@@ -92,6 +94,36 @@ struct Channel
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status)
 
+// Updates of the launcher itself, from the GitHub releases of the project
+enum class SelfUpdateStatus
+{
+    Idle,
+    Checking,
+    UpToDate,
+    Available,
+    Error
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(SelfUpdateStatus, {{SelfUpdateStatus::Idle, "idle"},
+                                                {SelfUpdateStatus::Checking, "checking"},
+                                                {SelfUpdateStatus::UpToDate, "upToDate"},
+                                                {SelfUpdateStatus::Available, "available"},
+                                                {SelfUpdateStatus::Error, "error"}})
+
+struct SelfUpdate
+{
+    SelfUpdateStatus status = SelfUpdateStatus::Idle;
+    std::string currentVersion;
+    std::string latestVersion;
+    // Release notes in Markdown
+    std::string notes;
+    // Release page with the downloads
+    std::string url;
+    std::string error;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SelfUpdate, status, currentVersion, latestVersion, notes, url, error)
+
 struct State
 {
     // All known languages in display order, ENGLISH first
@@ -101,8 +133,9 @@ struct State
     Options options;
     UpdateStatus update = UpdateStatus::Idle;
     bool searching = false;
+    SelfUpdate selfUpdate;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, searching)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, searching, selfUpdate)
 
 }  // namespace Protocol
