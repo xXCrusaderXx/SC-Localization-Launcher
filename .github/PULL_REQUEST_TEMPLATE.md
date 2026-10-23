@@ -13,4 +13,4 @@
 - [ ] The project builds locally.
 - [ ] No Star Citizen assets, translation files, or binaries are included (see [LEGAL.md](../LEGAL.md)).
 - [ ] If AI tools were used: I reviewed every change myself, and I describe their use here. See [AGENTS.md](../AGENTS.md).
-- [ ] User-visible changes are noted in `CHANGELOG.md` under `Unreleased`.
+- [ ] The title describes the user-visible change; `CHANGELOG.md` is not edited (it is written at release time).
