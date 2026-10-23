@@ -42,12 +42,13 @@ The launcher never hosts translation texts or game data itself. See [LEGAL.md](L
 ## Proposing changes
 
 - **New feature or change to a phase:** open a [roadmap proposal](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=roadmap_proposal.yml). Proposals are discussed in the issue. Accepted ones get a milestone, or land under [Open ideas](#open-ideas).
-- **New game language:** open a [new language request](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=new_language.yml), or send a PR that edits `languages.json` (see [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-game-language)). Languages don't wait for a milestone: a merged `languages.json` reaches users without a new release.
+- **New game language:** open a [new language request](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=new_language.yml), or send a PR that edits `languages.json` (see [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-game-language)). The launcher reads `languages.json` from `main`, so a new language reaches users when `dev` is merged into `main` at the next release point; no launcher update is needed.
 - This file is updated in the same PR that changes a milestone.
 
 ## Releases
 
-- Closing a milestone `vX.Y.Z – Name` starts the `Milestone release` workflow. It checks that every issue in the milestone is closed, collects the closed issues and pull requests as release notes, and runs the `Release` workflow for version `X.Y.Z`.
+- Work happens on feature branches that are merged into `dev`. At a release point, `dev` is merged into `main` by the maintainer.
+- Closing a milestone `vX.Y.Z – Name` starts the `Milestone release` workflow. It checks that every issue in the milestone is closed, collects the closed issues and pull requests as release notes, and runs the `Release` workflow for version `X.Y.Z` on `main`.
 - The `Release` workflow builds and tests all packages and publishes them as GitHub release `vX.Y.Z`.
 - If a milestone is closed by mistake while issues are still open, no release is made. Reopen the milestone, finish the issues, and close it again.
 - Bug-fix releases (`X.Y.Z+1`) use their own small milestone, or a manual run of the `Release` workflow.
