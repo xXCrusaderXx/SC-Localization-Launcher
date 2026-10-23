@@ -114,6 +114,29 @@ ApplicationWindow {
                 Layout.fillWidth: true
             }
 
+            // Launcher updates; the dot shows that a newer version is published
+            IconButton {
+                objectName: "launcherUpdateButton"
+                glyph: "⇩"
+
+                onClicked: {
+                    if (window.appState.selfUpdate.status !== "available")
+                        backend.checkForUpdate();
+                    launcherUpdateDialog.open();
+                }
+
+                Rectangle {
+                    visible: window.appState.selfUpdate.status === "available"
+                    width: 8
+                    height: 8
+                    radius: 4
+                    color: Theme.accent
+                    anchors.top: parent.top
+                    anchors.right: parent.right
+                    anchors.margins: 3
+                }
+            }
+
             IconButton {
                 glyph: "⚙"
                 onClicked: settingsPanel.open = true
@@ -337,6 +360,13 @@ ApplicationWindow {
         appState: window.appState
         locked: window.updateBusy
         onPathChangeRequested: target => window.choosePath(target)
+    }
+
+    LauncherUpdateDialog {
+        id: launcherUpdateDialog
+
+        selfUpdate: window.appState.selfUpdate || ({})
+        onCheckRequested: backend.checkForUpdate()
     }
 
     Shortcut {

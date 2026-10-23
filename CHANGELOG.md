@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Issue templates for new game languages, roadmap proposals and release checklists.
 - Each channel shows whether its translation is installed, missing or outdated; the launcher checks for new translation versions at start without downloading them.
 - Updates download only translations that changed (HTTP ETag); unchanged channels are skipped.
+- Launcher update button in the title bar: checks the GitHub releases for a newer launcher version and shows its release notes and download page. Optional check at start (off by default).
 
 ### Changed
 

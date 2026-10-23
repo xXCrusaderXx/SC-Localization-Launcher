@@ -166,7 +166,10 @@ inline QHash<QByteArray, QByteArray> fixtureFiles ()
                                 {{{"active", 1}, {"description", "LIVE"}, {"server1", "{base}/fr.ini"}},
                                  {{"active", 0}, {"description", "PTU"}, {"server1", "{base}/fr.ini"}}}},
                                {"backup", {{"EPTU", {{"active", 1}, {"server1", "{base}/missing.ini"}, {"server1_fallback", "{base}/fr.ini"}}}}}};
+    // A newer launcher release; html_url points away from GitHub on purpose, the launcher must not open it
+    nlohmann::json release = {{"tag_name", "v9.9.9"}, {"body", "- New feature"}, {"html_url", "https://example.org/release"}, {"prerelease", false}};
     return {{"/languages.json", QByteArray::fromStdString(languages.dump())},
+            {"/releases/latest", QByteArray::fromStdString(release.dump())},
             {"/channels.json", QByteArray::fromStdString(channels.dump())},
             {"/de.ini", TRANSLATION},
             {"/fr.ini", TRANSLATION_FR}};

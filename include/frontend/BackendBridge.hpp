@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QCoreApplication>
 #include <QDesktopServices>
 #include <QJsonDocument>
 #include <QObject>
@@ -47,7 +48,9 @@ class BackendBridge : public QObject
                           emit stateChanged();
                       },
                       Qt::QueuedConnection);
-              })
+              },
+              // Set by main() from the CMake project version
+              QCoreApplication::applicationVersion().toStdString())
     {
     }
 
@@ -76,6 +79,7 @@ class BackendBridge : public QObject
 
     Q_INVOKABLE void startUpdate () { backEnd.execute(Protocol::StartUpdate{}); }
     Q_INVOKABLE void autoSearch () { backEnd.execute(Protocol::AutoSearch{}); }
+    Q_INVOKABLE void checkForUpdate () { backEnd.execute(Protocol::CheckForUpdate{}); }
 
     Q_INVOKABLE QUrl fromLocalFile (const QString& path) const { return QUrl::fromLocalFile(path); }
 

@@ -128,6 +128,13 @@ Item {
                         checked: panel.options.launchGameAfterUpdate === true
                         onSwitched: on => backend.setOption("launchGameAfterUpdate", on)
                     }
+
+                    Toggle {
+                        text: qsTr("Check for launcher updates on start")
+                        description: qsTr("Asks GitHub for a newer version of this launcher")
+                        checked: panel.options.checkLauncherUpdatesAtStart === true
+                        onSwitched: on => backend.setOption("checkLauncherUpdatesAtStart", on)
+                    }
                 }
 
                 RowLayout {

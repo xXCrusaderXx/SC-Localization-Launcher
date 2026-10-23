@@ -4,6 +4,7 @@
 #include <QQuickWindow>
 #include <QTemporaryDir>
 #include <QTest>
+#include <algorithm>
 #include <functional>
 #include <memory>
 
@@ -82,6 +83,8 @@ class GuiTest : public QObject
     {
         LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>());
         qputenv("SC_LANGUAGES_URL", server.url("/languages.json").toUtf8());
+        qputenv("SC_RELEASES_URL", server.url("/releases/latest").toUtf8());
+        QCoreApplication::setApplicationVersion("0.6.0");
         resetUserDir();
         // Starts with the game launch switched on, the first test turns it off before any update runs
         writeSettingsFile(legacySettings(liveDir.path().toStdString(), "eng", true), PATHS::JSON_FILES::SETTINGS_LEGACY);
@@ -175,6 +178,26 @@ class GuiTest : public QObject
         QCOMPARE(statuses, (QStringList{"running", "succeeded"}));
         QTRY_VERIFY(findText("Translations updated"));
         QVERIFY(QFile::exists(liveDir.filePath("data/Localization/german_(germany)/global.ini")));
+    }
+
+    void launcherUpdateButton ()
+    {
+        auto* button = engine->rootObjects().first()->findChild<QQuickItem*>("launcherUpdateButton");
+        QVERIFY(button);
+        QPointF center = button->mapToScene(QPointF(button->width() / 2, button->height() / 2));
+        QTest::mouseClick(window, Qt::LeftButton, {}, center.toPoint());
+
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("launcherUpdateDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_VERIFY(findText("Version 9.9.9 is available. You are using 0.6.0."));
+        // Buttons draw their label without a Text item, so look for the button itself
+        auto buttons = window->contentItem()->findChildren<QQuickItem*>();
+        QVERIFY(
+            std::any_of(buttons.begin(), buttons.end(), [] (QQuickItem* item)
+                        { return item->inherits("QQuickAbstractButton") && item->isVisible() && item->property("text") == "Open download page"; }));
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
     }
 };
 

@@ -13,7 +13,8 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}
-  cancel-in-progress: true
+  # Queue instead of cancel: a cancelled run could leave a PR behind.
+  cancel-in-progress: false
 
 jobs:
   update:
@@ -30,9 +31,17 @@ jobs:
             echo "::warning::Secret AUTOMERGE_TOKEN is missing, PRs are not updated."
             exit 0
           fi
-          for n in $(gh pr list --state open --json number,autoMergeRequest,mergeStateStatus \
-                       --jq '.[] | select(.autoMergeRequest != null and .mergeStateStatus == "BEHIND") | .number'); do
-            echo "Updating #$n"
+          # Right after a push, GitHub often reports mergeStateStatus as UNKNOWN, so
+          # ask the compare API whether the head is behind the base instead.
+          gh pr list --state open --json number,autoMergeRequest,baseRefName,headRefOid \
+              --jq '.[] | select(.autoMergeRequest != null) | "\(.number) \(.baseRefName) \(.headRefOid)"' |
+          while read -r n base head; do
+            behind="$(gh api "repos/$GH_REPO/compare/$head...$base" --jq .ahead_by)"
+            if [ "$behind" = "0" ]; then
+              echo "#$n is up to date"
+              continue
+            fi
+            echo "Updating #$n ($behind commits behind $base)"
             gh api -X PUT "repos/$GH_REPO/pulls/$n/update-branch" --silent \
               || echo "::warning::#$n could not be updated (conflict?)"
           done
