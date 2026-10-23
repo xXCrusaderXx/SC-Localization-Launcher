@@ -23,11 +23,36 @@ class SingleInstance : public QObject
     std::unique_ptr<QLocalServer> server;
     bool primary = false;
 
-    static QString lockPath (const QString& name)
+    static QString runtimeDir ()
     {
         QString dir = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
-        if(dir.isEmpty()) dir = QDir::tempPath();
-        return dir + "/" + name + ".lock";
+        return dir.isEmpty() ? QDir::tempPath() : dir;
+    }
+
+    static QString lockPath (const QString& name) { return runtimeDir() + "/" + name + ".lock"; }
+
+    // Next to the lock instead of Qt's default in /tmp, which is private to each Flatpak sandbox:
+    // a second start there would never reach the running launcher
+    static QString socketPath (const QString& name) { return runtimeDir() + "/" + name + ".socket"; }
+
+    void listen ()
+    {
+        server = std::make_unique<QLocalServer>();
+        server->setSocketOptions(QLocalServer::UserAccessOption);
+        // A socket file left behind by a crashed launcher would block listen()
+        QLocalServer::removeServer(socketPath(name));
+        if(!server->listen(socketPath(name)))
+            LOG_ERROR(lg) << "cannot listen on " << socketPath(name).toStdString() << ": " << server->errorString().toStdString();
+        connect(server.get(), &QLocalServer::newConnection, this,
+                [this]
+                {
+                    while(QLocalSocket* socket = server->nextPendingConnection())
+                    {
+                        connect(socket, &QLocalSocket::disconnected, socket, &QObject::deleteLater);
+                        socket->disconnectFromServer();
+                        emit activationRequested();
+                    }
+                });
     }
 
    public:
@@ -43,23 +68,7 @@ class SingleInstance : public QObject
         lockFile.setStaleLockTime(0);
         primary = lockFile.tryLock(waitMs);
         // Nothing logged for a second start, it would leave a log file behind for every click on the menu entry
-        if(!primary) return;
-
-        server = std::make_unique<QLocalServer>();
-        server->setSocketOptions(QLocalServer::UserAccessOption);
-        // A socket file left behind by a crashed launcher would block listen()
-        QLocalServer::removeServer(name);
-        if(!server->listen(name)) LOG_ERROR(lg) << "cannot listen on " << name.toStdString() << ": " << server->errorString().toStdString();
-        connect(server.get(), &QLocalServer::newConnection, this,
-                [this]
-                {
-                    while(QLocalSocket* socket = server->nextPendingConnection())
-                    {
-                        connect(socket, &QLocalSocket::disconnected, socket, &QObject::deleteLater);
-                        socket->disconnectFromServer();
-                        emit activationRequested();
-                    }
-                });
+        if(primary) listen();
     }
 
     bool isPrimary () const { return primary; }
@@ -68,11 +77,25 @@ class SingleInstance : public QObject
     bool activatePrimary ()
     {
         QLocalSocket socket;
-        socket.connectToServer(name);
+        socket.connectToServer(socketPath(name));
         bool connected = socket.waitForConnected(1000);
         if(!connected) LOG_ERROR(lg) << "cannot reach the running launcher: " << socket.errorString().toStdString();
         socket.disconnectFromServer();
         return connected;
+    }
+
+    // Called when activatePrimary() failed: the lock belongs to a launcher that is gone but whose lock
+    // QLockFile cannot judge, e.g. one from the native build seen inside the Flatpak (other PID namespace)
+    bool takeOver ()
+    {
+        LOG_INFO(lg) << "taking over the lock of a launcher that does not answer";
+        lockFile.removeStaleLockFile();
+        primary = lockFile.tryLock(0);
+        if(primary)
+            listen();
+        else
+            LOG_ERROR(lg) << "cannot take over the lock " << lockPath(name).toStdString();
+        return primary;
     }
 
    signals:
