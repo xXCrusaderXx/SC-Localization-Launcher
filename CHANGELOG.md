@@ -5,6 +5,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-24
+
+### Added
+
+- Own translation source per channel: any `global.ini` link (HTTPS) can be chosen as "Own source" in the channel's language list, for example to test a translation.
+- Translation projects can show a short notice per channel and language, set in `languages.json`.
+- Own signed Flatpak repository: the Flatpak installs with one click (`.flatpakref`) and then updates through `flatpak update` or the software centre.
+- The update button follows the game. It shows "Start" when every translation is current and "Update & start" only when a channel needs an update. During the start it shows "Starting game …", then "Running" while the RSI Launcher is open and "Game running" while Star Citizen runs. This also works when the game was started without the launcher.
+- The status line reports when the RSI Launcher did not start, with a link to the log, or when neither the LUG Helper's `sc-launch.sh` nor Lutris was found. The end of `sc-launch.log` is written to the launcher's log.
+
+### Changed
+
+- Translations are not updated or repaired while Star Citizen runs.
+- Software centres show the real launcher version and release date.
+- A second start that only brings the running launcher to the front no longer creates a log file, and the last 10 log files are kept instead of 5.
+
+### Fixed
+
+- The RSI Launcher now also starts when the launcher itself was started from VS Code or another Electron app; before, it quit at once with "bad option".
+- The launcher update now recognises a running Star Citizen under Wine and waits; before, it did not notice the game.
+
+## [0.6.1] - 2026-10-23
+
+### Fixed
+
+- The AppImage no longer crashes at startup on Wayland desktops (KDE Plasma, GNOME, …). It lacked Qt's Wayland EGL plugin. The `.deb`, `.rpm`, Arch and Flatpak packages were not affected.
+
 ## [0.6.0] - 2026-10-23
 
 First release as *SC Localization Launcher*.
@@ -52,5 +79,7 @@ First release as *SC Localization Launcher*.
 - When switching languages, the previous language's folder is removed only after the new download succeeded.
 - Only one launcher runs at a time; starting it again brings the open window to the front instead of running two launchers that write the same settings and game folders.
 
-[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.6.1...v0.7.0
+[0.6.1]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/releases/tag/v0.6.0
