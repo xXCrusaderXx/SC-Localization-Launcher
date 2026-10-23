@@ -122,13 +122,14 @@ ApplicationWindow {
                 glyph: "⇩"
 
                 onClicked: {
-                    if (window.appState.selfUpdate.status !== "available")
+                    // Only ask GitHub again when nothing is known or in progress yet
+                    if (["idle", "upToDate", "error"].indexOf(window.appState.selfUpdate.status) >= 0)
                         backend.checkForUpdate();
                     launcherUpdateDialog.open();
                 }
 
                 Rectangle {
-                    visible: window.appState.selfUpdate.status === "available"
+                    visible: ["available", "downloading", "installing", "installed"].indexOf(window.appState.selfUpdate.status) >= 0
                     width: 8
                     height: 8
                     radius: 4
@@ -461,6 +462,8 @@ ApplicationWindow {
 
         selfUpdate: window.appState.selfUpdate || ({})
         onCheckRequested: backend.checkForUpdate()
+        onInstallRequested: backend.installUpdate()
+        onRestartRequested: backend.restartLauncher()
     }
 
     Shortcut {

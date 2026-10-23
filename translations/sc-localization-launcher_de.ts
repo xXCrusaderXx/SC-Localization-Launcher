@@ -38,6 +38,38 @@
 <context>
     <name>LauncherUpdateDialog</name>
     <message>
+        <source>The update is not signed correctly and was not installed.</source>
+        <translation>Das Update ist nicht korrekt signiert und wurde nicht installiert.</translation>
+    </message>
+    <message>
+        <source>The download is damaged and was not installed.</source>
+        <translation>Der Download ist beschädigt und wurde nicht installiert.</translation>
+    </message>
+    <message>
+        <source>Close Star Citizen first, then try again.</source>
+        <translation>Schließe zuerst Star Citizen und versuche es dann erneut.</translation>
+    </message>
+    <message>
+        <source>The installation was cancelled.</source>
+        <translation>Die Installation wurde abgebrochen.</translation>
+    </message>
+    <message>
+        <source>The update failed: %1</source>
+        <translation>Das Update ist fehlgeschlagen: %1</translation>
+    </message>
+    <message>
+        <source>Update the Flatpak through your software centre or with &quot;flatpak update&quot;.</source>
+        <translation>Aktualisiere das Flatpak über deine Softwareverwaltung oder mit „flatpak update“.</translation>
+    </message>
+    <message>
+        <source>This launcher was built from source; build the new version the same way.</source>
+        <translation>Dieser Launcher wurde aus dem Quellcode gebaut; baue die neue Version auf dieselbe Weise.</translation>
+    </message>
+    <message>
+        <source>Download the new version from the release page.</source>
+        <translation>Lade die neue Version von der Release-Seite herunter.</translation>
+    </message>
+    <message>
         <source>Launcher update</source>
         <translation>Launcher-Update</translation>
     </message>
@@ -54,12 +86,32 @@
         <translation>Du nutzt die neueste Version (%1).</translation>
     </message>
     <message>
-        <source>GitHub is limiting requests right now. Please try again in an hour.</source>
-        <translation>GitHub begrenzt gerade die Anfragen. Bitte versuche es in einer Stunde erneut.</translation>
+        <source>Downloading version %1 …</source>
+        <translation>Lade Version %1 herunter …</translation>
     </message>
     <message>
-        <source>The check failed: %1</source>
-        <translation>Die Prüfung ist fehlgeschlagen: %1</translation>
+        <source>Installing … Your system may ask for your password.</source>
+        <translation>Installiere … Dein System fragt eventuell nach deinem Passwort.</translation>
+    </message>
+    <message>
+        <source>Installing …</source>
+        <translation>Installiere …</translation>
+    </message>
+    <message>
+        <source>Version %1 is installed. Restart the launcher to use it.</source>
+        <translation>Version %1 ist installiert. Starte den Launcher neu, um sie zu nutzen.</translation>
+    </message>
+    <message>
+        <source>Install update</source>
+        <translation>Update installieren</translation>
+    </message>
+    <message>
+        <source>Restart now</source>
+        <translation>Jetzt neu starten</translation>
+    </message>
+    <message>
+        <source>GitHub is limiting requests right now. Please try again in an hour.</source>
+        <translation>GitHub begrenzt gerade die Anfragen. Bitte versuche es in einer Stunde erneut.</translation>
     </message>
     <message>
         <source>Version %1</source>

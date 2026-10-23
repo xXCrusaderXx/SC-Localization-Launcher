@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <map>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -74,6 +75,27 @@ struct ChannelData
     std::string remoteEtag;
 };
 
+// What SelfUpdateManager::install() needs from a release; filled by its check() when a matching signed package exists
+struct ReleaseAssets
+{
+    std::string version;
+    std::string packageName;
+    std::string packageUrl;
+    std::string checksumsUrl;
+    std::string signatureUrl;
+};
+
+// How this launcher was installed, found by SelfUpdateManager::detectInstallation()
+struct Installation
+{
+    // appimage, deb, rpm, arch, flatpak or source
+    std::string type = "source";
+    // Release asset for this installation, e.g. "ubuntu24.04" for the matching .deb
+    std::string variant;
+    // The AppImage file itself, only for type appimage
+    std::filesystem::path appImage;
+};
+
 // Only touched by the backend thread, see BackEnd
 struct BackendData
 {
@@ -85,6 +107,9 @@ struct BackendData
     Protocol::UpdateStatus update = Protocol::UpdateStatus::Idle;
     bool searching = false;
     Protocol::SelfUpdate selfUpdate;
+    // Set by the last check; what an installation of the launcher update needs
+    std::optional<ReleaseAssets> releaseAssets;
+    Installation installation;
 
     // Set when the app closes; background jobs read it to stop early
     std::atomic<bool> shuttingDown{false};

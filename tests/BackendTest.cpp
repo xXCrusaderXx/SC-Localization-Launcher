@@ -1,3 +1,5 @@
+#include <QProcess>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
 #include <algorithm>
@@ -6,6 +8,7 @@
 #include <optional>
 
 #include "TestSupport.hpp"
+#include "UpdateSigningKey.hpp"
 #include "backend/BackEnd.hpp"
 #include "logging/logger/custom_logger/custom_logger.h"
 
@@ -109,6 +112,41 @@ class BackendTest : public QObject
         return states[*done].update;
     }
 
+    TestSigningKey releaseKey;
+    // Checks for the launcher update and installs it if it can; returns the final self-update state
+    Protocol::SelfUpdate checkAndInstall ()
+    {
+        using Protocol::SelfUpdateStatus;
+        size_t from = published();
+        backEnd->execute(Protocol::CheckForUpdate{});
+        auto checked = waitForState(
+            [] (const auto& s) { return s.selfUpdate.status != SelfUpdateStatus::Checking && s.selfUpdate.status != SelfUpdateStatus::Idle; }, from);
+        if(!checked) return {};
+        Protocol::SelfUpdate update;
+        {
+            std::lock_guard lock(mutex);
+            update = states[*checked].selfUpdate;
+        }
+        if(!update.canInstall) return update;
+
+        from = published();
+        backEnd->execute(Protocol::InstallUpdate{});
+        auto done =
+            waitForState([] (const auto& s)
+                         { return s.selfUpdate.status == SelfUpdateStatus::Installed || s.selfUpdate.status == SelfUpdateStatus::Error; }, from);
+        std::lock_guard lock(mutex);
+        return done ? states[*done].selfUpdate : Protocol::SelfUpdate{};
+    }
+
+    // An AppImage in a temporary folder that the launcher runs from
+    std::filesystem::path fakeAppImage (const QTemporaryDir& dir)
+    {
+        auto path = std::filesystem::path(dir.path().toStdString()) / "SC-Localization-Launcher.AppImage";
+        std::ofstream(path) << "old version";
+        qputenv("APPIMAGE", QByteArray::fromStdString(path.string()));
+        return path;
+    }
+
    private slots:
     void initTestCase () { LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>()); }
 
@@ -117,6 +155,10 @@ class BackendTest : public QObject
         qputenv("SC_LANGUAGES_URL", server.url("/languages.json").toUtf8());
         qputenv("SC_RELEASES_URL", server.url("/releases/latest").toUtf8());
         server.setFile("/de.ini", TRANSLATION);
+        server.setFile("/releases/latest", fixtureFiles().value("/releases/latest"));
+        // No signing key and no AppImage unless a test sets them: the launcher then never installs anything
+        qputenv("SC_UPDATE_SIGNING_KEY", "");
+        qunsetenv("APPIMAGE");
         resetUserDir();
         std::lock_guard lock(mutex);
         states.clear();
@@ -386,6 +428,110 @@ class BackendTest : public QObject
         QVERIFY(waitForState([] (const auto& s) { return s.selfUpdate.status == Protocol::SelfUpdateStatus::Checking; }));
         QVERIFY(waitForState([] (const auto& s) { return s.selfUpdate.status == Protocol::SelfUpdateStatus::UpToDate; }, published() - 1));
         server.setFile("/releases/latest", fixtureFiles().value("/releases/latest"));
+    }
+
+    void installsSignedAppImageUpdate ()
+    {
+        QTemporaryDir dir;
+        auto appImage = fakeAppImage(dir);
+        qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
+        publishAppImageRelease(server, releaseKey, "new version");
+        QVERIFY(start());
+
+        auto update = checkAndInstall();
+        QCOMPARE(update.installType, std::string("appimage"));
+        QCOMPARE(jsonText(update.status), jsonText(Protocol::SelfUpdateStatus::Installed));
+        QCOMPARE(readFile(appImage), std::string("new version"));
+        QVERIFY((std::filesystem::status(appImage).permissions() & std::filesystem::perms::owner_exec) != std::filesystem::perms::none);
+        QVERIFY(!std::filesystem::exists(appImage.string() + ".new"));
+    }
+
+    void rejectsUpdateSignedWithAnotherKey ()
+    {
+        QTemporaryDir dir;
+        auto appImage = fakeAppImage(dir);
+        qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
+        TestSigningKey otherKey;
+        std::string sums = sha256Hex("evil version") + "  " + APPIMAGE_ASSET + "\n";
+        publishAppImageRelease(server, releaseKey, "evil version", sums, otherKey.sign(sums, "sc-localization-launcher v9.9.9"));
+        QVERIFY(start());
+
+        auto update = checkAndInstall();
+        QCOMPARE(jsonText(update.status), jsonText(Protocol::SelfUpdateStatus::Error));
+        QCOMPARE(update.error, std::string("invalid signature"));
+        QCOMPARE(readFile(appImage), std::string("old version"));
+    }
+
+    void rejectsSignatureOfAnotherRelease ()
+    {
+        QTemporaryDir dir;
+        auto appImage = fakeAppImage(dir);
+        qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
+        // A genuine signature, but made for an older release whose checksum list was reused
+        std::string sums = sha256Hex("new version") + "  " + APPIMAGE_ASSET + "\n";
+        publishAppImageRelease(server, releaseKey, "new version", sums, releaseKey.sign(sums, "sc-localization-launcher v9.9.8"));
+        QVERIFY(start());
+
+        auto update = checkAndInstall();
+        QCOMPARE(update.error, std::string("invalid signature"));
+        QCOMPARE(readFile(appImage), std::string("old version"));
+    }
+
+    void rejectsTamperedPackage ()
+    {
+        QTemporaryDir dir;
+        auto appImage = fakeAppImage(dir);
+        qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
+        // Signed checksums of the real package, but the server delivers something else
+        std::string sums = sha256Hex("new version") + "  " + APPIMAGE_ASSET + "\n";
+        publishAppImageRelease(server, releaseKey, "tampered version", sums);
+        QVERIFY(start());
+
+        auto update = checkAndInstall();
+        QCOMPARE(update.error, std::string("checksum mismatch"));
+        QCOMPARE(readFile(appImage), std::string("old version"));
+        QVERIFY(!std::filesystem::exists(PATHS::CACHE_USER / "launcher-update"));
+    }
+
+    void doesNotInstallWhileTheGameRuns ()
+    {
+        QTemporaryDir dir;
+        auto appImage = fakeAppImage(dir);
+        qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
+        publishAppImageRelease(server, releaseKey, "new version");
+
+        // A process named like the game: a copy of sleep
+        auto game = std::filesystem::path(dir.path().toStdString()) / "StarCitizen.exe";
+        std::filesystem::copy_file(QStandardPaths::findExecutable("sleep", {"/usr/bin", "/bin"}).toStdString(), game);
+        QProcess running;
+        running.start(QString::fromStdString(game.string()), {"30"});
+        QVERIFY(running.waitForStarted());
+
+        QVERIFY(start());
+        auto update = checkAndInstall();
+        running.kill();
+        running.waitForFinished();
+        QCOMPARE(update.error, std::string("Star Citizen is running"));
+        QCOMPARE(readFile(appImage), std::string("old version"));
+    }
+
+    void offersNoInstallWithoutSigningKey ()
+    {
+        QTemporaryDir dir;
+        fakeAppImage(dir);
+        publishAppImageRelease(server, releaseKey, "new version");
+        QVERIFY(start());
+
+        auto update = checkAndInstall();
+        QCOMPARE(jsonText(update.status), jsonText(Protocol::SelfUpdateStatus::Available));
+        QVERIFY(!update.canInstall);
+    }
+
+    void projectSigningKeyIsUsable ()
+    {
+        // packaging/minisign.pub is embedded at build time; a broken file would silently disable self-updates
+        auto key = Minisign::parsePublicKey(UPDATE_SIGNING_KEY);
+        QVERIFY2(key, "packaging/minisign.pub is missing or not a minisign public key");
     }
 };
 

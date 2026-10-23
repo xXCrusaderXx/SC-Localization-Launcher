@@ -64,6 +64,19 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_SOURCE_DI
 file(READ ${CMAKE_SOURCE_DIR}/languages.json SC_BUNDLED_LANGUAGES)
 configure_file(${CMAKE_SOURCE_DIR}/include/backend/BundledLanguages.hpp.in ${CMAKE_BINARY_DIR}/generated/BundledLanguages.hpp @ONLY)
 
+# Verifies the signatures of launcher updates
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SODIUM REQUIRED IMPORTED_TARGET libsodium>=1.0.18)
+
+# Public key the release checksums are signed with; without it the launcher never installs updates itself
+set(SC_MINISIGN_PUBLIC_KEY_FILE ${CMAKE_SOURCE_DIR}/packaging/minisign.pub)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${SC_MINISIGN_PUBLIC_KEY_FILE})
+set(SC_MINISIGN_PUBLIC_KEY "")
+if(EXISTS ${SC_MINISIGN_PUBLIC_KEY_FILE})
+  file(READ ${SC_MINISIGN_PUBLIC_KEY_FILE} SC_MINISIGN_PUBLIC_KEY)
+endif()
+configure_file(${CMAKE_SOURCE_DIR}/include/backend/UpdateSigningKey.hpp.in ${CMAKE_BINARY_DIR}/generated/UpdateSigningKey.hpp @ONLY)
+
 #############################################################
 # --- BINARY ---
 #############################################################
@@ -118,6 +131,7 @@ endif()
 target_link_libraries(${SC_LAUNCHER_BINARY} PRIVATE
   Qt6::Quick
   Qt6::Network
+  PkgConfig::SODIUM
   nlohmann_json::nlohmann_json
   CURL::libcurl
 )
