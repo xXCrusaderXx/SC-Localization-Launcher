@@ -53,15 +53,16 @@ jobs:
   build-ubuntu:
     name: build (ubuntu)
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
 
       # Ubuntu 24.04 ships Qt 6.4, the oldest Qt the launcher supports.
-      # apt sometimes hangs on a runner (twice for 30 minutes); give up after a few minutes and try again
+      # The runner's Azure mirror sometimes hangs or crawls; give up after a few minutes and try again
+      # from the next mirror in the runner's list. Packages already downloaded are kept.
       - name: Install dependencies
-        timeout-minutes: 15
+        timeout-minutes: 25
         run: |
           packages=(
             build-essential cmake ninja-build pkg-config libgl-dev libcurl4-openssl-dev libsodium-dev nlohmann-json3-dev
@@ -80,6 +81,11 @@ jobs:
             echo "::warning::apt attempt $attempt of 3 failed or hung"
             # A killed install may leave half-configured packages behind
             sudo dpkg --configure -a || true
+            # The runner's sources pick the first entry of this mirror list
+            if [ -f /etc/apt/apt-mirrors.txt ] && grep -q azure /etc/apt/apt-mirrors.txt; then
+              sudo sed -i '/azure/d' /etc/apt/apt-mirrors.txt
+              echo "Next attempt without the Azure mirror: $(head -n1 /etc/apt/apt-mirrors.txt)"
+            fi
           done
           exit 1
 
