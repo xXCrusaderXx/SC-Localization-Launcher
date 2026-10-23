@@ -1,0 +1,41 @@
+name: Clean up merged branches
+
+# Deletes the head branch of a merged PR from this repository. GitHub's own
+# "automatically delete head branches" setting does not fire for every merge
+# made by auto-merge, so this does it explicitly. Fork branches are left alone.
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  delete-branch:
+    name: delete merged branch
+    if: github.event.pull_request.merged && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      # The branch name is contributor-controlled; it reaches the shell only through the environment.
+      BRANCH: ${{ github.event.pull_request.head.ref }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - name: Delete the head branch
+        run: |
+          if [ "$BRANCH" = "$DEFAULT_BRANCH" ]; then
+            echo "::notice::Head branch is the default branch, nothing to delete."
+            exit 0
+          fi
+          # Another open PR may still build on this branch.
+          if [ -n "$(gh pr list --state open --base "$BRANCH" --json number --jq '.[].number')" ]; then
+            echo "::notice::Branch $BRANCH is the base of an open PR, kept."
+            exit 0
+          fi
+          if gh api -X DELETE "repos/$GH_REPO/git/refs/heads/$BRANCH" --silent; then
+            echo "Deleted $BRANCH"
+          else
+            echo "::notice::Branch $BRANCH was already deleted."
+          fi

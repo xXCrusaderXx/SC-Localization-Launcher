@@ -60,3 +60,5 @@ A change is done only when it builds and the tests pass. Backend behaviour belon
 
 - Changes you did not make belong to the human or another agent. Do not commit, revert, stash, or unstage them. Check `git diff --cached --name-only` before you commit.
 - Do not commit build output (`build/`, `release/`, `build-appimage/`) or downloaded tools (`misc/*.appimage`).
+- Never switch branches in the main checkout; it stays on `main`. Work on a branch in your own worktree (`git worktree add <dir> -b <branch> origin/main`).
+- Clean up after every merge: remove your worktree and local branch (`git worktree remove <dir>`, `git branch -D <branch>`) and run `git fetch --prune`. The `Clean up merged branches` workflow deletes the remote branch.
