@@ -9,7 +9,7 @@ target_sources(sc_test_support INTERFACE ${CMAKE_SOURCE_DIR}/src/logging/logger/
 target_include_directories(sc_test_support INTERFACE ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/generated ${CMAKE_CURRENT_SOURCE_DIR})
 # Enables the SC_LANGUAGES_URL override and plain HTTP to 127.0.0.1, which the app itself never has
 target_compile_definitions(sc_test_support INTERFACE SC_TESTING)
-target_link_libraries(sc_test_support INTERFACE Qt6::Test Qt6::Network nlohmann_json::nlohmann_json CURL::libcurl)
+target_link_libraries(sc_test_support INTERFACE Qt6::Test Qt6::Network nlohmann_json::nlohmann_json CURL::libcurl PkgConfig::SODIUM)
 
 add_executable(BackendTest BackendTest.cpp)
 target_link_libraries(BackendTest PRIVATE sc_test_support)

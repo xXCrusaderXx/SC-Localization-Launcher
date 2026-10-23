@@ -2,8 +2,10 @@
 
 #include <QCoreApplication>
 #include <QDesktopServices>
+#include <QGuiApplication>
 #include <QJsonDocument>
 #include <QObject>
+#include <QProcess>
 #include <QUrl>
 #include <QVariantMap>
 
@@ -80,6 +82,19 @@ class BackendBridge : public QObject
     Q_INVOKABLE void startUpdate () { backEnd.execute(Protocol::StartUpdate{}); }
     Q_INVOKABLE void autoSearch () { backEnd.execute(Protocol::AutoSearch{}); }
     Q_INVOKABLE void checkForUpdate () { backEnd.execute(Protocol::CheckForUpdate{}); }
+    Q_INVOKABLE void installUpdate () { backEnd.execute(Protocol::InstallUpdate{}); }
+
+    // Starts the updated launcher and quits this one; the new one waits until this one released its lock
+    Q_INVOKABLE void restartLauncher ()
+    {
+        QString program = qEnvironmentVariableIsSet("APPIMAGE") ? qEnvironmentVariable("APPIMAGE") : QCoreApplication::applicationFilePath();
+        if(!QProcess::startDetached(program, {"--after-update"}))
+        {
+            LOG_ERROR(lg) << "restartLauncher() - cannot start " << program.toStdString();
+            return;
+        }
+        QGuiApplication::quit();
+    }
 
     Q_INVOKABLE QUrl fromLocalFile (const QString& path) const { return QUrl::fromLocalFile(path); }
 

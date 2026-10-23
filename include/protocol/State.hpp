@@ -101,6 +101,10 @@ enum class SelfUpdateStatus
     Checking,
     UpToDate,
     Available,
+    Downloading,
+    Installing,
+    // Installed; the new version runs after a restart of the launcher
+    Installed,
     Error
 };
 
@@ -108,6 +112,9 @@ NLOHMANN_JSON_SERIALIZE_ENUM(SelfUpdateStatus, {{SelfUpdateStatus::Idle, "idle"}
                                                 {SelfUpdateStatus::Checking, "checking"},
                                                 {SelfUpdateStatus::UpToDate, "upToDate"},
                                                 {SelfUpdateStatus::Available, "available"},
+                                                {SelfUpdateStatus::Downloading, "downloading"},
+                                                {SelfUpdateStatus::Installing, "installing"},
+                                                {SelfUpdateStatus::Installed, "installed"},
                                                 {SelfUpdateStatus::Error, "error"}})
 
 struct SelfUpdate
@@ -120,9 +127,16 @@ struct SelfUpdate
     // Release page with the downloads
     std::string url;
     std::string error;
+    // How this launcher was installed: appimage, deb, rpm, arch, flatpak or source
+    std::string installType;
+    // A signed package for this installation is in the release, so the launcher can update itself
+    bool canInstall = false;
+    // Download progress, 0..1
+    double progress = 0;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SelfUpdate, status, currentVersion, latestVersion, notes, url, error)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SelfUpdate, status, currentVersion, latestVersion, notes, url, error, installType, canInstall,
+                                                progress)
 
 struct State
 {
