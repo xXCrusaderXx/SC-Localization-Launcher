@@ -65,6 +65,24 @@ NLOHMANN_JSON_SERIALIZE_ENUM(UpdateStatus, {{UpdateStatus::Idle, "idle"},
                                             {UpdateStatus::Succeeded, "succeeded"},
                                             {UpdateStatus::Failed, "failed"}})
 
+// Start of the RSI Launcher after an update
+enum class GameStart
+{
+    Idle,
+    Starting,
+    Running,
+    // Started, but the RSI Launcher did not appear or quit right away
+    Failed,
+    // Neither the LUG Helper's sc-launch.sh nor Lutris was found
+    NoStarter
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(GameStart, {{GameStart::Idle, "idle"},
+                                         {GameStart::Starting, "starting"},
+                                         {GameStart::Running, "running"},
+                                         {GameStart::Failed, "failed"},
+                                         {GameStart::NoStarter, "noStarter"}})
+
 struct Options
 {
     bool launchGameAfterUpdate = false;
@@ -171,10 +189,11 @@ struct State
     std::string rsiLauncherPath;
     Options options;
     UpdateStatus update = UpdateStatus::Idle;
+    GameStart game = GameStart::Idle;
     bool searching = false;
     SelfUpdate selfUpdate;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, searching, selfUpdate)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, selfUpdate)
 
 }  // namespace Protocol

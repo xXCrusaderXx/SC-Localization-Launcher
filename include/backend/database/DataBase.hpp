@@ -119,6 +119,7 @@ struct BackendData
     std::filesystem::path rsiLauncherPath;
     Protocol::Options options;
     Protocol::UpdateStatus update = Protocol::UpdateStatus::Idle;
+    Protocol::GameStart game = Protocol::GameStart::Idle;
     bool searching = false;
     Protocol::SelfUpdate selfUpdate;
     // Set by the last check; what an installation of the launcher update needs

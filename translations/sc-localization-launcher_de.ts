@@ -224,8 +224,24 @@
         <translation>Übersetzungen werden heruntergeladen …</translation>
     </message>
     <message>
+        <source>Starting the RSI Launcher …</source>
+        <translation>RSI Launcher wird gestartet …</translation>
+    </message>
+    <message>
         <source>Searching for Star Citizen installations …</source>
         <translation>Suche nach Star-Citizen-Installationen …</translation>
+    </message>
+    <message>
+        <source>The RSI Launcher did not start. &lt;a href=&quot;log&quot;&gt;Open the log&lt;/a&gt;</source>
+        <translation>Der RSI Launcher ist nicht gestartet. &lt;a href=&quot;log&quot;&gt;Log öffnen&lt;/a&gt;</translation>
+    </message>
+    <message>
+        <source>Cannot start the game: install it with the LUG Helper or Lutris</source>
+        <translation>Spiel kann nicht gestartet werden: Installiere es mit dem LUG Helper oder Lutris</translation>
+    </message>
+    <message>
+        <source>RSI Launcher started</source>
+        <translation>RSI Launcher gestartet</translation>
     </message>
     <message>
         <source>Translations updated</source>
@@ -265,6 +281,10 @@
     <message>
         <source>Update translations</source>
         <translation>Übersetzungen aktualisieren</translation>
+    </message>
+    <message>
+        <source>Starting game …</source>
+        <translation>Spiel wird gestartet …</translation>
     </message>
     <message>
         <source>RSI Launcher folder</source>

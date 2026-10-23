@@ -26,6 +26,9 @@ ApplicationWindow {
 
     readonly property bool updateBusy: appState.update === "running"
     readonly property bool updateFailed: appState.update === "failed"
+    // The RSI Launcher is starting after an update; the button stays busy until it runs or failed
+    readonly property bool gameStarting: appState.game === "starting"
+    readonly property bool gameFailed: appState.game === "failed" || appState.game === "noStarter"
     readonly property bool updateReady: channels.some(c => c.installPath !== "")
     // Channels whose translation is missing, outdated or still has to be removed
     readonly property int pendingUpdates: channels.filter(c => ["notInstalled", "updateAvailable", "damaged", "failed"].indexOf(c.status) >= 0).length
@@ -356,10 +359,10 @@ ApplicationWindow {
                         width: 6
                         height: 6
                         radius: 3
-                        color: window.updateBusy || window.searchBusy ? Theme.accent : window.updateFailed ? Theme.danger : window.pendingUpdates > 0 ? Theme.warning : window.updateReady ? Theme.success : Theme.disabled
+                        color: window.updateBusy || window.gameStarting || window.searchBusy ? Theme.accent : window.updateFailed || window.gameFailed ? Theme.danger : window.pendingUpdates > 0 ? Theme.warning : window.updateReady ? Theme.success : Theme.disabled
 
                         SequentialAnimation on opacity {
-                            running: window.updateBusy || window.searchBusy
+                            running: window.updateBusy || window.gameStarting || window.searchBusy
                             loops: Animation.Infinite
                             alwaysRunToEnd: true
                             NumberAnimation {
@@ -374,7 +377,27 @@ ApplicationWindow {
                     }
 
                     Text {
-                        text: window.updateBusy ? qsTr("Downloading translations …") : window.searchBusy ? qsTr("Searching for Star Citizen installations …") : window.updateFailed ? qsTr("Update failed. <a href=\"log\">Open the log</a>") : window.pendingUpdates > 0 ? qsTr("%n channel(s) need an update", "", window.pendingUpdates) : window.appState.update === "succeeded" ? qsTr("Translations updated") : window.updateReady ? qsTr("Ready") : qsTr("Choose a game folder or use the automatic search")
+                        text: {
+                            if (window.updateBusy)
+                                return qsTr("Downloading translations …");
+                            if (window.gameStarting)
+                                return qsTr("Starting the RSI Launcher …");
+                            if (window.searchBusy)
+                                return qsTr("Searching for Star Citizen installations …");
+                            if (window.updateFailed)
+                                return qsTr("Update failed. <a href=\"log\">Open the log</a>");
+                            if (window.appState.game === "failed")
+                                return qsTr("The RSI Launcher did not start. <a href=\"log\">Open the log</a>");
+                            if (window.appState.game === "noStarter")
+                                return qsTr("Cannot start the game: install it with the LUG Helper or Lutris");
+                            if (window.pendingUpdates > 0)
+                                return qsTr("%n channel(s) need an update", "", window.pendingUpdates);
+                            if (window.appState.game === "running")
+                                return qsTr("RSI Launcher started");
+                            if (window.appState.update === "succeeded")
+                                return qsTr("Translations updated");
+                            return window.updateReady ? qsTr("Ready") : qsTr("Choose a game folder or use the automatic search");
+                        }
                         color: Theme.muted
                         textFormat: Text.StyledText
                         linkColor: Theme.accent
@@ -391,13 +414,14 @@ ApplicationWindow {
             Rectangle {
                 id: updateButton
 
-                readonly property bool clickable: window.updateReady && !window.updateBusy
+                readonly property bool busy: window.updateBusy || window.gameStarting
+                readonly property bool clickable: window.updateReady && !busy
 
                 Layout.preferredWidth: 270
                 Layout.preferredHeight: 52
                 radius: 26
                 clip: true
-                opacity: clickable || window.updateBusy ? 1 : 0.45
+                opacity: clickable || busy ? 1 : 0.45
                 scale: updateMouse.pressed ? 0.97 : updateMouse.containsMouse && clickable ? 1.03 : 1
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
@@ -417,16 +441,16 @@ ApplicationWindow {
                     }
                 }
 
-                // Shimmer while the update is running
+                // Shimmer while the update or the game start is running
                 Rectangle {
-                    visible: window.updateBusy
+                    visible: updateButton.busy
                     width: parent.width * 0.35
                     height: parent.height
                     radius: parent.radius
                     color: Qt.rgba(1, 1, 1, 0.25)
 
                     NumberAnimation on x {
-                        running: window.updateBusy
+                        running: updateButton.busy
                         loops: Animation.Infinite
                         from: -updateButton.width * 0.35
                         to: updateButton.width
@@ -436,7 +460,7 @@ ApplicationWindow {
 
                 Text {
                     anchors.centerIn: parent
-                    text: window.updateBusy ? qsTr("Updating …") : !window.updateReady ? qsTr("No game folder set") : window.launchAfterUpdate ? qsTr("Update & start") : qsTr("Update translations")
+                    text: window.updateBusy ? qsTr("Updating …") : window.gameStarting ? qsTr("Starting game …") : !window.updateReady ? qsTr("No game folder set") : window.launchAfterUpdate ? qsTr("Update & start") : qsTr("Update translations")
                     color: "white"
                     font.pixelSize: 15
                     font.bold: true

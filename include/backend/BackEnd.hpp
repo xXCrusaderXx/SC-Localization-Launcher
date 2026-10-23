@@ -42,6 +42,7 @@ class BackEnd
     std::thread searchJob;
     std::thread versionCheckJob;
     std::thread selfUpdateJob;
+    std::thread gameJob;
 
     // Declared last: its thread uses all members above
     TaskQueue queue;
@@ -220,17 +221,33 @@ class BackEnd
         return job;
     }
 
+    void startGame ()
+    {
+        data.game = Protocol::GameStart::Starting;
+        startJob(gameJob,
+                 [this, rsiLauncherPath = data.rsiLauncherPath]
+                 {
+                     auto result = updateManager.startGame(rsiLauncherPath);
+                     queue.post(
+                         [this, result]
+                         {
+                             data.game = result;
+                             publish();
+                         });
+                 });
+    }
+
     void runUpdate (std::vector<UpdateManager::Job> jobs, bool launchGame)
     {
         data.update = Protocol::UpdateStatus::Running;
+        // A repair may run while the RSI Launcher is still starting; that start reports its own result
+        if(data.game != Protocol::GameStart::Starting) data.game = Protocol::GameStart::Idle;
         startJob(updateJob,
-                 [this, jobs, launchGame, rsiLauncherPath = data.rsiLauncherPath]
+                 [this, jobs, launchGame]
                  {
                      auto results = updateManager.update(jobs);
-                     // Also after a partial failure, the other channels are still playable
-                     if(launchGame && !data.shuttingDown) updateManager.startGame(rsiLauncherPath);
                      queue.post(
-                         [this, results, jobCount = jobs.size()]
+                         [this, results, launchGame, jobCount = jobs.size()]
                          {
                              bool success = results.size() == jobCount;
                              for(const auto& result : results)
@@ -245,6 +262,8 @@ class BackEnd
                                  if(channel.language == result.language) channel.remoteEtag = result.etag;
                              }
                              data.update = success ? Protocol::UpdateStatus::Succeeded : Protocol::UpdateStatus::Failed;
+                             // Also after a partial failure, the other channels are still playable
+                             if(launchGame && !data.shuttingDown) startGame();
                              saveSettings();
                              publish();
                          });
@@ -287,6 +306,7 @@ class BackEnd
         state.rsiLauncherPath = data.rsiLauncherPath.string();
         state.options = data.options;
         state.update = data.update;
+        state.game = data.game;
         state.searching = data.searching;
         state.selfUpdate = data.selfUpdate;
         return state;
@@ -395,9 +415,9 @@ class BackEnd
 
     void handle (const Protocol::StartUpdate&)
     {
-        if(data.update == Protocol::UpdateStatus::Running)
+        if(data.update == Protocol::UpdateStatus::Running || data.game == Protocol::GameStart::Starting)
         {
-            LOG_DEBUG(lg) << "startUpdate - update already running";
+            LOG_DEBUG(lg) << "startUpdate - update or game start already running";
             return;
         }
 
@@ -572,7 +592,7 @@ class BackEnd
         data.shuttingDown = true;
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
-        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob})
+        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }
