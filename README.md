@@ -42,6 +42,17 @@ For openSUSE, Ubuntu 22.04 and other distributions, use the AppImage or the Flat
 
 The Flatpak can read game folders anywhere (`--filesystem=host`) and starts the game outside the sandbox through `flatpak-spawn --host` (`--talk-name=org.freedesktop.Flatpak`).
 
+### Verifying a download
+
+Every release has a `SHA256SUMS` file signed with [minisign](https://jedisct1.github.io/minisign/). The public key is [`packaging/minisign.pub`](packaging/minisign.pub):
+
+```sh
+minisign -Vm SHA256SUMS -p minisign.pub
+sha256sum --check --ignore-missing SHA256SUMS
+```
+
+The AppImage carries update information, so [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate) can update it in place.
+
 ### Where your data is stored
 
 | What | Path |
@@ -54,17 +65,17 @@ The `XDG_*_HOME` variables are respected. The Flatpak keeps its data under `~/.v
 
 ## Building from source
 
-Requirements: CMake 3.16 or newer, a C++20 compiler, Qt 6.4 or newer (Quick/QML), libcurl and nlohmann_json 3.11 or newer (downloaded automatically if missing). The Qt Linguist tools are optional; without them the interface is English only.
+Requirements: CMake 3.16 or newer, a C++20 compiler, Qt 6.4 or newer (Quick/QML), libcurl, libsodium 1.0.18 or newer and nlohmann_json 3.11 or newer (downloaded automatically if missing). The Qt Linguist tools are optional; without them the interface is English only.
 
 ```sh
 # Arch Linux
-sudo pacman -S --needed base-devel cmake ninja qt6-declarative qt6-tools curl nlohmann-json
+sudo pacman -S --needed base-devel cmake ninja qt6-declarative qt6-tools curl libsodium nlohmann-json
 # Debian / Ubuntu
-sudo apt install build-essential cmake ninja-build libgl-dev libcurl4-openssl-dev nlohmann-json3-dev \
+sudo apt install build-essential cmake ninja-build pkg-config libgl-dev libcurl4-openssl-dev libsodium-dev nlohmann-json3-dev \
     qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools qt6-tools-dev qt6-l10n-tools \
     qml6-module-qtquick-controls qml6-module-qtquick-dialogs qml6-module-qtquick-layouts
 # Fedora
-sudo dnf install gcc-c++ cmake ninja-build libcurl-devel json-devel \
+sudo dnf install gcc-c++ cmake ninja-build libcurl-devel libsodium-devel json-devel \
     qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qttools-devel qt6-linguist
 
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release

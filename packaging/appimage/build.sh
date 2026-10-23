@@ -13,8 +13,8 @@ QT_DIR="/opt/qt/$QT_VERSION/gcc_64"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y --no-install-recommends \
-    build-essential cmake ninja-build git curl ca-certificates file python3-pip \
-    libcurl4-openssl-dev libglib2.0-0 libopengl0 libgl1-mesa-dev libegl1 libfontconfig1 libdbus-1-3 \
+    build-essential cmake ninja-build pkg-config git curl ca-certificates file python3-pip \
+    libcurl4-openssl-dev libsodium-dev libglib2.0-0 libopengl0 libgl1-mesa-dev libegl1 libfontconfig1 libdbus-1-3 \
     libxkbcommon-dev libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
     libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 \
     libwayland-client0 libwayland-cursor0 libwayland-egl1
@@ -36,4 +36,4 @@ if [ -n "${HOST_UID:-}" ]; then
     chown -R "$HOST_UID:${HOST_GID:-$HOST_UID}" "$BUILD"
 fi
 
-ls -la "$BUILD"/*.AppImage
+ls -la "$BUILD"/*.AppImage "$BUILD"/*.AppImage.zsync

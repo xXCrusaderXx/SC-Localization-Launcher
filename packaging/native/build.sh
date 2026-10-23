@@ -14,17 +14,17 @@ if command -v apt-get >/dev/null; then
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
     apt-get install -y --no-install-recommends \
-        build-essential cmake ninja-build file dpkg-dev ca-certificates \
-        libcurl4-openssl-dev nlohmann-json3-dev libgl-dev \
+        build-essential cmake ninja-build pkg-config file dpkg-dev ca-certificates \
+        libcurl4-openssl-dev libsodium-dev nlohmann-json3-dev libgl-dev \
         qt6-base-dev qt6-base-dev-tools qt6-declarative-dev qt6-declarative-dev-tools \
         qt6-tools-dev qt6-l10n-tools
     GENERATOR=DEB
 elif command -v dnf >/dev/null; then
-    dnf install -y gcc-c++ cmake ninja-build rpm-build libcurl-devel json-devel \
+    dnf install -y gcc-c++ cmake ninja-build pkgconf-pkg-config rpm-build libcurl-devel libsodium-devel json-devel \
         qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qttools-devel qt6-linguist
     GENERATOR=RPM
 elif command -v zypper >/dev/null; then
-    zypper --non-interactive install gcc-c++ cmake ninja rpm-build libcurl-devel nlohmann_json-devel \
+    zypper --non-interactive install gcc-c++ cmake ninja pkg-config rpm-build libcurl-devel libsodium-devel nlohmann_json-devel \
         qt6-base-devel qt6-declarative-devel qt6-tools-linguist
     GENERATOR=RPM
 else
