@@ -60,8 +60,8 @@ A change is done only when it builds and the tests pass. Backend behaviour belon
 
 - Changes you did not make belong to the human or another agent. Do not commit, revert, stash, or unstage them. Check `git diff --cached --name-only` before you commit.
 - Do not commit build output (`build/`, `release/`, `build-appimage/`) or downloaded tools (`misc/*.appimage`).
-- Branch from `dev` and open PRs against `dev` (merge commit, no squash). `main` only receives `dev` at release points, merged by the human.
-- Before opening a PR, combine work-in-progress commits into meaningful ones with clear messages (no interactive tools: e.g. `git reset --soft origin/dev` and commit again); every commit of the branch ends up in the history.
+- Branch from `dev` and open PRs against `dev`; they are squashed into one commit (title = PR title). `main` only receives `dev` at release points, merged by the human (merge commit).
+- Keep the branch's commit messages clear; they become the message of the squashed commit. Update a branch with `git rebase origin/dev` and `git push --force-with-lease`, never by merging `dev` into it.
 - Hotfixes (`hotfix/…` from `main`, PR against `main`) only when the human asks for one; see CONTRIBUTING.md "Hotfixes".
 - Never switch branches in the main checkout; it stays on `dev`. Work on a branch in your own worktree (`git worktree add <dir> -b <branch> origin/dev`).
 - Don't edit `CHANGELOG.md` in feature PRs; it is written once per release. Put the user-visible change in the PR title instead.
