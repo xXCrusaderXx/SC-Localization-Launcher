@@ -80,6 +80,7 @@ set(SC_QML_FILES
   qml/Main.qml
   qml/ChannelRow.qml
   qml/LanguagePicker.qml
+  qml/LauncherUpdateDialog.qml
   qml/IconButton.qml
   qml/PathRow.qml
   qml/SettingsPanel.qml
