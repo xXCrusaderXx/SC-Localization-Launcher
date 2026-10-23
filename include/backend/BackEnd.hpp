@@ -109,6 +109,7 @@ class BackEnd
     {
         using Protocol::ChannelStatus;
         if(channel.installPath.empty()) return ChannelStatus::NoPath;
+        if(channel.lastUpdateFailed) return ChannelStatus::Failed;
 
         if(channel.language == Protocol::ENGLISH)
         {
@@ -123,36 +124,106 @@ class BackEnd
         if(!language || !hasTranslationFile(channel.installPath, language->folder)) return ChannelStatus::NotInstalled;
         // Installed by hand, by the former SC Deutsch Launcher or as another language of the same folder: version unknown
         if(channel.installed.language != channel.language) return ChannelStatus::UpdateAvailable;
+        if(channel.damaged) return ChannelStatus::Damaged;
         if(!channel.remoteEtag.empty() && channel.remoteEtag != channel.installed.etag) return ChannelStatus::UpdateAvailable;
         return ChannelStatus::Installed;
     }
 
-    // Asks the sources whether the chosen translations changed, without downloading them
-    void checkRemoteVersions ()
+    // Asks the sources whether the chosen translations changed, without downloading them, and checks that the
+    // installed files are still as installed (a game update may overwrite global.ini or user.cfg)
+    void checkChannels ()
     {
+        struct Integrity
+        {
+            std::filesystem::path installPath;
+            std::string folder;
+            std::string fileHash;
+        };
         std::map<std::string, std::vector<std::string>> urls;
+        std::map<std::string, Integrity> installed;
         std::map<std::string, std::string> checkedLanguage;
         for(const auto& [name, channel] : data.channels)
         {
-            if(channel.installPath.empty() || channel.language == Protocol::ENGLISH || !isAvailable(name, channel.language)) continue;
-            urls[name] = findLanguage(channel.language)->urls.at(name);
+            if(channel.installPath.empty() || channel.language == Protocol::ENGLISH) continue;
+            const auto* language = findLanguage(channel.language);
+            if(!language) continue;
             checkedLanguage[name] = channel.language;
+            if(isAvailable(name, channel.language)) urls[name] = language->urls.at(name);
+            if(channel.installed.language == channel.language) installed[name] = {channel.installPath, language->folder, channel.installed.fileHash};
         }
-        if(urls.empty()) return;
+        if(checkedLanguage.empty()) return;
 
         startJob(versionCheckJob,
-                 [this, urls, checkedLanguage]
+                 [this, urls, installed, checkedLanguage]
                  {
                      auto etags = updateManager.remoteVersions(urls);
+                     std::map<std::string, bool> damaged;
+                     for(const auto& [name, files] : installed)
+                         damaged[name] = !UpdateManager::isIntact(files.installPath, files.folder, files.fileHash);
                      queue.post(
-                         [this, etags, checkedLanguage]
+                         [this, etags, damaged, checkedLanguage]
                          {
-                             for(const auto& [name, etag] : etags)
+                             for(const auto& [name, language] : checkedLanguage)
                              {
                                  auto& channel = data.channels[name];
                                  // The user may have picked another language meanwhile
-                                 if(channel.language == checkedLanguage.at(name)) channel.remoteEtag = etag;
+                                 if(channel.language != language) continue;
+                                 if(etags.contains(name)) channel.remoteEtag = etags.at(name);
+                                 if(damaged.contains(name)) channel.damaged = damaged.at(name);
                              }
+                             publish();
+                         });
+                 });
+    }
+
+    // force: download even if the source reports "not modified", e.g. to repair a changed file
+    std::optional<UpdateManager::Job> makeUpdateJob (const std::string& name, const Database::ChannelData& channel, bool force)
+    {
+        if(channel.installPath.empty()) return std::nullopt;
+        // Offline or not offered right now: leave the installed translation alone instead of removing it
+        if(!isAvailable(name, channel.language))
+        {
+            LOG_DEBUG(lg) << "update - " << name << ": " << channel.language << " is not available, channel skipped";
+            return std::nullopt;
+        }
+
+        // Same language as installed and intact: the source can answer "not modified" instead of sending the file again
+        bool reuse = !force && !channel.damaged && channel.installed.language == channel.language;
+        UpdateManager::Job job{name, channel.installPath, channel.language, "", {}, managedFolders(), reuse ? channel.installed.etag : ""};
+        if(const auto* language = findLanguage(channel.language))
+        {
+            job.folder = language->folder;
+            job.urls = language->urls.at(name);
+        }
+        return job;
+    }
+
+    void runUpdate (std::vector<UpdateManager::Job> jobs, bool launchGame)
+    {
+        data.update = Protocol::UpdateStatus::Running;
+        startJob(updateJob,
+                 [this, jobs, launchGame, rsiLauncherPath = data.rsiLauncherPath]
+                 {
+                     auto results = updateManager.update(jobs);
+                     // Also after a partial failure, the other channels are still playable
+                     if(launchGame && !data.shuttingDown) updateManager.startGame(rsiLauncherPath);
+                     queue.post(
+                         [this, results, jobCount = jobs.size()]
+                         {
+                             bool success = results.size() == jobCount;
+                             for(const auto& result : results)
+                             {
+                                 success &= result.success;
+                                 auto& channel = data.channels[result.channel];
+                                 channel.lastUpdateFailed = !result.success;
+                                 if(!result.success) continue;
+                                 bool english = result.language == Protocol::ENGLISH;
+                                 channel.installed = {english ? "" : result.language, result.etag, result.fileHash};
+                                 channel.damaged = false;
+                                 if(channel.language == result.language) channel.remoteEtag = result.etag;
+                             }
+                             data.update = success ? Protocol::UpdateStatus::Succeeded : Protocol::UpdateStatus::Failed;
+                             saveSettings();
                              publish();
                          });
                  });
@@ -231,7 +302,7 @@ class BackEnd
                              for(const auto& language : data.languages)
                                  for(const auto& [channel, urls] : language.urls) data.channels[channel];
                              publish();
-                             checkRemoteVersions();
+                             checkChannels();
                          });
                  });
     }
@@ -248,8 +319,10 @@ class BackEnd
         if(auto* channel = findChannel(command.channel))
         {
             channel->language = command.language;
-            // The known version belonged to the previous language
+            // The known version and the last result belonged to the previous language
             channel->remoteEtag.clear();
+            channel->damaged = false;
+            channel->lastUpdateFailed = false;
         }
     }
 
@@ -261,6 +334,8 @@ class BackEnd
             // The record described the previous folder
             channel->installed = {};
             channel->remoteEtag.clear();
+            channel->damaged = false;
+            channel->lastUpdateFailed = false;
         }
     }
 
@@ -287,61 +362,32 @@ class BackEnd
             return;
         }
 
-        // The job works on a copy, the user may change settings while it runs
+        // The jobs work on copies, the user may change settings while they run
         std::vector<UpdateManager::Job> jobs;
         for(const auto& [name, channel] : data.channels)
-        {
-            if(channel.installPath.empty()) continue;
-            // Offline or not offered right now: leave the installed translation alone instead of removing it
-            if(!isAvailable(name, channel.language))
-            {
-                LOG_DEBUG(lg) << "startUpdate - " << name << ": " << channel.language << " is not available, channel skipped";
-                continue;
-            }
-
-            // Same language as installed: the source can answer "not modified" instead of sending the file again
-            std::string etag = channel.installed.language == channel.language ? channel.installed.etag : "";
-            UpdateManager::Job job{name, channel.installPath, channel.language, "", {}, managedFolders(), etag};
-            if(const auto* language = findLanguage(channel.language))
-            {
-                job.folder = language->folder;
-                job.urls = language->urls.at(name);
-            }
-            jobs.push_back(std::move(job));
-        }
+            if(auto job = makeUpdateJob(name, channel, false)) jobs.push_back(std::move(*job));
 
         if(jobs.empty())
         {
             LOG_DEBUG(lg) << "startUpdate - nothing to update";
             return;
         }
+        runUpdate(std::move(jobs), data.options.launchGameAfterUpdate);
+    }
 
-        data.update = Protocol::UpdateStatus::Running;
-        bool launchGame = data.options.launchGameAfterUpdate;
-        startJob(updateJob,
-                 [this, jobs, launchGame, rsiLauncherPath = data.rsiLauncherPath]
-                 {
-                     auto results = updateManager.update(jobs);
-                     // Also after a partial failure, the other channels are still playable
-                     if(launchGame && !data.shuttingDown) updateManager.startGame(rsiLauncherPath);
-                     queue.post(
-                         [this, results, jobCount = jobs.size()]
-                         {
-                             bool success = results.size() == jobCount;
-                             for(const auto& result : results)
-                             {
-                                 success &= result.success;
-                                 if(!result.success) continue;
-                                 auto& channel = data.channels[result.channel];
-                                 bool english = result.language == Protocol::ENGLISH;
-                                 channel.installed = {english ? "" : result.language, result.etag};
-                                 if(channel.language == result.language) channel.remoteEtag = result.etag;
-                             }
-                             data.update = success ? Protocol::UpdateStatus::Succeeded : Protocol::UpdateStatus::Failed;
-                             saveSettings();
-                             publish();
-                         });
-                 });
+    void handle (const Protocol::RepairChannel& command)
+    {
+        if(data.update == Protocol::UpdateStatus::Running)
+        {
+            LOG_DEBUG(lg) << "repairChannel - an update is running";
+            return;
+        }
+        const auto* channel = findChannel(command.channel);
+        if(!channel) return;
+        auto job = makeUpdateJob(command.channel, *channel, true);
+        if(!job) return;
+        // A repair never starts the game
+        runUpdate({std::move(*job)}, false);
     }
 
     void handle (const Protocol::CheckForUpdate&)

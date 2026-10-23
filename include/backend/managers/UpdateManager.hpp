@@ -2,6 +2,8 @@
 
 #include <curl/curl.h>
 #include <strings.h>
+#include <QCryptographicHash>
+#include <QFile>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QStringList>
@@ -291,7 +293,54 @@ class UpdateManager
         std::string language;
         bool success = false;
         std::string etag;
+        // SHA-256 of the installed global.ini, empty for English
+        std::string fileHash;
     };
+
+    static std::filesystem::path translationFile (const std::filesystem::path& installPath, const std::string& folder)
+    {
+        return installPath / "data" / "Localization" / folder / "global.ini";
+    }
+
+    static std::string fileSha256 (const std::filesystem::path& path)
+    {
+        QFile file(QString::fromStdString(path.string()));
+        QCryptographicHash hash(QCryptographicHash::Sha256);
+        if(!file.open(QIODevice::ReadOnly) || !hash.addData(&file)) return "";
+        return hash.result().toHex().toStdString();
+    }
+
+    // The game only uses the translation while user.cfg selects its folder
+    static bool userCfgSelects (const std::filesystem::path& installPath, const std::string& folder)
+    {
+        std::ifstream in(installPath / "user.cfg");
+        std::string line;
+        while(std::getline(in, line))
+        {
+            if(!line.empty() && line.back() == '\r') line.pop_back();
+            auto start = line.find_first_not_of(" \t");
+            if(start == std::string::npos) continue;
+            std::string key = line.substr(start, line.find_first_of(" \t=", start) - start);
+            std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+            if(key != "g_language") continue;
+            auto equals = line.find('=');
+            if(equals == std::string::npos) continue;
+            std::string value = line.substr(equals + 1);
+            value.erase(0, value.find_first_not_of(" \t"));
+            value.erase(value.find_last_not_of(" \t") + 1);
+            if(value == folder) return true;
+        }
+        return false;
+    }
+
+    // Whether the translation the launcher installed is still in place as installed
+    static bool isIntact (const std::filesystem::path& installPath, const std::string& folder, const std::string& fileHash)
+    {
+        auto file = translationFile(installPath, folder);
+        std::error_code ec;
+        if(!std::filesystem::exists(file, ec) || !userCfgSelects(installPath, folder)) return false;
+        return fileHash.empty() || fileSha256(file) == fileHash;
+    }
 
     UpdateManager (const std::atomic<bool>& shuttingDown)
         : lg("UpdateManager")
@@ -322,6 +371,7 @@ class UpdateManager
                     continue;
                 }
                 result.etag = download.etag;
+                result.fileHash = fileSha256(translationFile(job.installPath, job.folder));
             }
             removeTranslations(job.installPath, job.managedFolders, job.folder);
             patchUserCfg(job.installPath / "user.cfg", job.folder);

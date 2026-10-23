@@ -80,6 +80,7 @@ class BackendBridge : public QObject
     }
 
     Q_INVOKABLE void startUpdate () { backEnd.execute(Protocol::StartUpdate{}); }
+    Q_INVOKABLE void repairChannel (const QString& channel) { backEnd.execute(Protocol::RepairChannel{.channel = channel.toStdString()}); }
     Q_INVOKABLE void autoSearch () { backEnd.execute(Protocol::AutoSearch{}); }
     Q_INVOKABLE void checkForUpdate () { backEnd.execute(Protocol::CheckForUpdate{}); }
     Q_INVOKABLE void installUpdate () { backEnd.execute(Protocol::InstallUpdate{}); }

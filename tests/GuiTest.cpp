@@ -295,6 +295,36 @@ class GuiTest : public QObject
         QTRY_VERIFY(!dialog->property("visible").toBool());
         qunsetenv("APPIMAGE");
     }
+
+    void repairButtonRestoresTheTranslation ()
+    {
+        // LIVE got German in runUpdate(); something overwrites it
+        auto ini = std::filesystem::path(liveDir.path().toStdString()) / "data/Localization/german_(germany)/global.ini";
+        QVERIFY(std::filesystem::exists(ini));
+        std::ofstream(ini) << "from the game\n";
+
+        // Repeater delegates only hang in the visual tree, so walk that to the LIVE row and its button
+        std::function<QQuickItem*(QQuickItem*, const char*)> find = [&] (QQuickItem* item, const char* name) -> QQuickItem*
+        {
+            if(item->objectName() == name && item->isVisible()) return item;
+            for(auto* child : item->childItems())
+                if(auto* found = find(child, name)) return found;
+            return nullptr;
+        };
+        QQuickItem* liveRow = nullptr;
+        std::function<void(QQuickItem*)> findRow = [&] (QQuickItem* item)
+        {
+            if(!liveRow && item->property("channel").toMap().value("name") == "LIVE") liveRow = item;
+            for(auto* child : item->childItems()) findRow(child);
+        };
+        findRow(window->contentItem());
+        QVERIFY(liveRow);
+        auto* repair = find(liveRow, "repairButton");
+        QVERIFY(repair);
+        QPointF center = repair->mapToScene(QPointF(repair->width() / 2, repair->height() / 2));
+        QTest::mouseClick(window, Qt::LeftButton, {}, center.toPoint());
+        QTRY_COMPARE_WITH_TIMEOUT(QByteArray::fromStdString(readFile(ini)), TRANSLATION, 30000);
+    }
 };
 
 QTEST_MAIN(GuiTest)

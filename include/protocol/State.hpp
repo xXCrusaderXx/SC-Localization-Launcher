@@ -73,13 +73,19 @@ enum class ChannelStatus
     // The chosen translation is installed and no newer version is known
     Installed,
     // A newer version exists, or the installed language differs from the chosen one
-    UpdateAvailable
+    UpdateAvailable,
+    // The installed global.ini or the language line in user.cfg was changed, e.g. by a game update
+    Damaged,
+    // The last update of this channel failed
+    Failed
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(ChannelStatus, {{ChannelStatus::NoPath, "noPath"},
                                              {ChannelStatus::NotInstalled, "notInstalled"},
                                              {ChannelStatus::Installed, "installed"},
-                                             {ChannelStatus::UpdateAvailable, "updateAvailable"}})
+                                             {ChannelStatus::UpdateAvailable, "updateAvailable"},
+                                             {ChannelStatus::Damaged, "damaged"},
+                                             {ChannelStatus::Failed, "failed"}})
 
 struct Channel
 {
