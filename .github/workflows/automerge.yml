@@ -1,8 +1,10 @@
 name: Auto-merge
 
 # Turns on GitHub auto-merge for trusted PRs into dev. GitHub then merges them by
-# itself once the branch ruleset is satisfied (required checks green, branch up
-# to date). Nothing is merged before that.
+# itself once the branch ruleset is satisfied (required checks green). Nothing is
+# merged before that. Feature PRs are squashed into one commit, so dev stays a
+# straight line; the automatic back-merge of main keeps a merge commit, otherwise
+# dev would not contain main and every release would conflict.
 #
 # Trusted: PRs opened by the repository owner, members or collaborators, and
 # Dependabot minor/patch updates. Everything else (fork PRs, major Dependabot
@@ -39,9 +41,10 @@ jobs:
         if: env.IS_DEPENDABOT == 'true'
         uses: dependabot/fetch-metadata@v3
 
-      - name: Enable auto-merge (merge commit) for trusted PRs
+      - name: Enable auto-merge for trusted PRs
         env:
           UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           case "$ASSOCIATION" in
             OWNER|MEMBER|COLLABORATOR) trusted=true ;;
@@ -55,4 +58,6 @@ jobs:
             echo "::notice::Not enabling auto-merge (author association $ASSOCIATION). A maintainer reviews and merges this PR."
             exit 0
           fi
-          gh pr merge --auto --merge "$PR_URL"
+          method=--squash
+          case "$HEAD_REF" in back-merge/*) method=--merge ;; esac
+          gh pr merge --auto "$method" "$PR_URL"
