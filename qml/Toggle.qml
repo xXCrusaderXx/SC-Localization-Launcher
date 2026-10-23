@@ -49,26 +49,36 @@ Switch {
     }
 
     contentItem: Item {
-        implicitWidth: textColumn.implicitWidth + control.indicator.width + 12
+        // From the unwrapped texts, not from textColumn: its width follows this item's width
+        implicitWidth: textColumn.x + Math.max(label.implicitWidth + (badgeBox.visible ? badgeBox.width + 8 : 0), descriptionText.visible ? descriptionText.implicitWidth : 0)
         implicitHeight: Math.max(textColumn.implicitHeight, control.indicator.implicitHeight)
 
+        // Texts wrap when the switch gets less than its implicit width (e.g. in a layout, or with wide fonts)
         Column {
             id: textColumn
 
             x: control.indicator.width + 12
+            width: parent.width - x
             anchors.verticalCenter: parent.verticalCenter
             spacing: 2
 
             Row {
+                width: parent.width
                 spacing: 8
 
                 Text {
+                    id: label
+
+                    width: Math.min(implicitWidth, parent.width - (badgeBox.visible ? badgeBox.width + parent.spacing : 0))
                     text: control.text
                     color: Theme.text
                     font.pixelSize: 13
+                    wrapMode: Text.WordWrap
                 }
 
                 Rectangle {
+                    id: badgeBox
+
                     visible: control.comingSoon
                     anchors.verticalCenter: parent.verticalCenter
                     width: badge.implicitWidth + 12
@@ -90,8 +100,12 @@ Switch {
             }
 
             Text {
+                id: descriptionText
+
+                width: parent.width
                 visible: control.description !== ""
                 text: control.description
+                wrapMode: Text.WordWrap
                 color: Theme.muted
                 font.pixelSize: 11
             }

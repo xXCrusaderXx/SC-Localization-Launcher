@@ -44,6 +44,6 @@ foreach(test BackendTest SingleInstanceTest GuiTest)
   set(test_home ${CMAKE_CURRENT_BINARY_DIR}/home-${test})
   set_tests_properties(${test} PROPERTIES
     TIMEOUT 120
-    ENVIRONMENT "HOME=${test_home};XDG_CONFIG_HOME=${test_home}/.config;XDG_CACHE_HOME=${test_home}/.cache;XDG_STATE_HOME=${test_home}/.local/state;PATH=/nonexistent;QT_QPA_PLATFORM=offscreen;QT_FORCE_STDERR_LOGGING=1;LANGUAGE=en;LC_ALL=C.UTF-8"
+    ENVIRONMENT "SC_TEST_HOME=${test_home};HOME=${test_home};XDG_CONFIG_HOME=${test_home}/.config;XDG_CACHE_HOME=${test_home}/.cache;XDG_STATE_HOME=${test_home}/.local/state;PATH=/nonexistent;QT_QPA_PLATFORM=offscreen;QT_FORCE_STDERR_LOGGING=1;LANGUAGE=en;LC_ALL=C.UTF-8"
   )
 endforeach()

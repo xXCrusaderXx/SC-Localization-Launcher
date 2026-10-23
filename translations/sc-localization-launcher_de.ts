@@ -93,57 +93,79 @@
 <context>
     <name>Main</name>
     <message>
-        <location filename="../qml/Main.qml" line="106"/>
+        <location filename="../qml/Main.qml" line="108"/>
         <source>COMMUNITY TRANSLATIONS FOR LINUX</source>
         <translation>COMMUNITY-ÜBERSETZUNGEN FÜR LINUX</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="173"/>
+        <location filename="../qml/Main.qml" line="175"/>
         <source>GAME CHANNELS</source>
         <translation>SPIELVERSIONEN</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="185"/>
+        <location filename="../qml/Main.qml" line="187"/>
+        <location filename="../qml/Main.qml" line="294"/>
         <source>Searching …</source>
         <translation>Suche läuft …</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="185"/>
+        <location filename="../qml/Main.qml" line="187"/>
+        <location filename="../qml/Main.qml" line="294"/>
         <source>Search automatically</source>
         <translation>Automatisch suchen</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="238"/>
+        <location filename="../qml/Main.qml" line="237"/>
+        <source>Searching for Star Citizen …</source>
+        <translation>Suche nach Star Citizen …</translation>
+    </message>
+    <message>
+        <location filename="../qml/Main.qml" line="237"/>
+        <source>No Star Citizen installation found yet</source>
+        <translation>Noch keine Star Citizen Installation gefunden</translation>
+    </message>
+    <message>
+        <location filename="../qml/Main.qml" line="246"/>
+        <source>Search your drives automatically, or add the game folder of a channel in the settings.</source>
+        <translation>Durchsuche deine Laufwerke automatisch oder trage den Spielordner eines Kanals in den Einstellungen ein.</translation>
+    </message>
+    <message>
+        <location filename="../qml/Main.qml" line="299"/>
+        <source>Open settings</source>
+        <translation>Einstellungen öffnen</translation>
+    </message>
+    <message>
+        <location filename="../qml/Main.qml" line="332"/>
         <source>Start Star Citizen afterwards</source>
         <translation>Star Citizen danach starten</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="268"/>
+        <location filename="../qml/Main.qml" line="362"/>
         <source>Downloading translations …</source>
         <translation>Übersetzungen werden heruntergeladen …</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="268"/>
+        <location filename="../qml/Main.qml" line="362"/>
         <source>Searching for Star Citizen installations …</source>
         <translation>Suche nach Star-Citizen-Installationen …</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="268"/>
+        <location filename="../qml/Main.qml" line="362"/>
         <source>Translations updated</source>
         <translation>Übersetzungen aktualisiert</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="268"/>
+        <location filename="../qml/Main.qml" line="362"/>
         <source>Ready</source>
         <translation>Bereit</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="268"/>
+        <location filename="../qml/Main.qml" line="362"/>
         <source>Choose a game folder or use the automatic search</source>
         <translation>Wähle einen Spielordner oder nutze die automatische Suche</translation>
     </message>
     <message numerus="yes">
-        <location filename="../qml/Main.qml" line="268"/>
+        <location filename="../qml/Main.qml" line="362"/>
         <source>%n channel(s) need an update</source>
         <translation>
             <numerusform>%n Kanal braucht ein Update</numerusform>
@@ -151,37 +173,37 @@
         </translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="268"/>
+        <location filename="../qml/Main.qml" line="362"/>
         <source>Update failed. &lt;a href=&quot;log&quot;&gt;Open the log&lt;/a&gt;</source>
-        <translation>Update fehlgeschlagen. &lt;a href="log"&gt;Log öffnen&lt;/a&gt;</translation>
+        <translation>Update fehlgeschlagen. &lt;a href=&quot;log&quot;&gt;Log öffnen&lt;/a&gt;</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="330"/>
+        <location filename="../qml/Main.qml" line="424"/>
         <source>Updating …</source>
         <translation>Aktualisiere …</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="330"/>
+        <location filename="../qml/Main.qml" line="424"/>
         <source>No game folder set</source>
         <translation>Kein Spielordner gesetzt</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="330"/>
+        <location filename="../qml/Main.qml" line="424"/>
         <source>Update &amp; start</source>
         <translation>Aktualisieren &amp; starten</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="330"/>
+        <location filename="../qml/Main.qml" line="424"/>
         <source>Update translations</source>
         <translation>Übersetzungen aktualisieren</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="384"/>
+        <location filename="../qml/Main.qml" line="478"/>
         <source>RSI Launcher folder</source>
         <translation>Ordner des RSI Launchers</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="384"/>
+        <location filename="../qml/Main.qml" line="478"/>
         <source>Install folder for %1</source>
         <translation>Installationsordner für %1</translation>
     </message>
@@ -207,63 +229,63 @@
         <translation>VERHALTEN</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="126"/>
+        <location filename="../qml/SettingsPanel.qml" line="130"/>
         <source>Start Star Citizen after the update</source>
         <translation>Star Citizen nach dem Update starten</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="127"/>
+        <location filename="../qml/SettingsPanel.qml" line="131"/>
         <source>Starts through the LUG script or Lutris</source>
         <translation>Startet über das LUG-Skript oder Lutris</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="133"/>
+        <location filename="../qml/SettingsPanel.qml" line="139"/>
         <source>Check for launcher updates on start</source>
         <translation>Beim Start nach Launcher-Updates suchen</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="134"/>
+        <location filename="../qml/SettingsPanel.qml" line="140"/>
         <source>Asks GitHub for a newer version of this launcher</source>
         <translation>Fragt bei GitHub nach einer neueren Version dieses Launchers</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="268"/>
+        <location filename="../qml/SettingsPanel.qml" line="277"/>
         <source>HELP</source>
         <translation>HILFE</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="276"/>
+        <location filename="../qml/SettingsPanel.qml" line="285"/>
         <source>Log files</source>
         <translation>Log-Dateien</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="145"/>
+        <location filename="../qml/SettingsPanel.qml" line="152"/>
         <source>INSTALLATIONS</source>
         <translation>INSTALLATIONEN</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="154"/>
+        <location filename="../qml/SettingsPanel.qml" line="161"/>
         <source>Searching …</source>
         <translation>Suche läuft …</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="154"/>
+        <location filename="../qml/SettingsPanel.qml" line="161"/>
         <source>Search automatically</source>
         <translation>Automatisch suchen</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="200"/>
+        <location filename="../qml/SettingsPanel.qml" line="208"/>
         <source>TRANSLATIONS</source>
         <translation>ÜBERSETZUNGEN</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="243"/>
+        <location filename="../qml/SettingsPanel.qml" line="252"/>
         <source>%1 by %2</source>
         <translation>%1 von %2</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="254"/>
-        <location filename="../qml/SettingsPanel.qml" line="254"/>
+        <location filename="../qml/SettingsPanel.qml" line="263"/>
+        <location filename="../qml/SettingsPanel.qml" line="263"/>
         <source>License: %1</source>
         <translation>Lizenz: %1</translation>
     </message>
@@ -271,7 +293,7 @@
 <context>
     <name>Toggle</name>
     <message>
-        <location filename="../qml/Toggle.qml" line="83"/>
+        <location filename="../qml/Toggle.qml" line="93"/>
         <source>SOON</source>
         <translation>BALD</translation>
     </message>
