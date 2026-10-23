@@ -1,6 +1,7 @@
 name: Milestone release
 
-# Closing a roadmap milestone named "vX.Y.Z – Name" publishes release vX.Y.Z.
+# Closing a roadmap milestone named "vX.Y.Z – Name" publishes release vX.Y.Z
+# from main (merge dev into main first).
 # The milestone's closed issues and merged PRs become the release notes.
 # See ROADMAP.md.
 on:
@@ -86,13 +87,38 @@ jobs:
           { echo "notes<<$delim"; cat notes.md; echo "$delim"; } >> "$GITHUB_OUTPUT"
 
   release:
-    name: release
+    name: start release on main
     needs: prepare
     if: needs.prepare.outputs.version != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
     permissions:
-      contents: write
-    uses: ./.github/workflows/release.yml
-    with:
-      version: ${{ needs.prepare.outputs.version }}
-      notes: ${{ needs.prepare.outputs.notes }}
-    secrets: inherit
+      actions: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+      NOTES: ${{ needs.prepare.outputs.notes }}
+    steps:
+      # The milestone event runs on the default branch (dev). Releases are built
+      # and tagged from main, so the Release workflow is started on main.
+      - name: Run the Release workflow on main
+        run: |
+          set -euo pipefail
+          started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gh workflow run release.yml --ref main -f version="$VERSION" -f notes="$NOTES"
+          # gh workflow run returns at once; find the run it started and follow it,
+          # so this job fails when the release fails.
+          run=""
+          for _ in $(seq 1 30); do
+            run="$(gh run list --workflow release.yml --branch main --event workflow_dispatch --limit 5 \
+                     --json databaseId,createdAt --jq "[.[] | select(.createdAt >= \"$started\")][0].databaseId // empty")"
+            [ -n "$run" ] && break
+            sleep 10
+          done
+          if [ -z "$run" ]; then
+            echo "::error::The Release run on main did not start."
+            exit 1
+          fi
+          echo "Release run: https://github.com/$GH_REPO/actions/runs/$run"
+          gh run watch "$run" --exit-status --interval 60

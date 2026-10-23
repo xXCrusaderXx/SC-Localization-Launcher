@@ -18,7 +18,7 @@ This project uses the [Developer Certificate of Origin](https://developercertifi
 git commit -s -m "Your message"
 ```
 
-**Per PR:** put one `Signed-off-by: Your Name <your@email>` line in the pull request description, or tick the sign-off box in the PR template. PRs are squash-merged, so that one sign-off covers the whole PR.
+**Per PR:** put one `Signed-off-by: Your Name <your@email>` line in the pull request description, or tick the sign-off box in the PR template. That one sign-off covers all commits of the PR.
 
 The `DCO` check enforces this. PRs opened from the repository owner's account are exempt: the owner certifies them as a standing decision. Use your real identity and a reachable email address. Never sign off for someone else.
 
@@ -46,7 +46,7 @@ By contributing, you agree that your contribution is licensed under the [GNU Gen
 
 ### Adding a game language
 
-Game languages are listed in [`languages.json`](languages.json) in the repository root. The launcher downloads this file from `main` (with a cached and a built-in copy as fallback), so **a merged language reaches users without a new release**.
+Game languages are listed in [`languages.json`](languages.json) in the repository root. The launcher downloads this file from `main` (with a cached and a built-in copy as fallback). A language merged into `dev` therefore reaches users when `dev` is merged into `main` at the next release point, **without a launcher update**.
 
 ```json
 {
@@ -81,6 +81,7 @@ Game languages are listed in [`languages.json`](languages.json) in the repositor
 | `name` | Written in the language itself (`Français`, `Español`). Shown as-is in the language picker. |
 | `folder` | The game's localization folder that the `global.ini` goes into and that `g_language` in `user.cfg` points to, e.g. `french_(france)`, `spanish_(spain)`, `italian_(italy)`, `polish_(poland)`, `portuguese_(brazil)`, `german_(germany)`. Check that the game accepts the folder name. |
 | `credit` | Required. Shown under the language in the picker and in the settings. `project`, `authors` and `license` must not be empty, `url` (the project page) must use HTTPS, `licenseUrl` is optional and must use HTTPS if set. |
+| `notices` | Optional. A short notice per channel, written in the language itself, e.g. `{"LIVE": "Übersetzung wird vorbereitet", "*": "Beta"}`. The key is a channel name or `*` for all channels; a channel's own entry wins over `*`. Shown as plain text on one line, cut to 120 characters. |
 | `source` | Either `channels`: per channel (`LIVE`, `HOTFIX`, `PTU`, `TECH-PREVIEW`, `EPTU`) a list of HTTPS URLs, primary first, then fallbacks; channels that are missing are not offered for this language. Or `channelList` + `server`: a channel list in the format the German project uses; the launcher takes `<server>` and `<server>_fallback` of each channel and respects its `active` flag. |
 
 Rules for a new language:
@@ -108,16 +109,26 @@ The launcher's own interface is English by default and follows the system langua
 ## Workflow
 
 1. Open an issue first for larger changes, so the approach can be agreed on before you invest time.
-2. Fork the repository and create a branch from `main` (`feat/…`, `fix/…`, `docs/…`, `chore/…`).
-3. Keep each PR focused on one topic. Use a [Conventional Commits](https://www.conventionalcommits.org/)-style PR title, for example `fix: detect PTU folder with custom library path`. It becomes the squash-commit message.
-4. Open a pull request against `main` and fill in the template.
+2. Fork the repository and create a branch from `dev` (`feat/…`, `fix/…`, `docs/…`, `chore/…`).
+3. Keep each PR focused on one topic. Use a [Conventional Commits](https://www.conventionalcommits.org/)-style PR title, for example `fix: detect PTU folder with custom library path`. It becomes the title of the merge commit and the changelog entry.
+4. Open a pull request against `dev` and fill in the template.
+
+### Branches
+
+| Branch | Purpose |
+| ------ | ------- |
+| `main` | Released code only. Changes come exclusively from `dev`, merged by a maintainer at a release point. |
+| `dev` | Integration branch and default branch. All feature and fix PRs go here. |
+| `feat/…`, `fix/…`, `docs/…`, `chore/…` | One topic each, branched from `dev`, deleted after the merge. |
+
+PRs are merged with a merge commit, never squashed or rebased, so the history shows which commits belong to which branch. After `dev` is merged into `main`, work simply continues on `dev`.
 
 ### How a PR gets merged
 
-A PR can only be merged when all required checks are green (`format`, `build (ubuntu)`, `build (arch)` including the tests, `DCO sign-off`). The branch does not need to be up to date with `main`; if two PRs that pass on their own break `main` together, the CI run on `main` shows it and a small follow-up PR fixes it. PRs are always squash-merged.
+A PR can only be merged when all required checks are green (`format`, `build (ubuntu)`, `build (arch)` including the tests, `DCO sign-off`). The branch does not need to be up to date with `dev`; if two PRs that pass on their own break `dev` together, the CI run on `dev` shows it and a small follow-up PR fixes it.
 
 - **Contributors' PRs:** a maintainer reviews the change. When it is good, the maintainer merges it, or enables auto-merge so GitHub merges it as soon as the checks are green. Nothing from outside is merged without a maintainer looking at it.
-- **Maintainers' own PRs:** auto-merge is enabled automatically. Ticking the sign-off box in the PR description is the maintainer's one action; the PR merges once the checks are green.
+- **Maintainers' own PRs into `dev`:** auto-merge is enabled automatically. Ticking the sign-off box in the PR description is the maintainer's one action; the PR merges once the checks are green.
 - **Dependabot:** minor and patch updates of GitHub Actions merge automatically once CI is green. Major updates wait for a maintainer.
 
 A PR with a merge conflict needs a rebase by its author.
@@ -132,7 +143,7 @@ Run the same checks as CI before you push:
 
 ```sh
 # Formatting of the lines you changed (.clang-format in the repository root)
-git fetch origin && git clang-format --diff origin/main
+git fetch origin && git clang-format --diff origin/dev
 
 # Build and test (the tests need no internet and never touch your settings)
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSC_BUILD_TESTS=ON
@@ -144,7 +155,7 @@ Optional: `.githooks/pre-push` stops a push when a commit's author or committer 
 
 Optional: `.githooks/post-merge` cleans up after every `git pull`: local branches whose PR was merged (remote branch gone) are deleted, together with their worktree if it has no changes. Enable it with `git config core.hooksPath .githooks` and `git config fetch.prune true`.
 
-CI checks only the lines your PR changes. To fix them in place, run `git clang-format origin/main`. Don't reformat code you didn't otherwise touch.
+CI checks only the lines your PR changes. To fix them in place, run `git clang-format origin/dev`. Don't reformat code you didn't otherwise touch.
 
 To check the AppImage, run `packaging/appimage/build-in-docker.sh`. It builds in Ubuntu 22.04, exactly like the release pipeline.
 
@@ -159,7 +170,7 @@ To check the AppImage, run `packaging/appimage/build-in-docker.sh`. It builds in
 ## Pull request checklist
 
 - [ ] Signed off (`git commit -s`, or one `Signed-off-by` line in the PR description).
-- [ ] `git clang-format --diff origin/main` reports no changes.
+- [ ] `git clang-format --diff origin/dev` reports no changes.
 - [ ] The project builds with `cmake --build build`, and `ctest --test-dir build` passes.
 - [ ] You tested the change by hand. Describe how in the PR.
 - [ ] No Star Citizen assets, translation files, or binaries are committed (see [LEGAL.md](LEGAL.md)).
@@ -169,7 +180,7 @@ To check the AppImage, run `packaging/appimage/build-in-docker.sh`. It builds in
 
 `CHANGELOG.md` is written by a maintainer once per release, from the titles of the merged PRs. Feature PRs don't edit it: with several PRs in flight it was the most frequent merge conflict.
 
-Releases follow the [roadmap](ROADMAP.md): every phase is a milestone named `vX.Y.Z – Name`. When a maintainer closes the milestone, the `Milestone release` workflow checks that all its issues are closed and runs the `Release` workflow for `X.Y.Z`. That workflow builds and tests every package and publishes GitHub release `vX.Y.Z`, with the milestone's issues and PRs as release notes. The version comes from the milestone title, so no version-bump commit is needed. Before closing a milestone, work through the [release checklist](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=release.yml).
+Releases follow the [roadmap](ROADMAP.md): every phase is a milestone named `vX.Y.Z – Name`. At a release point, a PR `dev` → `main` is opened and the maintainer merges it (merge commit, never automatic). When the maintainer then closes the milestone, the `Milestone release` workflow checks that all its issues are closed and runs the `Release` workflow for `X.Y.Z` on `main`. That workflow builds and tests every package and publishes GitHub release `vX.Y.Z`, with the milestone's issues and PRs as release notes. The version comes from the milestone title, so no version-bump commit is needed. Before closing a milestone, work through the [release checklist](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=release.yml).
 
 For a release outside a milestone, either run the `Release` workflow by hand with a version (without a version it is a dry run that builds and tests everything but publishes nothing), or set `SC_DEFAULT_VERSION` in `CMakeLists.txt` and push a matching tag `vX.Y.Z`. A version with a suffix (`0.6.0-rc.1`) is published as a pre-release.
 

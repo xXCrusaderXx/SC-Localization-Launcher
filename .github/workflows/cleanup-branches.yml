@@ -25,8 +25,8 @@ jobs:
     steps:
       - name: Delete the head branch
         run: |
-          if [ "$BRANCH" = "$DEFAULT_BRANCH" ]; then
-            echo "::notice::Head branch is the default branch, nothing to delete."
+          if [ "$BRANCH" = "$DEFAULT_BRANCH" ] || [ "$BRANCH" = "dev" ] || [ "$BRANCH" = "main" ]; then
+            echo "::notice::$BRANCH is a long-lived branch, kept."
             exit 0
           fi
           # Another open PR may still build on this branch.
