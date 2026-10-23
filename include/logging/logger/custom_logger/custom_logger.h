@@ -24,12 +24,14 @@ class CustomLogger : public LoggerBase
     CustomLogger& operator=(const CustomLogger&) = delete;
 
     std::filesystem::path logPath = PATHS::LOGPATH_USER / "logs";
-    int maxFiles = 5;
+    int maxFiles = 10;
 
     void cleanOffOldLogs ();
     bool init () override;
 
     std::ofstream m_LogFile;
+    // The file is created with the first line, so a start that only hands over to the running launcher leaves none
+    std::once_flag m_FileOpened;
 
    public:
     CustomLogger ();
