@@ -67,22 +67,37 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           TITLE: ${{ github.event.milestone.title }}
-          DESCRIPTION: ${{ github.event.milestone.description }}
+          VERSION: ${{ steps.check.outputs.version }}
         run: |
           set -euo pipefail
-          {
-            echo "## $TITLE"
-            if [ -n "$DESCRIPTION" ]; then echo; echo "$DESCRIPTION"; fi
-            echo
-            echo "### Features and fixes"
+          # The changelog section of this version on main is the release text;
+          # dev has been merged into main before the milestone is closed.
+          gh api "repos/$GH_REPO/contents/CHANGELOG.md?ref=main" --jq .content | base64 -d > CHANGELOG.md
+          awk -v v="$VERSION" '
+              index($0, "## [" v "]") == 1 { found = 1; next }
+              found && /^## \[/ { exit }
+              found && !/^\[[^]]*\]: / { print }' CHANGELOG.md > notes.md
+          if [ -z "$(tr -d '[:space:]' < notes.md)" ]; then
+            echo "::warning::CHANGELOG.md on main has no section for $VERSION; listing the milestone's issues instead."
             gh issue list --milestone "$TITLE" --state closed --limit 500 \
-              --json number,title --jq '.[] | "- \(.title) (#\(.number))"'
-            echo
-            echo "### Merged pull requests"
-            gh pr list --search "milestone:\"$TITLE\" is:merged" --state merged --limit 500 \
-              --json number,title,author --jq '.[] | "- \(.title) (#\(.number), @\(.author.login))"'
-          } > notes.md
-          # Random delimiter: issue titles are user-controlled and must not end the block.
+              --json number,title --jq '.[] | "- \(.title) (#\(.number))"' > notes.md
+          fi
+          key="$(sed -n 2p packaging/minisign.pub 2>/dev/null || true)"
+          if [ -z "$key" ]; then
+            key="$(gh api "repos/$GH_REPO/contents/packaging/minisign.pub?ref=main" --jq .content | base64 -d | sed -n 2p)"
+          fi
+          cat >> notes.md <<NOTES
+
+          ### Verify the download
+
+          \`SHA256SUMS\` is signed with minisign (public key in [\`packaging/minisign.pub\`](https://github.com/$GH_REPO/blob/main/packaging/minisign.pub)):
+
+          \`\`\`sh
+          minisign -Vm SHA256SUMS -P $key
+          sha256sum -c --ignore-missing SHA256SUMS
+          \`\`\`
+          NOTES
+          # Random delimiter: the text is user-controlled and must not end the block.
           delim="NOTES_$(openssl rand -hex 16)"
           { echo "notes<<$delim"; cat notes.md; echo "$delim"; } >> "$GITHUB_OUTPUT"
 
