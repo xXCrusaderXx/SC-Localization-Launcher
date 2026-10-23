@@ -114,13 +114,13 @@ The launcher's own interface is English by default and follows the system langua
 
 ### How a PR gets merged
 
-A PR can only be merged when all required checks are green (`format`, `build (ubuntu)`, `build (arch)` including the tests, `DCO sign-off`) and the branch is up to date with `main`. PRs are always squash-merged.
+A PR can only be merged when all required checks are green (`format`, `build (ubuntu)`, `build (arch)` including the tests, `DCO sign-off`). The branch does not need to be up to date with `main`; if two PRs that pass on their own break `main` together, the CI run on `main` shows it and a small follow-up PR fixes it. PRs are always squash-merged.
 
 - **Contributors' PRs:** a maintainer reviews the change. When it is good, the maintainer merges it, or enables auto-merge so GitHub merges it as soon as the checks are green. Nothing from outside is merged without a maintainer looking at it.
 - **Maintainers' own PRs:** auto-merge is enabled automatically. Ticking the sign-off box in the PR description is the maintainer's one action; the PR merges once the checks are green.
 - **Dependabot:** minor and patch updates of GitHub Actions merge automatically once CI is green. Major updates wait for a maintainer.
 
-After every merge, the `Update PR branches` workflow brings the other open auto-merge PRs up to date with `main`, so they don't need a manual "Update branch". A PR with a merge conflict is skipped and needs a rebase by its author.
+A PR with a merge conflict needs a rebase by its author.
 
 Draft PRs are never merged; mark the PR "Ready for review" when you are done.
 
@@ -163,9 +163,11 @@ To check the AppImage, run `packaging/appimage/build-in-docker.sh`. It builds in
 - [ ] The project builds with `cmake --build build`, and `ctest --test-dir build` passes.
 - [ ] You tested the change by hand. Describe how in the PR.
 - [ ] No Star Citizen assets, translation files, or binaries are committed (see [LEGAL.md](LEGAL.md)).
-- [ ] User-visible changes are noted under `Unreleased` in [CHANGELOG.md](CHANGELOG.md).
+- [ ] The PR title describes the user-visible change (it becomes the changelog entry). Don't edit [CHANGELOG.md](CHANGELOG.md) in feature PRs.
 
 ## Releases
+
+`CHANGELOG.md` is written by a maintainer once per release, from the titles of the merged PRs. Feature PRs don't edit it: with several PRs in flight it was the most frequent merge conflict.
 
 Releases follow the [roadmap](ROADMAP.md): every phase is a milestone named `vX.Y.Z – Name`. When a maintainer closes the milestone, the `Milestone release` workflow checks that all its issues are closed and runs the `Release` workflow for `X.Y.Z`. That workflow builds and tests every package and publishes GitHub release `vX.Y.Z`, with the milestone's issues and PRs as release notes. The version comes from the milestone title, so no version-bump commit is needed. Before closing a milestone, work through the [release checklist](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=release.yml).
 

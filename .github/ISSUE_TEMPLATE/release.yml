@@ -16,7 +16,7 @@ body:
       label: Before closing the milestone
       options:
         - label: Every other issue and PR of the milestone is closed or moved to the next milestone.
-        - label: "`CHANGELOG.md`: `Unreleased` renamed to `[X.Y.Z] - YYYY-MM-DD`, with a fresh empty `Unreleased` section above it."
+        - label: "`CHANGELOG.md`: a `[X.Y.Z] - YYYY-MM-DD` section written from the merged PRs of the milestone, with a fresh empty `Unreleased` section above it."
         - label: "`ROADMAP.md` reflects what was actually delivered."
         - label: CI on `main` is green.
         - label: A manual run of the `Release` workflow (dry run) built and tested all packages.
