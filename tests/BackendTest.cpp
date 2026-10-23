@@ -455,6 +455,62 @@ class BackendTest : public QObject
         QVERIFY(!SelfUpdateManager::isNewer("nightly", "0.6.0"));
     }
 
+    // os-release values of real distributions
+    void picksThePackageForDerivatives ()
+    {
+        using OS = std::map<std::string, std::string>;
+        auto variant = [] (const std::string& type, const OS& os, bool imageBased = false)
+        { return SelfUpdateManager::packageVariant(type, os, imageBased); };
+
+        QCOMPARE(variant("deb", OS{{"ID", "ubuntu"}, {"VERSION_ID", "24.04"}, {"UBUNTU_CODENAME", "noble"}}), std::string("ubuntu24.04"));
+        // Linux Mint 22, Pop!_OS 24.04
+        QCOMPARE(variant("deb", OS{{"ID", "linuxmint"}, {"ID_LIKE", "ubuntu debian"}, {"VERSION_ID", "22"}, {"UBUNTU_CODENAME", "noble"}}),
+                 std::string("ubuntu24.04"));
+        QCOMPARE(variant("deb", OS{{"ID", "pop"}, {"ID_LIKE", "ubuntu debian"}, {"VERSION_ID", "24.04"}, {"UBUNTU_CODENAME", "noble"}}),
+                 std::string("ubuntu24.04"));
+        // Ubuntu 25.04 and Mint 21 (Ubuntu 22.04) have other library versions
+        QCOMPARE(variant("deb", OS{{"ID", "ubuntu"}, {"VERSION_ID", "25.04"}, {"UBUNTU_CODENAME", "plucky"}}), std::string());
+        QCOMPARE(variant("deb", OS{{"ID", "linuxmint"}, {"ID_LIKE", "ubuntu debian"}, {"UBUNTU_CODENAME", "jammy"}}), std::string());
+
+        QCOMPARE(variant("deb", OS{{"ID", "debian"}, {"VERSION_ID", "12"}, {"VERSION_CODENAME", "bookworm"}}), std::string("debian12"));
+        // LMDE 6 names its Debian base separately
+        QCOMPARE(variant("deb", OS{{"ID", "linuxmint"}, {"ID_LIKE", "debian"}, {"VERSION_CODENAME", "faye"}, {"DEBIAN_CODENAME", "bookworm"}}),
+                 std::string("debian12"));
+        QCOMPARE(variant("deb", OS{{"ID", "debian"}, {"VERSION_ID", "13"}, {"VERSION_CODENAME", "trixie"}}), std::string());
+
+        QCOMPARE(variant("rpm", OS{{"ID", "fedora"}, {"VERSION_ID", "42"}}), std::string("fedora"));
+        QCOMPARE(variant("rpm", OS{{"ID", "nobara"}, {"ID_LIKE", "rhel centos fedora"}}), std::string("fedora"));
+        // Fedora Atomic / Bazzite: no dnf install on an image-based system
+        QCOMPARE(variant("rpm", OS{{"ID", "fedora"}, {"VERSION_ID", "42"}}, true), std::string());
+        QCOMPARE(variant("rpm", OS{{"ID", "opensuse-tumbleweed"}, {"ID_LIKE", "opensuse suse"}}), std::string());
+
+        QCOMPARE(variant("arch", OS{{"ID", "cachyos"}, {"ID_LIKE", "arch"}}), std::string("arch"));
+        QCOMPARE(variant("source", OS{{"ID", "ubuntu"}, {"VERSION_ID", "24.04"}}), std::string());
+    }
+
+    // Output of `flatpak info` and `flatpak remotes --columns=name,url` with LC_ALL=C
+    void readsFlatpakInformation ()
+    {
+        std::string info =
+            "\nSC Localization Launcher - Community translations for Star Citizen on Linux\n\n"
+            "          ID: io.github.xXCrusaderXx.SCLocalizationLauncher\n"
+            "         Ref: app/io.github.xXCrusaderXx.SCLocalizationLauncher/x86_64/stable\n"
+            "     Version: 0.7.0\n"
+            "      Origin: sc-localization-launcher\n"
+            "Installation: user\n";
+        QCOMPARE(SelfUpdateManager::flatpakInfoField(info, "Version"), std::string("0.7.0"));
+        QCOMPARE(SelfUpdateManager::flatpakInfoField(info, "Installation"), std::string("user"));
+        QCOMPARE(SelfUpdateManager::flatpakInfoField(info, "Origin"), std::string("sc-localization-launcher"));
+        QCOMPARE(SelfUpdateManager::flatpakInfoField(info, "Missing"), std::string());
+
+        std::string remotes =
+            "flathub\thttps://dl.flathub.org/repo/\n"
+            "sc-localization-launcher\thttps://xxcrusaderxx.github.io/SC-Localization-Launcher/repo/\n";
+        QCOMPARE(SelfUpdateManager::flatpakRemoteUrl(remotes, "sc-localization-launcher"),
+                 std::string("https://xxcrusaderxx.github.io/SC-Localization-Launcher/repo/"));
+        QCOMPARE(SelfUpdateManager::flatpakRemoteUrl(remotes, "sclocalizationlauncher-origin"), std::string());
+    }
+
     void findsNewerLauncherRelease ()
     {
         QVERIFY(start());
