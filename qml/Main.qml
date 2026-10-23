@@ -12,6 +12,18 @@ ApplicationWindow {
     // The main page only lists channels with an install folder; all of them stay in the settings
     readonly property var visibleChannels: channels.filter(c => c.installPath !== "")
 
+    // Folders offered for an own source: the catalogue's, then the other languages Star Citizen knows
+    readonly property var localizationFolders: {
+        const folders = [];
+        for (const language of appState.languages || [])
+            if (language.folder && folders.indexOf(language.folder) < 0)
+                folders.push(language.folder);
+        for (const folder of ["german_(germany)", "french_(france)", "spanish_(spain)", "italian_(italy)", "polish_(poland)", "portuguese_(brazil)"])
+            if (folders.indexOf(folder) < 0)
+                folders.push(folder);
+        return folders;
+    }
+
     readonly property bool updateBusy: appState.update === "running"
     readonly property bool updateFailed: appState.update === "failed"
     readonly property bool updateReady: channels.some(c => c.installPath !== "")
@@ -215,6 +227,7 @@ ApplicationWindow {
                 onLanguagePicked: language => backend.setLanguage(channel.name, language)
                 onPathRequested: window.choosePath(channel.name)
                 onRepairRequested: backend.repairChannel(channel.name)
+                onCustomSourceRequested: customSourceDialog.openFor(channel.name, channel.custom, window.localizationFolders)
             }
         }
 
@@ -456,6 +469,16 @@ ApplicationWindow {
         appState: window.appState
         locked: window.updateBusy
         onPathChangeRequested: target => window.choosePath(target)
+    }
+
+    CustomSourceDialog {
+        id: customSourceDialog
+
+        onSaved: (url, folder) => {
+            backend.setCustomSource(channelName, url, folder);
+            backend.setLanguage(channelName, "custom");
+        }
+        onRemoved: backend.setCustomSource(channelName, "", "")
     }
 
     LauncherUpdateDialog {

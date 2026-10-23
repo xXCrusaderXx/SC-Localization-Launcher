@@ -94,6 +94,8 @@ set(SC_QML_FILES
   qml/ChannelRow.qml
   qml/LanguagePicker.qml
   qml/LauncherUpdateDialog.qml
+  qml/CustomSourceDialog.qml
+  qml/DialogButton.qml
   qml/IconButton.qml
   qml/PathRow.qml
   qml/SettingsPanel.qml

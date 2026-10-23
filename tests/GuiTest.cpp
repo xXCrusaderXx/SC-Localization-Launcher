@@ -29,11 +29,14 @@ class GuiTest : public QObject
 
     QQuickItem* findButton (const QString& text) const
     {
-        for(auto* item : window->contentItem()->findChildren<QQuickItem*>())
-            if(item->inherits("QQuickAbstractButton") && item->isVisible() && item->property("text") == text) return item;
+        // Popup contents hang below the window's root object, the rest below its content item
+        for(QObject* root : {static_cast<QObject*>(window->contentItem()), engine->rootObjects().first()})
+            for(auto* item : root->findChildren<QQuickItem*>())
+                if(item->inherits("QQuickAbstractButton") && item->isVisible() && item->property("text") == text) return item;
         return nullptr;
     }
 
+    // Not inside QTRY_*: those evaluate their expression once more after it succeeded, which would click twice
     bool clickButton (const QString& text)
     {
         QQuickItem* button = findButton(text);
@@ -286,7 +289,8 @@ class GuiTest : public QObject
         QTRY_VERIFY(dialog->property("opened").toBool());
 
         // The earlier check knew no package for this installation; checking again finds the signed AppImage
-        QTRY_VERIFY(clickButton("Check again"));
+        QTRY_VERIFY(findButton("Check again"));
+        QVERIFY(clickButton("Check again"));
         QTRY_VERIFY(findButton("Install update"));
         QVERIFY(clickButton("Install update"));
         QTRY_VERIFY_WITH_TIMEOUT(findButton("Restart now"), 30000);
@@ -326,6 +330,39 @@ class GuiTest : public QObject
         QPointF center = repair->mapToScene(QPointF(repair->width() / 2, repair->height() / 2));
         QTest::mouseClick(window, Qt::LeftButton, {}, center.toPoint());
         QTRY_COMPARE_WITH_TIMEOUT(QByteArray::fromStdString(readFile(ini)), TRANSLATION, 30000);
+    }
+
+    void ownSourceThroughTheDialog ()
+    {
+        // The dialog only accepts HTTPS; nothing is downloaded in this test
+        QString url = "https://example.org/test/global.ini";
+
+        // Open the LIVE picker (the topmost one) and choose the entry for an own source
+        QQuickItem* picker = languagePicker();
+        QVERIFY(picker);
+        QPointF center = picker->mapToScene(QPointF(picker->width() / 2, picker->height() / 2));
+        QTest::mouseClick(window, Qt::LeftButton, {}, center.toPoint());
+        QTRY_VERIFY(findText("Own source …"));
+        QVERIFY(click("Own source …"));
+
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("customSourceDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QCOMPARE(dialog->property("channelName").toString(), QString("LIVE"));
+
+        // The address field takes the keyboard focus when the dialog opens
+        auto* urlField = engine->rootObjects().first()->findChild<QQuickItem*>("customSourceUrl");
+        QVERIFY(urlField);
+        QTRY_VERIFY(urlField->hasActiveFocus());
+        // keyClicks() only exists for widgets
+        for(QChar character : url) QTest::keyClick(window, character.toLatin1());
+        QTRY_COMPARE(urlField->property("text").toString(), url);
+        QTRY_VERIFY(findButton("Save and use"));
+        QVERIFY(clickButton("Save and use"));
+        QTRY_COMPARE(channel("LIVE")["language"].toString(), QString("custom"));
+        QCOMPARE(channel("LIVE")["custom"].toMap()["url"].toString(), url);
+        QCOMPARE(channel("LIVE")["custom"].toMap()["folder"].toString(), QString("german_(germany)"));
+        QTRY_VERIFY(!dialog->property("visible").toBool());
     }
 };
 

@@ -4,6 +4,18 @@
 <context>
     <name>ChannelRow</name>
     <message>
+        <source>Own source</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Change own source …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Own source …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>No install path set</source>
         <translation type="unfinished"></translation>
     </message>
@@ -37,6 +49,37 @@
     </message>
     <message>
         <source>Repair</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>CustomSourceDialog</name>
+    <message>
+        <source>Own source for %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Link to a global.ini, e.g. a translation you are testing. Only use sources you trust: the file replaces the game texts.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Address (HTTPS)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Language folder in the game</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save and use</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
