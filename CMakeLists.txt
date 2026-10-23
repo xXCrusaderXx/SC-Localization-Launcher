@@ -173,7 +173,12 @@ endif()
 # so the AppImage runs without Qt installed. For broad glibc compatibility build it on an old
 # distro (the CI uses Ubuntu 22.04). At runtime paths.hpp finds the AppDir via $APPDIR.
 
-set(APPIMAGE_FILE ${CMAKE_BINARY_DIR}/${PROJECT_NAME}-x86_64.AppImage)
+# The final release name: the .zsync file refers to it, so the AppImage must not be renamed afterwards
+set(APPIMAGE_FILE ${CMAKE_BINARY_DIR}/${PROJECT_NAME}-${SC_FULL_VERSION}-x86_64.AppImage)
+# Lets AppImageUpdate and the launcher find newer releases; the pattern must match APPIMAGE_FILE
+set(SC_APPIMAGE_UPDATE_INFORMATION
+    "gh-releases-zsync|xXCrusaderXx|SC-Localization-Launcher|latest|${PROJECT_NAME}-*-x86_64.AppImage.zsync"
+    CACHE STRING "Update information embedded in the AppImage (empty: none)")
 
 # linuxdeploy-plugin-qt needs qmake; distro builds without it simply get no appimage target
 if(NOT TARGET Qt6::qmake)
@@ -233,6 +238,7 @@ else()
               EXTRA_PLATFORM_PLUGINS=${SC_WAYLAND_PLUGINS}
               EXTRA_QT_MODULES=waylandclient
               LDAI_OUTPUT=${APPIMAGE_FILE}
+              LDAI_UPDATE_INFORMATION=${SC_APPIMAGE_UPDATE_INFORMATION}
             ${LINUXDEPLOY}
               --appdir ${APPDIR}
               --executable $<TARGET_FILE:${SC_LAUNCHER_BINARY}>

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds the distributable AppImage locally, the same way the CI does.
-# Result: build-appimage/SC-Localization-Launcher-x86_64.AppImage
+# Result: build-appimage/SC-Localization-Launcher-<version>-x86_64.AppImage and its .zsync file
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
