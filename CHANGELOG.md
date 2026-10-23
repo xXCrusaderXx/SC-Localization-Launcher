@@ -29,6 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A missing or broken `settings.json` no longer stops the launcher, it starts with default settings instead.
 - Inside the Flatpak, Star Citizen is started on the host (`flatpak-spawn --host`).
 - A language drop-down per channel replaces the fixed language buttons.
+- The main page only lists channels with a game folder. Without any, it offers the automatic search and the settings; all channels stay configurable in the settings.
 - Translations are downloaded directly from the translation projects; the launcher no longer contacts the servers of other launchers.
 - Settings moved to `~/.config/sc-localization-launcher/` (migrated automatically from `~/SC-Deutsch-Launcher`), logs to `~/.local/state/sc-localization-launcher/logs/`.
 - The settings show the folder with the log files, and a failed update links straight to it.
@@ -36,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- Long option texts or install paths no longer push the settings panel wider than the window; the texts wrap and paths are shortened.
 - If a chosen language is temporarily not offered for a channel, updates skip that channel instead of removing the installed translation.
 - When switching languages, the previous language's folder is removed only after the new download succeeded.
 - Only one launcher runs at a time; starting it again brings the open window to the front instead of running two launchers that write the same settings and game folders.

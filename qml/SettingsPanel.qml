@@ -118,11 +118,15 @@ Item {
                 }
 
                 ColumnLayout {
+                    // Bound to the panel width, so long texts wrap and long paths are elided instead of pushing the buttons out
+                    Layout.fillWidth: true
                     Layout.leftMargin: 24
                     Layout.rightMargin: 24
                     spacing: 14
 
                     Toggle {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
                         text: qsTr("Start Star Citizen after the update")
                         description: qsTr("Starts through the LUG script or Lutris")
                         checked: panel.options.launchGameAfterUpdate === true
@@ -130,6 +134,8 @@ Item {
                     }
 
                     Toggle {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
                         text: qsTr("Check for launcher updates on start")
                         description: qsTr("Asks GitHub for a newer version of this launcher")
                         checked: panel.options.checkLauncherUpdatesAtStart === true
@@ -138,6 +144,7 @@ Item {
                 }
 
                 RowLayout {
+                    Layout.fillWidth: true
                     Layout.rightMargin: 24
                     Layout.topMargin: 12
 
@@ -169,6 +176,7 @@ Item {
                 }
 
                 ColumnLayout {
+                    Layout.fillWidth: true
                     Layout.leftMargin: 24
                     Layout.rightMargin: 24
                     spacing: 8
@@ -202,6 +210,7 @@ Item {
 
                 // Credit and license of every offered translation, as the community projects' licenses require
                 ColumnLayout {
+                    Layout.fillWidth: true
                     Layout.leftMargin: 24
                     Layout.rightMargin: 24
                     spacing: 8

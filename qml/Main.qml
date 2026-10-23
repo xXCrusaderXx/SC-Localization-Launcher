@@ -9,6 +9,8 @@ ApplicationWindow {
     // Latest backend snapshot (Protocol::State), replaced as a whole on every change
     readonly property var appState: backend.state
     readonly property var channels: appState.channels || []
+    // The main page only lists channels with an install folder; all of them stay in the settings
+    readonly property var visibleChannels: channels.filter(c => c.installPath !== "")
 
     readonly property bool updateBusy: appState.update === "running"
     readonly property bool updateFailed: appState.update === "failed"
@@ -201,17 +203,109 @@ ApplicationWindow {
 
         // Model is the count, not the array: the rows stay alive across snapshots, so their animations keep running
         Repeater {
-            model: window.channels.length
+            model: window.visibleChannels.length
 
             delegate: ChannelRow {
                 required property int index
 
-                channel: window.channels[index] || ({})
+                channel: window.visibleChannels[index] || ({})
                 languages: window.appState.languages || []
                 locked: window.updateBusy
                 onLanguagePicked: language => backend.setLanguage(channel.name, language)
                 onPathRequested: window.choosePath(channel.name)
             }
+        }
+
+        // First start or nothing found yet
+        Rectangle {
+            visible: window.visibleChannels.length === 0
+            Layout.fillWidth: true
+            implicitHeight: emptyColumn.implicitHeight + 40
+            radius: 12
+            color: Theme.panel
+            border.color: Theme.border
+
+            ColumnLayout {
+                id: emptyColumn
+
+                anchors.fill: parent
+                anchors.margins: 20
+                spacing: 14
+
+                Text {
+                    Layout.fillWidth: true
+                    text: window.searchBusy ? qsTr("Searching for Star Citizen …") : qsTr("No Star Citizen installation found yet")
+                    color: Theme.text
+                    font.pixelSize: 15
+                    font.bold: true
+                    wrapMode: Text.WordWrap
+                }
+
+                Text {
+                    Layout.fillWidth: true
+                    text: qsTr("Search your drives automatically, or add the game folder of a channel in the settings.")
+                    color: Theme.muted
+                    font.pixelSize: 12
+                    wrapMode: Text.WordWrap
+                }
+
+                RowLayout {
+                    spacing: 10
+
+                    component PillButton: Rectangle {
+                        id: pill
+
+                        property alias text: pillLabel.text
+                        property bool primary: false
+                        property bool active: true
+
+                        signal clicked
+
+                        implicitWidth: pillLabel.implicitWidth + 28
+                        implicitHeight: 32
+                        radius: 16
+                        opacity: active ? 1 : 0.5
+                        color: primary ? Theme.accent : pillMouse.containsMouse ? Theme.hover : "transparent"
+                        border.color: Theme.accent
+
+                        Text {
+                            id: pillLabel
+
+                            anchors.centerIn: parent
+                            color: pill.primary ? Theme.background : Theme.accent
+                            font.pixelSize: 12
+                            font.bold: true
+                        }
+
+                        MouseArea {
+                            id: pillMouse
+
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            enabled: pill.active
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: pill.clicked()
+                        }
+                    }
+
+                    PillButton {
+                        primary: true
+                        active: !window.searchBusy
+                        text: window.searchBusy ? qsTr("Searching …") : qsTr("Search automatically")
+                        onClicked: backend.autoSearch()
+                    }
+
+                    PillButton {
+                        text: qsTr("Open settings")
+                        onClicked: settingsPanel.open = true
+                    }
+                }
+            }
+        }
+
+        // Keeps the rows at the top when fewer channels are shown
+        Item {
+            Layout.fillHeight: true
         }
     }
 
