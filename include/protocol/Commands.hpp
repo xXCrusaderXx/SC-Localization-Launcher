@@ -44,6 +44,12 @@ struct StartUpdate
     static constexpr const char* name = "startUpdate";
 };
 
+// Starts the RSI Launcher without updating anything
+struct StartGame
+{
+    static constexpr const char* name = "startGame";
+};
+
 struct AutoSearch
 {
     static constexpr const char* name = "autoSearch";
@@ -85,12 +91,13 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetOption, option, value)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RepairChannel, channel)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetCustomSource, channel, url, folder)
 inline void to_json (nlohmann::json& j, const StartUpdate&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const StartGame&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const AutoSearch&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const CheckForUpdate&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const InstallUpdate&) { j = nlohmann::json::object(); }
 
-using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, AutoSearch, CheckForUpdate, InstallUpdate,
-                             RepairChannel, SetCustomSource>;
+using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
+                             InstallUpdate, RepairChannel, SetCustomSource>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

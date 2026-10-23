@@ -9,10 +9,12 @@
 #include <QStringList>
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <map>
 #include <optional>
+#include <thread>
 #include <vector>
 
 #include "backend/database/DataBase.hpp"
@@ -22,6 +24,9 @@
 
 class UpdateManager
 {
+   public:
+    using GameProcess = Database::GameProcess;
+
    private:
     LoggerFramework::LogEx lg;
     const std::atomic<bool>& shuttingDown;
@@ -260,18 +265,114 @@ class UpdateManager
 
     static bool inFlatpak () { return std::filesystem::exists("/.flatpak-info"); }
 
-    // Inside a Flatpak the game and its launchers live on the host, not in the sandbox
-    static bool startOnHost (const QString& program, const QStringList& arguments, const QString& workingDirectory = {})
+    // Inside a Flatpak the game and its launchers live on the host, not in the sandbox.
+    // Returns the process id, or nothing if the program could not be started.
+    static std::optional<qint64> startOnHost (const QString& program, const QStringList& arguments, const QString& workingDirectory = {})
     {
-        if(!inFlatpak()) return QProcess::startDetached(program, arguments, workingDirectory);
+        QProcess process;
+        if(inFlatpak())
+        {
+            QStringList hostArguments{"--host"};
+            if(!workingDirectory.isEmpty()) hostArguments << "--directory=" + workingDirectory;
+            hostArguments << program << arguments;
+            process.setProgram("flatpak-spawn");
+            process.setArguments(hostArguments);
+        }
+        else
+        {
+            process.setProgram(program);
+            process.setArguments(arguments);
+            process.setWorkingDirectory(workingDirectory);
+        }
+        // Set when the launcher runs from VS Code or another Electron app; the RSI Launcher is an Electron app
+        // too and would then run as plain Node.js and quit with "bad option"
+        QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+        environment.remove("ELECTRON_RUN_AS_NODE");
+        process.setProcessEnvironment(environment);
 
-        QStringList hostArguments{"--host"};
-        if(!workingDirectory.isEmpty()) hostArguments << "--directory=" + workingDirectory;
-        hostArguments << program << arguments;
-        return QProcess::startDetached("flatpak-spawn", hostArguments);
+        qint64 pid = 0;
+        if(!process.startDetached(&pid)) return std::nullopt;
+        return pid;
+    }
+
+    // Wine names a process after its Windows program: the first argument is e.g. "C:\\...\\RSI Launcher.exe"
+    static std::string rsiLauncherProgram ()
+    {
+#ifdef SC_TESTING
+        // Test builds only: a real RSI Launcher on the test machine must not count
+        if(const char* program = std::getenv("SC_RSI_LAUNCHER_PROGRAM")) return program;
+#endif
+        return "RSI Launcher.exe";
+    }
+
+    static std::string gameProgram ()
+    {
+#ifdef SC_TESTING
+        if(const char* program = std::getenv("SC_GAME_PROGRAM")) return program;
+#endif
+        return "StarCitizen.exe";
+    }
+
+    // The host's /proc is not visible inside the Flatpak; pgrep matches the joined command line instead
+    static GameProcess runningOnFlatpakHost ()
+    {
+        auto running = [] (const std::string& program)
+        {
+            QProcess pgrep;
+            pgrep.start("flatpak-spawn", {"--host", "pgrep", "-f", QString::fromStdString("(^|\\\\)" + program + "( |$)")});
+            return pgrep.waitForFinished(5000) && pgrep.exitStatus() == QProcess::NormalExit && pgrep.exitCode() == 0;
+        };
+        if(running("StarCitizen\\.exe")) return GameProcess::Game;
+        return running("RSI Launcher\\.exe") ? GameProcess::Launcher : GameProcess::None;
+    }
+
+    // A process that ended stays a zombie until its parent reaps it, which a container's PID 1 may never do
+    static bool processExists (qint64 pid)
+    {
+        std::ifstream stat("/proc/" + std::to_string(pid) + "/stat");
+        std::string line;
+        if(!std::getline(stat, line)) return false;
+        // "pid (name) state …"; the name may contain spaces and parentheses
+        auto end = line.rfind(')');
+        return end != std::string::npos && end + 2 < line.size() && line[end + 2] != 'Z' && line[end + 2] != 'X';
+    }
+
+    // Last lines of the LUG launch log; the RSI Launcher writes why it quit there
+    static std::string tailOf (const std::filesystem::path& file, size_t lines)
+    {
+        std::ifstream in(file);
+        std::vector<std::string> last;
+        for(std::string line; std::getline(in, line);)
+        {
+            last.push_back(line);
+            if(last.size() > lines) last.erase(last.begin());
+        }
+        std::string text;
+        for(const auto& line : last) text += "\n    " + line;
+        return text;
     }
 
    public:
+    // What of Star Citizen is running, started by this launcher or not
+    static GameProcess runningGameProcess ()
+    {
+        if(inFlatpak()) return runningOnFlatpakHost();
+        auto launcher = rsiLauncherProgram();
+        auto game = gameProgram();
+        auto found = GameProcess::None;
+        std::error_code ec;
+        for(const auto& entry : std::filesystem::directory_iterator("/proc", ec))
+        {
+            std::ifstream cmdline(entry.path() / "cmdline");
+            std::string program;
+            if(!std::getline(cmdline, program, '\0')) continue;
+            auto name = program.substr(program.find_last_of("\\/") + 1);
+            if(strcasecmp(name.c_str(), game.c_str()) == 0) return GameProcess::Game;
+            if(strcasecmp(name.c_str(), launcher.c_str()) == 0) found = GameProcess::Launcher;
+        }
+        return found;
+    }
+
     // One channel to update, prepared by the backend
     struct Job
     {
@@ -395,28 +496,65 @@ class UpdateManager
         return etags;
     }
 
-    void startGame (const std::filesystem::path& rsiLauncherPath)
+    // Starts the RSI Launcher through the LUG Helper's script or Lutris and waits until it keeps running
+    Protocol::GameStart startGame (const std::filesystem::path& rsiLauncherPath)
     {
         LOG_DEBUG(lg) << "startGame() - START";
 
+        std::optional<qint64> starter;
+        // sc-launch.sh runs as long as the RSI Launcher, so its end means the start failed. Lutris may hand the
+        // start over to an instance that is already running and quit right away.
+        bool starterOutlivesGame = false;
+        std::filesystem::path launchLog;
         auto prefix = findWinePrefix(rsiLauncherPath);
         if(prefix && std::filesystem::exists(*prefix / "sc-launch.sh"))
         {
             // LUG helper installation
             std::filesystem::path script = *prefix / "sc-launch.sh";
             LOG_DEBUG(lg) << "startGame() - LUG: " << script;
-            if(!startOnHost("bash", {QString::fromStdString(script.string())}, QString::fromStdString(prefix->string())))
-                LOG_ERROR(lg) << "startGame() - failed to start " << script;
-            return;
+            starter = startOnHost("bash", {QString::fromStdString(script.string())}, QString::fromStdString(prefix->string()));
+            starterOutlivesGame = true;
+            launchLog = *prefix / "sc-launch.log";
         }
-
-        if(inFlatpak() || !QStandardPaths::findExecutable("lutris").isEmpty())
+        else if(inFlatpak() || !QStandardPaths::findExecutable("lutris").isEmpty())
         {
             LOG_DEBUG(lg) << "startGame() - Lutris";
-            if(!startOnHost("lutris", {"lutris:rungame/star-citizen"})) LOG_ERROR(lg) << "startGame() - failed to start lutris";
-            return;
+            starter = startOnHost("lutris", {"lutris:rungame/star-citizen"});
+        }
+        else
+        {
+            LOG_ERROR(lg) << "startGame() - neither sc-launch.sh nor lutris found (RSI Launcher path: " << rsiLauncherPath << ")";
+            return Protocol::GameStart::NoStarter;
+        }
+        if(!starter)
+        {
+            LOG_ERROR(lg) << "startGame() - failed to start the LUG script or Lutris";
+            return Protocol::GameStart::Failed;
         }
 
-        LOG_ERROR(lg) << "startGame() - neither sc-launch.sh nor lutris found (RSI Launcher path: " << rsiLauncherPath << ")";
+        // The RSI Launcher may also start and quit at once, so it only counts once it has been running for a moment
+        using Clock = std::chrono::steady_clock;
+        constexpr auto settled = std::chrono::seconds(3);
+        // Wine may need a while, e.g. to set up its prefix after an update
+        auto deadline = Clock::now() + std::chrono::seconds(90);
+        std::optional<Clock::time_point> runningSince;
+        while(!shuttingDown && Clock::now() < deadline)
+        {
+            if(runningGameProcess() == GameProcess::None)
+                runningSince.reset();
+            else if(!runningSince)
+                runningSince = Clock::now();
+            else if(Clock::now() - *runningSince >= settled)
+            {
+                LOG_INFO(lg) << "startGame() - RSI Launcher is running";
+                return Protocol::GameStart::Running;
+            }
+            if(starterOutlivesGame && !runningSince && !processExists(*starter)) break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        }
+        if(shuttingDown) return Protocol::GameStart::Idle;
+        LOG_ERROR(lg) << "startGame() - the RSI Launcher did not start" << (launchLog.empty() ? "" : ", end of " + launchLog.string() + ":")
+                      << tailOf(launchLog, 10);
+        return Protocol::GameStart::Failed;
     }
 };

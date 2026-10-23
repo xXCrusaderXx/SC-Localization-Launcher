@@ -1,5 +1,4 @@
 #include <QProcess>
-#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
 #include <algorithm>
@@ -13,6 +12,7 @@
 #include "logging/logger/custom_logger/custom_logger.h"
 
 using Protocol::ChannelStatus;
+using Protocol::GameStart;
 using Protocol::UpdateStatus;
 using Codes = std::vector<std::string>;
 
@@ -26,6 +26,8 @@ class BackendTest : public QObject
     std::unique_ptr<BackEnd> backEnd;
     std::mutex mutex;
     std::vector<Protocol::State> states;
+    // The tests run without PATH so nothing real is started; restored after tests that need bash
+    QByteArray testPath = qgetenv("PATH");
 
     static Protocol::Channel channel (const Protocol::State& state, const std::string& name)
     {
@@ -166,6 +168,37 @@ class BackendTest : public QObject
         return path;
     }
 
+    // Fake LUG Helper installation: the Wine prefix holds sc-launch.sh with these commands; returns the RSI Launcher folder
+    static std::filesystem::path lugPrefix (const QTemporaryDir& prefix, const std::string& commands)
+    {
+        auto root = std::filesystem::path(prefix.path().toStdString());
+        auto rsiLauncher = root / "drive_c/Program Files/Roberts Space Industries/RSI Launcher";
+        std::filesystem::create_directories(rsiLauncher);
+        std::ofstream(root / "sc-launch.sh") << "#!/usr/bin/env bash\n" << commands;
+        return rsiLauncher;
+    }
+
+    // Updates LIVE with "Update & start" and returns how the start of the RSI Launcher ended
+    std::optional<GameStart> updateAndStartGame (const std::filesystem::path& rsiLauncher)
+    {
+        QTemporaryDir game;
+        if(!start()) return std::nullopt;
+        backEnd->execute(Protocol::SetOption{"launchGameAfterUpdate", true});
+        backEnd->execute(Protocol::SetRsiLauncherPath{rsiLauncher.string()});
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        if(!setLanguage("LIVE", "de") || runUpdate() != UpdateStatus::Succeeded) return std::nullopt;
+        if(!waitForState([] (const auto& s) { return s.game == GameStart::Starting; })) return std::nullopt;
+        auto done = waitForState([] (const auto& s) { return s.game != GameStart::Starting && s.game != GameStart::Idle; });
+        if(!done) return std::nullopt;
+        std::lock_guard lock(mutex);
+        return states[*done].game;
+    }
+
+    // Wine names the process after the Windows program; the fake one only sleeps.
+    // The tests watch for this name instead of "RSI Launcher.exe" (SC_RSI_LAUNCHER_PROGRAM in tests/CMakeLists.txt).
+    static constexpr const char* FAKE_RSI_LAUNCHER =
+        "exec -a 'C:\\Program Files\\Roberts Space Industries\\RSI Launcher\\RSI Test Launcher.exe' sleep 30\n";
+
    private slots:
     void initTestCase () { LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>()); }
 
@@ -183,7 +216,11 @@ class BackendTest : public QObject
         states.clear();
     }
 
-    void cleanup () { backEnd.reset(); }
+    void cleanup ()
+    {
+        backEnd.reset();
+        qputenv("PATH", testPath);
+    }
 
     void startsWithDefaultsWithoutSettingsFile ()
     {
@@ -519,11 +556,11 @@ class BackendTest : public QObject
         qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
         publishAppImageRelease(server, releaseKey, "new version");
 
-        // A process named like the game: a copy of sleep
-        auto game = std::filesystem::path(dir.path().toStdString()) / "StarCitizen.exe";
-        std::filesystem::copy_file(QStandardPaths::findExecutable("sleep", {"/usr/bin", "/bin"}).toStdString(), game);
+        // A process named like the game under Wine (SC_GAME_PROGRAM in tests/CMakeLists.txt)
+        qputenv("PATH", "/usr/bin:/bin");
         QProcess running;
-        running.start(QString::fromStdString(game.string()), {"30"});
+        running.start("/bin/bash",
+                      {"-c", "exec -a 'C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\Bin64\\StarCitizen Test.exe' sleep 30"});
         QVERIFY(running.waitForStarted());
 
         QVERIFY(start());
@@ -715,6 +752,98 @@ class BackendTest : public QObject
         backEnd->execute(Protocol::SetCustomSource{"LIVE", "", ""});
         QVERIFY(waitForState([] (const auto& s) { return channel(s, "LIVE").custom.url.empty(); }, from));
         QCOMPARE(channel(latest(), "LIVE").language, Protocol::ENGLISH);
+    }
+
+    void startsTheRsiLauncherWithoutElectronNodeMode ()
+    {
+        // VS Code and other Electron apps pass this on; the RSI Launcher would then quit with "bad option"
+        qputenv("ELECTRON_RUN_AS_NODE", "1");
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir prefix;
+        auto root = std::filesystem::path(prefix.path().toStdString());
+        auto rsiLauncher =
+            lugPrefix(prefix, std::string("echo \"${ELECTRON_RUN_AS_NODE-unset}\" > electron-env\necho $$ > pid\n") + FAKE_RSI_LAUNCHER);
+
+        auto result = updateAndStartGame(rsiLauncher);
+        QProcess::execute("kill", {QString::fromStdString(readFile(root / "pid")).trimmed()});
+        qunsetenv("ELECTRON_RUN_AS_NODE");
+        QCOMPARE(result, std::optional(GameStart::Running));
+        QCOMPARE(readFile(root / "electron-env"), std::string("unset\n"));
+        // Once it quits, the launcher is ready to start it again
+        QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Idle; }, published() - 1));
+    }
+
+    void startsTheGameWithoutUpdate ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir prefix;
+        auto root = std::filesystem::path(prefix.path().toStdString());
+        auto rsiLauncher = lugPrefix(prefix, std::string("echo $$ > pid\n") + FAKE_RSI_LAUNCHER);
+
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetRsiLauncherPath{rsiLauncher.string()});
+        backEnd->execute(Protocol::StartGame{});
+        auto running = waitForState([] (const auto& s) { return s.game == GameStart::Running; });
+        QProcess::execute("kill", {QString::fromStdString(readFile(root / "pid")).trimmed()});
+        QVERIFY(running);
+        // Nothing was downloaded
+        QCOMPARE(latest().update, UpdateStatus::Idle);
+    }
+
+    void noticesAnRsiLauncherStartedElsewhere ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QVERIFY(start());
+        QProcess rsiLauncher;
+        rsiLauncher.start("/bin/bash", {"-c", FAKE_RSI_LAUNCHER});
+        QVERIFY(rsiLauncher.waitForStarted());
+        auto running = waitForState([] (const auto& s) { return s.game == GameStart::Running; });
+        rsiLauncher.kill();
+        rsiLauncher.waitForFinished();
+        QVERIFY(running);
+        QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Idle; }, *running));
+    }
+
+    void doesNotUpdateWhileTheGameRuns ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir gameFolder;
+        QVERIFY(installGerman(gameFolder));
+        QProcess game;
+        game.start("/bin/bash",
+                   {"-c", "exec -a 'C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\Bin64\\StarCitizen Test.exe' sleep 30"});
+        QVERIFY(game.waitForStarted());
+        auto playing = waitForState([] (const auto& s) { return s.game == GameStart::Playing; });
+
+        // Ignored while the game reads the files; the marker shows the command has been handled
+        size_t from = published();
+        backEnd->execute(Protocol::StartUpdate{});
+        QVERIFY(waitForPreviousCommands());
+        bool updated = false;
+        {
+            std::lock_guard lock(mutex);
+            for(size_t i = from; i < states.size(); ++i) updated |= states[i].update == UpdateStatus::Running;
+        }
+        game.kill();
+        game.waitForFinished();
+        QVERIFY(playing);
+        QVERIFY(!updated);
+        QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Idle; }, *playing));
+    }
+
+    void reportsWhenTheRsiLauncherQuitsAtOnce ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir prefix;
+        auto rsiLauncher = lugPrefix(prefix, "echo 'RSI Launcher.exe: bad option: --in-process-gpu' > sc-launch.log\nexit 1\n");
+        QCOMPARE(updateAndStartGame(rsiLauncher), std::optional(GameStart::Failed));
+    }
+
+    void reportsWhenNothingCanStartTheGame ()
+    {
+        // No sc-launch.sh, and without PATH no Lutris either
+        QTemporaryDir folder;
+        QCOMPARE(updateAndStartGame(folder.path().toStdString()), std::optional(GameStart::NoStarter));
     }
 };
 

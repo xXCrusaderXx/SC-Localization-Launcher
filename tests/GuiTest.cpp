@@ -267,6 +267,22 @@ class GuiTest : public QObject
         QVERIFY(QFile::exists(liveDir.filePath("data/Localization/german_(germany)/global.ini")));
     }
 
+    void showsWhenTheGameCannotStart ()
+    {
+        // Everything is up to date after runUpdate(), so the button only starts the game
+        // The RSI Launcher folder has no LUG script, and without PATH there is no Lutris either
+        QTemporaryDir rsiLauncher;
+        bridge->setRsiLauncherPath(QUrl::fromLocalFile(rsiLauncher.path()));
+        bridge->setOption("launchGameAfterUpdate", true);
+        QTRY_VERIFY(launchGameOption());
+
+        QTRY_VERIFY(findText("Start"));
+        QVERIFY(click("Start"));
+        QTRY_VERIFY_WITH_TIMEOUT(findText("Cannot start the game: install it with the LUG Helper or Lutris"), 30000);
+        bridge->setOption("launchGameAfterUpdate", false);
+        QTRY_VERIFY(!launchGameOption());
+    }
+
     void launcherUpdateButton ()
     {
         auto* button = engine->rootObjects().first()->findChild<QQuickItem*>("launcherUpdateButton");

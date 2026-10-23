@@ -231,11 +231,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Starting the RSI Launcher …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Searching for Star Citizen installations …</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Update failed. &lt;a href=&quot;log&quot;&gt;Open the log&lt;/a&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The RSI Launcher did not start. &lt;a href=&quot;log&quot;&gt;Open the log&lt;/a&gt;</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cannot start the game: install it with the LUG Helper or Lutris</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -259,11 +271,35 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Game running</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Update &amp; start</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Update translations</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Star Citizen is running</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>RSI Launcher is running</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Starting game …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Start</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

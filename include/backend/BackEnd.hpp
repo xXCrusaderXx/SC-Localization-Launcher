@@ -42,6 +42,8 @@ class BackEnd
     std::thread searchJob;
     std::thread versionCheckJob;
     std::thread selfUpdateJob;
+    std::thread gameJob;
+    std::thread gameWatchJob;
 
     // Declared last: its thread uses all members above
     TaskQueue queue;
@@ -220,17 +222,78 @@ class BackEnd
         return job;
     }
 
+    void startGame ()
+    {
+        data.game = Protocol::GameStart::Starting;
+        startJob(gameJob,
+                 [this, rsiLauncherPath = data.rsiLauncherPath]
+                 {
+                     auto result = updateManager.startGame(rsiLauncherPath);
+                     queue.post(
+                         [this, result]
+                         {
+                             // It may have quit again or the game may run already; the watcher saw that
+                             data.game = result == Protocol::GameStart::Running ? gameStatus() : result;
+                             publish();
+                         });
+                 });
+    }
+
+    // Notices when the RSI Launcher or the game starts and quits, also when it was started without this launcher
+    void watchGame ()
+    {
+        startJob(gameWatchJob,
+                 [this]
+                 {
+                     auto seen = Database::GameProcess::None;
+                     while(!data.shuttingDown)
+                     {
+                         if(auto now = UpdateManager::runningGameProcess(); now != seen)
+                         {
+                             seen = now;
+                             queue.post([this, now] { gameProcessChanged(now); });
+                         }
+                         for(int i = 0; i < 8 && !data.shuttingDown; ++i) std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                     }
+                 });
+    }
+
+    // What the watcher saw, as shown to the user
+    Protocol::GameStart gameStatus () const
+    {
+        switch(data.gameProcess)
+        {
+            case Database::GameProcess::Game:
+                return Protocol::GameStart::Playing;
+            case Database::GameProcess::Launcher:
+                return Protocol::GameStart::Running;
+            default:
+                return Protocol::GameStart::Idle;
+        }
+    }
+
+    void gameProcessChanged (Database::GameProcess process)
+    {
+        data.gameProcess = process;
+        // A start in progress decides itself whether the RSI Launcher keeps running; a failed start stays visible
+        bool shownRunning = data.game == Protocol::GameStart::Running || data.game == Protocol::GameStart::Playing;
+        if(data.game != Protocol::GameStart::Starting && (process != Database::GameProcess::None || shownRunning)) data.game = gameStatus();
+        publish();
+    }
+
+    bool gamePlaying () const { return data.gameProcess == Database::GameProcess::Game; }
+
     void runUpdate (std::vector<UpdateManager::Job> jobs, bool launchGame)
     {
         data.update = Protocol::UpdateStatus::Running;
+        // A repair may run while the RSI Launcher is still starting; that start reports its own result
+        if(data.game != Protocol::GameStart::Starting) data.game = Protocol::GameStart::Idle;
         startJob(updateJob,
-                 [this, jobs, launchGame, rsiLauncherPath = data.rsiLauncherPath]
+                 [this, jobs, launchGame]
                  {
                      auto results = updateManager.update(jobs);
-                     // Also after a partial failure, the other channels are still playable
-                     if(launchGame && !data.shuttingDown) updateManager.startGame(rsiLauncherPath);
                      queue.post(
-                         [this, results, jobCount = jobs.size()]
+                         [this, results, launchGame, jobCount = jobs.size()]
                          {
                              bool success = results.size() == jobCount;
                              for(const auto& result : results)
@@ -245,6 +308,8 @@ class BackEnd
                                  if(channel.language == result.language) channel.remoteEtag = result.etag;
                              }
                              data.update = success ? Protocol::UpdateStatus::Succeeded : Protocol::UpdateStatus::Failed;
+                             // Also after a partial failure, the other channels are still playable
+                             if(launchGame && !data.shuttingDown) startGame();
                              saveSettings();
                              publish();
                          });
@@ -287,6 +352,7 @@ class BackEnd
         state.rsiLauncherPath = data.rsiLauncherPath.string();
         state.options = data.options;
         state.update = data.update;
+        state.game = data.game;
         state.searching = data.searching;
         state.selfUpdate = data.selfUpdate;
         return state;
@@ -395,9 +461,15 @@ class BackEnd
 
     void handle (const Protocol::StartUpdate&)
     {
-        if(data.update == Protocol::UpdateStatus::Running)
+        if(data.update == Protocol::UpdateStatus::Running || data.game == Protocol::GameStart::Starting)
         {
-            LOG_DEBUG(lg) << "startUpdate - update already running";
+            LOG_DEBUG(lg) << "startUpdate - update or game start already running";
+            return;
+        }
+        // The running game reads the translation files
+        if(gamePlaying())
+        {
+            LOG_DEBUG(lg) << "startUpdate - Star Citizen is running";
             return;
         }
 
@@ -412,6 +484,17 @@ class BackEnd
             return;
         }
         runUpdate(std::move(jobs), data.options.launchGameAfterUpdate);
+    }
+
+    void handle (const Protocol::StartGame&)
+    {
+        if(data.update == Protocol::UpdateStatus::Running || data.game == Protocol::GameStart::Starting ||
+           data.gameProcess != Database::GameProcess::None)
+        {
+            LOG_DEBUG(lg) << "startGame - update, game start or game already running";
+            return;
+        }
+        startGame();
     }
 
     void handle (const Protocol::SetCustomSource& command)
@@ -436,9 +519,9 @@ class BackEnd
 
     void handle (const Protocol::RepairChannel& command)
     {
-        if(data.update == Protocol::UpdateStatus::Running)
+        if(data.update == Protocol::UpdateStatus::Running || gamePlaying())
         {
-            LOG_DEBUG(lg) << "repairChannel - an update is running";
+            LOG_DEBUG(lg) << "repairChannel - an update or Star Citizen is running";
             return;
         }
         const auto* channel = findChannel(command.channel);
@@ -562,6 +645,7 @@ class BackEnd
                 loadSettings();
                 publish();
                 loadLanguages();
+                watchGame();
                 if(data.options.checkLauncherUpdatesAtStart) handle(Protocol::CheckForUpdate{});
             });
         LOG_DEBUG(lg) << "instanziated";
@@ -572,7 +656,7 @@ class BackEnd
         data.shuttingDown = true;
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
-        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob})
+        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }
