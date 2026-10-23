@@ -81,11 +81,6 @@
     </message>
     <message>
         <location filename="../qml/Main.qml" line="245"/>
-        <source>Update failed, see the log for details</source>
-        <translation>Update fehlgeschlagen, Details im Log</translation>
-    </message>
-    <message>
-        <location filename="../qml/Main.qml" line="245"/>
         <source>Translations updated</source>
         <translation>Übersetzungen aktualisiert</translation>
     </message>
@@ -108,32 +103,37 @@
         </translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="304"/>
+        <location filename="../qml/Main.qml" line="245"/>
+        <source>Update failed. &lt;a href=&quot;log&quot;&gt;Open the log&lt;/a&gt;</source>
+        <translation>Update fehlgeschlagen. &lt;a href="log"&gt;Log öffnen&lt;/a&gt;</translation>
+    </message>
+    <message>
+        <location filename="../qml/Main.qml" line="307"/>
         <source>Updating …</source>
         <translation>Aktualisiere …</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="304"/>
+        <location filename="../qml/Main.qml" line="307"/>
         <source>No game folder set</source>
         <translation>Kein Spielordner gesetzt</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="304"/>
+        <location filename="../qml/Main.qml" line="307"/>
         <source>Update &amp; start</source>
         <translation>Aktualisieren &amp; starten</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="304"/>
+        <location filename="../qml/Main.qml" line="307"/>
         <source>Update translations</source>
         <translation>Übersetzungen aktualisieren</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="351"/>
+        <location filename="../qml/Main.qml" line="354"/>
         <source>RSI Launcher folder</source>
         <translation>Ordner des RSI Launchers</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="351"/>
+        <location filename="../qml/Main.qml" line="354"/>
         <source>Install folder for %1</source>
         <translation>Installationsordner für %1</translation>
     </message>
@@ -141,7 +141,7 @@
 <context>
     <name>PathRow</name>
     <message>
-        <location filename="../qml/PathRow.qml" line="39"/>
+        <location filename="../qml/PathRow.qml" line="41"/>
         <source>Not set</source>
         <translation>Nicht gesetzt</translation>
     </message>
@@ -169,60 +169,45 @@
         <translation>Startet über das LUG-Skript oder Lutris</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="133"/>
-        <source>Update translations on start</source>
-        <translation>Übersetzungen beim Start aktualisieren</translation>
-    </message>
-    <message>
-        <location filename="../qml/SettingsPanel.qml" line="139"/>
-        <source>Install new translations automatically</source>
-        <translation>Neue Übersetzungen automatisch installieren</translation>
-    </message>
-    <message>
-        <location filename="../qml/SettingsPanel.qml" line="145"/>
-        <source>Minimize to the tray after updates</source>
-        <translation>Nach Updates in den Tray minimieren</translation>
-    </message>
-    <message>
-        <location filename="../qml/SettingsPanel.qml" line="151"/>
-        <source>Start with the system</source>
-        <translation>Mit dem System starten</translation>
-    </message>
-    <message>
-        <location filename="../qml/SettingsPanel.qml" line="157"/>
-        <source>Show update progress</source>
-        <translation>Update-Fortschritt anzeigen</translation>
-    </message>
-    <message>
-        <location filename="../qml/SettingsPanel.qml" line="168"/>
+        <location filename="../qml/SettingsPanel.qml" line="138"/>
         <source>INSTALLATIONS</source>
         <translation>INSTALLATIONEN</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="177"/>
+        <location filename="../qml/SettingsPanel.qml" line="147"/>
         <source>Searching …</source>
         <translation>Suche läuft …</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="177"/>
+        <location filename="../qml/SettingsPanel.qml" line="147"/>
         <source>Search automatically</source>
         <translation>Automatisch suchen</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="223"/>
+        <location filename="../qml/SettingsPanel.qml" line="193"/>
         <source>TRANSLATIONS</source>
         <translation>ÜBERSETZUNGEN</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="267"/>
+        <location filename="../qml/SettingsPanel.qml" line="236"/>
         <source>%1 by %2</source>
         <translation>%1 von %2</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsPanel.qml" line="278"/>
-        <location filename="../qml/SettingsPanel.qml" line="278"/>
+        <location filename="../qml/SettingsPanel.qml" line="247"/>
+        <location filename="../qml/SettingsPanel.qml" line="247"/>
         <source>License: %1</source>
         <translation>Lizenz: %1</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsPanel.qml" line="261"/>
+        <source>HELP</source>
+        <translation>HILFE</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsPanel.qml" line="269"/>
+        <source>Log files</source>
+        <translation>Log-Dateien</translation>
     </message>
 </context>
 <context>

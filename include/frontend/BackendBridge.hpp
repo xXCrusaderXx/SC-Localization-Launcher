@@ -1,11 +1,13 @@
 #pragma once
 
+#include <QDesktopServices>
 #include <QJsonDocument>
 #include <QObject>
 #include <QUrl>
 #include <QVariantMap>
 
 #include "backend/BackEnd.hpp"
+#include "backend/utils/paths.hpp"
 #include "logging/logging.h"
 
 // Connects the QML GUI with the BackEnd.
@@ -14,6 +16,7 @@ class BackendBridge : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QVariantMap state READ state NOTIFY stateChanged)
+    Q_PROPERTY(QString logFolder READ logFolder CONSTANT)
 
    private:
     LoggerFramework::LogEx lg;
@@ -75,6 +78,10 @@ class BackendBridge : public QObject
     Q_INVOKABLE void autoSearch () { backEnd.execute(Protocol::AutoSearch{}); }
 
     Q_INVOKABLE QUrl fromLocalFile (const QString& path) const { return QUrl::fromLocalFile(path); }
+
+    // Where CustomLogger writes; shown in the settings and opened from error messages
+    QString logFolder () const { return QString::fromStdString((PATHS::LOGPATH_USER / "logs").string()); }
+    Q_INVOKABLE void openLogFolder () const { QDesktopServices::openUrl(QUrl::fromLocalFile(logFolder())); }
 
    signals:
     void stateChanged ();

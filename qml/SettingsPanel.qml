@@ -128,36 +128,6 @@ Item {
                         checked: panel.options.launchGameAfterUpdate === true
                         onSwitched: on => backend.setOption("launchGameAfterUpdate", on)
                     }
-
-                    Toggle {
-                        text: qsTr("Update translations on start")
-                        comingSoon: true
-                        checked: panel.options.updateAtStart === true
-                    }
-
-                    Toggle {
-                        text: qsTr("Install new translations automatically")
-                        comingSoon: true
-                        checked: panel.options.installNewTranslations === true
-                    }
-
-                    Toggle {
-                        text: qsTr("Minimize to the tray after updates")
-                        comingSoon: true
-                        checked: panel.options.minimizeAfterUpdate === true
-                    }
-
-                    Toggle {
-                        text: qsTr("Start with the system")
-                        comingSoon: true
-                        checked: panel.options.startWithSystem === true
-                    }
-
-                    Toggle {
-                        text: qsTr("Show update progress")
-                        comingSoon: true
-                        checked: panel.options.showUpdateProgress === true
-                    }
                 }
 
                 RowLayout {
@@ -227,7 +197,6 @@ Item {
                 ColumnLayout {
                     Layout.leftMargin: 24
                     Layout.rightMargin: 24
-                    Layout.bottomMargin: 24
                     spacing: 8
 
                     Repeater {
@@ -285,6 +254,21 @@ Item {
                             }
                         }
                     }
+                }
+
+                SectionTitle {
+                    Layout.topMargin: 12
+                    text: qsTr("HELP")
+                }
+
+                // Log files are what a bug report needs; the path is shown so it can be mentioned
+                PathRow {
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    Layout.bottomMargin: 24
+                    label: qsTr("Log files")
+                    path: backend.logFolder
+                    editable: false
                 }
             }
         }
