@@ -22,3 +22,4 @@ build-appimage/
 build-flatpak/
 repo-flatpak/
 build-packages/
+flatpak-out/

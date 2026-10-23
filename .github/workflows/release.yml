@@ -188,13 +188,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7.0.1
 
-      - name: Build bundle
-        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+      # Signed repository for GitHub Pages (installs update through `flatpak update`) plus the single-file bundle.
+      # Output inside the workspace: runner.temp is a different path inside a container job.
+      - name: Build repository and bundle
+        env:
+          FLATPAK_GPG_PRIVATE_KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
+          REQUIRE_SIGNATURE: ${{ needs.version.outputs.publish }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: bash packaging/flatpak/build-repo.sh "$GITHUB_WORKSPACE" "$VERSION" flatpak-out
+
+      - uses: actions/upload-artifact@v7
         with:
-          bundle: SC-Localization-Launcher-${{ needs.version.outputs.version }}-x86_64.flatpak
-          manifest-path: flatpak/io.github.xXCrusaderXx.SCLocalizationLauncher.json
-          cache-key: flatpak-builder-${{ github.sha }}
-          upload-artifact: true
+          name: flatpak
+          path: flatpak-out/*.flatpak
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: flatpak-out/site
 
   # Installs every package on a fresh distro without build tools and starts it under Xvfb.
   test:
@@ -327,3 +337,21 @@ jobs:
           if [[ "$VERSION" == *-* ]]; then args+=(--prerelease); fi
           if [ -n "$NOTES" ]; then args+=(--notes "$NOTES"); else args+=(--generate-notes); fi
           gh release create "$tag" "${args[@]}" dist/*
+
+  # After the GitHub Release, so the repository never offers a version whose release page does not exist yet
+  pages:
+    name: publish Flatpak repository
+    needs: [version, publish]
+    if: needs.version.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v5
