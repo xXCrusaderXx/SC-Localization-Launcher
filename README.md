@@ -106,6 +106,8 @@ flatpak-builder --user --install build-flatpak flatpak/io.github.xXCrusaderXx.SC
 packaging/flatpak/build-repo.sh . 0.0.0-dev flatpak-out  # repository + bundle as in a release (unsigned without the key)
 ```
 
+Every release also updates the AUR package `sc-localization-launcher` through [`packaging/aur/publish.sh`](packaging/aur/publish.sh). It needs the secret `AUR_SSH_PRIVATE_KEY` (the SSH key of the AUR account); without it the step is skipped with a warning.
+
 For your own distribution package, use the FHS layout:
 
 ```sh

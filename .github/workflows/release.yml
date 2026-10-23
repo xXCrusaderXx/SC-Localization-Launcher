@@ -355,3 +355,25 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deploy
         uses: actions/deploy-pages@v5
+
+  # yay/paru users get the release through the AUR; skipped with a warning while the account's key is not set up
+  aur:
+    name: publish AUR package
+    needs: [version, publish]
+    if: needs.version.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container: archlinux:latest
+    steps:
+      - name: Install git
+        run: pacman -Syu --noconfirm --needed git
+
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Publish PKGBUILD
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: bash packaging/aur/publish.sh "$VERSION"
+
