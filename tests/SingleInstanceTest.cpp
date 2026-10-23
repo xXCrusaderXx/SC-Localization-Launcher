@@ -43,6 +43,29 @@ class SingleInstanceTest : public QObject
         QCOMPARE(logFiles(), before);
     }
 
+    void takesOverALockNoOneAnswersFor ()
+    {
+        // Left by a launcher in another PID namespace (native vs. Flatpak): QLockFile cannot tell it is stale
+        QString dir = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+        QFile lock((dir.isEmpty() ? QDir::tempPath() : dir) + "/" + name + ".lock");
+        QVERIFY(lock.open(QIODevice::WriteOnly));
+        lock.write("999999\nsc-localization-launcher\nanother-host\n");
+        lock.close();
+
+        SingleInstance next(name);
+        QVERIFY(!next.isPrimary());
+        QVERIFY(!next.activatePrimary());
+        QVERIFY(next.takeOver());
+        QVERIFY(next.isPrimary());
+
+        // And it answers the next start like any running launcher
+        QSignalSpy activated(&next, &SingleInstance::activationRequested);
+        SingleInstance second(name);
+        QVERIFY(!second.isPrimary());
+        QVERIFY(second.activatePrimary());
+        QTRY_COMPARE(activated.count(), 1);
+    }
+
     void lockIsFreeAgainAfterTheFirstEnds ()
     {
         {
