@@ -9,7 +9,7 @@
 ## Checklist
 
 - [ ] Signed off: every commit (`git commit -s`), or I add a `Signed-off-by: Name <email>` line to this description. See [CONTRIBUTING.md](../CONTRIBUTING.md).
-- [ ] `git clang-format --diff origin/main` reports no changes.
+- [ ] `git clang-format --diff origin/dev` reports no changes.
 - [ ] The project builds locally.
 - [ ] No Star Citizen assets, translation files, or binaries are included (see [LEGAL.md](../LEGAL.md)).
 - [ ] If AI tools were used: I reviewed every change myself, and I describe their use here. See [AGENTS.md](../AGENTS.md).

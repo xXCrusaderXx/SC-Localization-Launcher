@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
@@ -38,13 +38,14 @@ jobs:
       - name: Check formatting of changed lines
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
           base="$(git merge-base "$BASE_SHA" "$HEAD_SHA")"
           if ! out="$(git clang-format --diff --extensions h,hpp,cpp "$base" "$HEAD_SHA" -- include src)"; then
             echo "$out"
-            echo "::error::Formatting differs from .clang-format. Run: git clang-format origin/main"
+            echo "::error::Formatting differs from .clang-format. Run: git clang-format origin/$BASE_REF"
             exit 1
           fi
           echo "$out"

@@ -5,7 +5,7 @@ name: DCO
 # description must re-run the check without re-running the whole build.
 on:
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     types: [opened, synchronize, reopened, edited]
 
 permissions:
