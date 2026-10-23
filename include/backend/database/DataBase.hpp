@@ -108,6 +108,10 @@ struct Installation
     std::string variant;
     // The AppImage file itself, only for type appimage
     std::filesystem::path appImage;
+    // Flatpak only: "user" or "system", and whether it updates from the project's Flatpak repository
+    // (otherwise it was installed from a bundle and is switched to the repository on its first update)
+    std::string flatpakInstallation;
+    bool flatpakFromRepository = false;
 };
 
 // What of Star Citizen is running, see UpdateManager::runningGameProcess()

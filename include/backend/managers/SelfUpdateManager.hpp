@@ -40,6 +40,9 @@ class SelfUpdateManager
 
     using ProgressCallback = std::function<void(double)>;
 
+    // Flatpak app id; also used to restart the Flatpak after an update
+    inline static const QString FLATPAK_APP_ID = "io.github.xXCrusaderXx.SCLocalizationLauncher";
+
    private:
     LoggerFramework::LogEx lg;
     const std::atomic<bool>& shuttingDown;
@@ -47,6 +50,9 @@ class SelfUpdateManager
 
     inline static const std::string LATEST_RELEASE_URL = "https://api.github.com/repos/xXCrusaderXx/SC-Localization-Launcher/releases/latest";
     inline static const std::string DOWNLOAD_URL_PREFIX = "https://github.com/xXCrusaderXx/SC-Localization-Launcher/releases/download/";
+    inline static const std::string FLATPAK_REPO_URL = "https://xxcrusaderxx.github.io/SC-Localization-Launcher/repo/";
+    inline static const std::string FLATPAKREF_URL =
+        "https://xxcrusaderxx.github.io/SC-Localization-Launcher/io.github.xXCrusaderXx.SCLocalizationLauncher.flatpakref";
 
     static std::string latestReleaseUrl ()
     {
@@ -148,7 +154,7 @@ class SelfUpdateManager
         return parts;
     }
 
-    // ID and VERSION_ID from /etc/os-release
+    // Key/value pairs of /etc/os-release (ID, ID_LIKE, VERSION_ID, UBUNTU_CODENAME, ...)
     static std::map<std::string, std::string> osRelease ()
     {
         std::map<std::string, std::string> values;
@@ -172,6 +178,24 @@ class SelfUpdateManager
         QProcess process;
         process.start(program, arguments);
         return process.waitForFinished(5000) && process.exitStatus() == QProcess::NormalExit && process.exitCode() == 0;
+    }
+
+    struct HostResult
+    {
+        int exitCode = -1;
+        std::string output;
+    };
+
+    // Runs a command on the host from inside the Flatpak sandbox (needs --talk-name=org.freedesktop.Flatpak).
+    // timeoutMs -1 waits as long as it takes, e.g. while a password dialog is open.
+    static HostResult runOnHost (const QStringList& command, int timeoutMs = 15000)
+    {
+        QProcess process;
+        // English output, so the fields of `flatpak info` can be parsed
+        process.start("flatpak-spawn", QStringList{"--host", "--env=LC_ALL=C"} + command);
+        if(!process.waitForStarted(5000)) return {};
+        if(!process.waitForFinished(timeoutMs) || process.exitStatus() != QProcess::NormalExit) return {};
+        return {process.exitCode(), process.readAllStandardOutput().toStdString()};
     }
 
     // sha256sum format: "<64 hex digits>  <file name>", a '*' before the name marks binary mode
@@ -259,6 +283,33 @@ class SelfUpdateManager
         return std::nullopt;
     }
 
+    // Updates the Flatpak through Flatpak itself, which checks the repository's GPG signature. A bundle install is
+    // reinstalled from the repository once, so later updates also arrive through `flatpak update`.
+    std::optional<std::string> installFlatpak (const std::string& version, const Installation& installation)
+    {
+        QString where = QString::fromStdString("--" + installation.flatpakInstallation);
+        QStringList command =
+            installation.flatpakFromRepository
+                ? QStringList{"flatpak", "update", "-y", "--noninteractive", where, FLATPAK_APP_ID}
+                : QStringList{"flatpak", "install", "-y", "--noninteractive", "--reinstall", where, QString::fromStdString(FLATPAKREF_URL)};
+        auto result = runOnHost(command, -1);
+        if(result.exitCode != 0)
+        {
+            LOG_ERROR(lg) << "installFlatpak() - " << command.join(' ').toStdString() << " failed (" << result.exitCode << ")";
+            return "flatpak failed";
+        }
+
+        // The repository is published a moment after the GitHub release, so it may not offer the new version yet
+        auto info = runOnHost({"flatpak", "info", where, FLATPAK_APP_ID});
+        std::string installed = flatpakInfoField(info.output, "Version");
+        if(isNewer(version, installed))
+        {
+            LOG_ERROR(lg) << "installFlatpak() - repository still offers " << installed << ", release is " << version;
+            return "the Flatpak repository does not offer the new version yet";
+        }
+        return std::nullopt;
+    }
+
    public:
     // signingKey: text of a minisign .pub file; without a valid key nothing is ever installed
     SelfUpdateManager (const std::atomic<bool>& shuttingDown, const std::string& signingKey)
@@ -278,6 +329,62 @@ class SelfUpdateManager
         return latestVersion && currentVersion && *latestVersion > *currentVersion;
     }
 
+    // Which release package fits this distribution, also for derivatives: Linux Mint, Pop!_OS, Zorin (Ubuntu 24.04 base),
+    // LMDE (Debian 12 base), Nobara (Fedora base). Empty if none fits. Image-based systems (Fedora Atomic, Bazzite, ...)
+    // cannot install packages with dnf.
+    static std::string packageVariant (const std::string& type, const std::map<std::string, std::string>& os, bool imageBased)
+    {
+        auto get = [&os] (const char* key)
+        {
+            auto it = os.find(key);
+            return it == os.end() ? std::string() : it->second;
+        };
+        auto basedOn = [&get] (const std::string& id)
+        { return (" " + get("ID") + " " + get("ID_LIKE") + " ").find(" " + id + " ") != std::string::npos; };
+
+        if(type == "deb")
+        {
+            if((get("ID") == "ubuntu" && get("VERSION_ID") == "24.04") || get("UBUNTU_CODENAME") == "noble") return "ubuntu24.04";
+            // Other Ubuntu releases and their derivatives have other library versions than Debian 12
+            if(basedOn("ubuntu") || !get("UBUNTU_CODENAME").empty()) return "";
+            if((get("ID") == "debian" && get("VERSION_ID") == "12") ||
+               (basedOn("debian") && (get("VERSION_CODENAME") == "bookworm" || get("DEBIAN_CODENAME") == "bookworm")))
+                return "debian12";
+            return "";
+        }
+        if(type == "rpm") return !imageBased && basedOn("fedora") ? "fedora" : "";
+        if(type == "arch") return "arch";
+        return "";
+    }
+
+    // Value of "Key: value" in the output of `flatpak info` (run with LC_ALL=C)
+    static std::string flatpakInfoField (const std::string& info, const std::string& key)
+    {
+        std::istringstream stream(info);
+        std::string line;
+        while(std::getline(stream, line))
+        {
+            auto start = line.find_first_not_of(" \t");
+            if(start == std::string::npos || line.compare(start, key.size() + 1, key + ":") != 0) continue;
+            auto value = line.find_first_not_of(" \t", start + key.size() + 1);
+            return value == std::string::npos ? std::string() : line.substr(value);
+        }
+        return "";
+    }
+
+    // URL of a remote in the output of `flatpak remotes --columns=name,url` (tab separated)
+    static std::string flatpakRemoteUrl (const std::string& remotes, const std::string& name)
+    {
+        std::istringstream stream(remotes);
+        std::string line;
+        while(std::getline(stream, line))
+        {
+            auto tab = line.find('\t');
+            if(tab != std::string::npos && line.substr(0, tab) == name) return line.substr(tab + 1);
+        }
+        return "";
+    }
+
     static Installation detectInstallation ()
     {
         Installation installation;
@@ -290,28 +397,29 @@ class SelfUpdateManager
         if(std::filesystem::exists("/.flatpak-info"))
         {
             installation.type = "flatpak";
+            // Without access to the host's flatpak the launcher cannot update itself; the dialog then explains how
+            auto info = runOnHost({"flatpak", "info", FLATPAK_APP_ID});
+            std::string where = flatpakInfoField(info.output, "Installation");
+            if(info.exitCode == 0 && (where == "user" || where == "system"))
+            {
+                installation.flatpakInstallation = where;
+                std::string origin = flatpakInfoField(info.output, "Origin");
+                auto remotes = runOnHost({"flatpak", "remotes", "--" + QString::fromStdString(where), "--columns=name,url"});
+                installation.flatpakFromRepository = flatpakRemoteUrl(remotes.output, origin) == FLATPAK_REPO_URL;
+            }
             return installation;
         }
 
         std::error_code ec;
         QString binary = QString::fromStdString(std::filesystem::canonical("/proc/self/exe", ec).string());
-        auto os = osRelease();
+        bool imageBased = std::filesystem::exists("/run/ostree-booted");
         if(ownedBy("dpkg", {"-S", binary}))
-        {
             installation.type = "deb";
-            if(os["ID"] == "ubuntu" && os["VERSION_ID"] == "24.04") installation.variant = "ubuntu24.04";
-            if(os["ID"] == "debian" && os["VERSION_ID"] == "12") installation.variant = "debian12";
-        }
         else if(ownedBy("rpm", {"-qf", binary}))
-        {
             installation.type = "rpm";
-            if(os["ID"] == "fedora") installation.variant = "fedora";
-        }
         else if(ownedBy("pacman", {"-Qo", binary}))
-        {
             installation.type = "arch";
-            installation.variant = "arch";
-        }
+        installation.variant = packageVariant(installation.type, osRelease(), imageBased);
         return installation;
     }
 
@@ -379,13 +487,28 @@ class SelfUpdateManager
         if(!result.url.starts_with("https://github.com/")) result.url = "https://github.com/xXCrusaderXx/SC-Localization-Launcher/releases/latest";
         result.status = isNewer(tag, currentVersion) ? Protocol::SelfUpdateStatus::Available : Protocol::SelfUpdateStatus::UpToDate;
         result.error.clear();
-        LOG_DEBUG(lg) << "check() - current " << currentVersion << ", latest " << result.latestVersion << ", installed as " << installation.type;
+        LOG_DEBUG(lg) << "check() - current " << currentVersion << ", latest " << result.latestVersion << ", installed as " << installation.type
+                      << (installation.variant.empty() ? "" : " (" + installation.variant + ")")
+                      << (installation.type == "flatpak"
+                              ? " (" + installation.flatpakInstallation + ", " + (installation.flatpakFromRepository ? "repository" : "bundle") + ")"
+                              : "");
 
         // Installing needs the package for this installation plus the signed checksums
         std::map<std::string, std::string> assets;
         if(json.contains("assets") && json.at("assets").is_array())
             for(const auto& asset : json.at("assets"))
                 if(asset.is_object()) assets[asset.value("name", "")] = asset.value("browser_download_url", "");
+
+        // Flatpak updates come from the signed Flatpak repository, not from the release assets
+        if(installation.type == "flatpak")
+        {
+            if(!installation.flatpakInstallation.empty())
+            {
+                result.canInstall = result.status == Protocol::SelfUpdateStatus::Available;
+                check.assets = ReleaseAssets{result.latestVersion, "", "", "", ""};
+            }
+            return check;
+        }
 
         ReleaseAssets release{result.latestVersion, packageName(installation, result.latestVersion), "", "", ""};
         if(signingKey && !release.packageName.empty() && assets.contains(release.packageName) && assets.contains("SHA256SUMS") &&
@@ -409,9 +532,10 @@ class SelfUpdateManager
     std::optional<std::string> install (const ReleaseAssets& release, const Installation& installation, const std::string& currentVersion,
                                         const ProgressCallback& progress)
     {
-        if(!signingKey) return "no signing key";
         // The game reads its files while running and the launcher must not be replaced under it
         if(UpdateManager::runningGameProcess() == UpdateManager::GameProcess::Game) return "Star Citizen is running";
+        if(installation.type == "flatpak") return installFlatpak(release.version, installation);
+        if(!signingKey) return "no signing key";
 
         std::string userAgent = "sc-localization-launcher/" + currentVersion;
         std::string checksums;
