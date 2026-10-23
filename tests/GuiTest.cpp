@@ -153,6 +153,8 @@ class GuiTest : public QObject
         QVERIFY(findText("Test-INI · CC BY-NC-SA 4.0"));
         QVERIFY(click("Deutsch"));
         QTRY_COMPARE(channel("LIVE")["language"].toString(), QString("de"));
+        // The notice of the chosen language replaces the path in the row
+        QTRY_VERIFY(findText("Wird vorbereitet"));
         QCOMPARE(jsonText(readSettingsFile()["channels"]["LIVE"]["language"]), jsonText("de"));
 
         // The picker shows the confirmed choice, and opening it again highlights it
