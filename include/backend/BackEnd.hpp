@@ -11,6 +11,7 @@
 #include "jsonParser/LanguageCatalogParser.hpp"
 #include "jsonParser/SettingsJsonParser.hpp"
 #include "logging/logging.h"
+#include "managers/SelfUpdateManager.hpp"
 #include "managers/UpdateManager.hpp"
 #include "protocol/Commands.hpp"
 #include "protocol/State.hpp"
@@ -31,6 +32,7 @@ class BackEnd
     SettingsJsonParser settingsJsonParser;
     LanguageCatalogParser languageCatalogParser;
     UpdateManager updateManager;
+    SelfUpdateManager selfUpdateManager;
     DirectoryFinder directoryFinder;
     StateCallback stateCallback;
 
@@ -38,6 +40,7 @@ class BackEnd
     std::thread updateJob;
     std::thread searchJob;
     std::thread versionCheckJob;
+    std::thread selfUpdateJob;
 
     // Declared last: its thread uses all members above
     TaskQueue queue;
@@ -167,6 +170,7 @@ class BackEnd
         state.options = data.options;
         state.update = data.update;
         state.searching = data.searching;
+        state.selfUpdate = data.selfUpdate;
         return state;
     }
 
@@ -330,6 +334,23 @@ class BackEnd
                  });
     }
 
+    void handle (const Protocol::CheckForUpdate&)
+    {
+        if(data.selfUpdate.status == Protocol::SelfUpdateStatus::Checking) return;
+        data.selfUpdate.status = Protocol::SelfUpdateStatus::Checking;
+        startJob(selfUpdateJob,
+                 [this, version = data.selfUpdate.currentVersion]
+                 {
+                     auto result = selfUpdateManager.check(version);
+                     queue.post(
+                         [this, result]
+                         {
+                             data.selfUpdate = result;
+                             publish();
+                         });
+                 });
+    }
+
     void handle (const Protocol::AutoSearch&)
     {
         if(data.searching)
@@ -360,12 +381,15 @@ class BackEnd
 
    public:
     // The callback is called on the backend thread
-    explicit BackEnd (StateCallback stateCallback)
+    // version: of this launcher, compared with the published releases
+    BackEnd (StateCallback stateCallback, std::string version)
         : lg("BackEnd")
         , settingsJsonParser(PATHS::JSON_FILES::SETTINGS_USER)
         , updateManager(data.shuttingDown)
+        , selfUpdateManager(data.shuttingDown)
         , stateCallback(std::move(stateCallback))
     {
+        data.selfUpdate.currentVersion = std::move(version);
         // Settings first, so the GUI can show them while the language list is still downloading
         queue.post(
             [this]
@@ -373,6 +397,7 @@ class BackEnd
                 loadSettings();
                 publish();
                 loadLanguages();
+                if(data.options.checkLauncherUpdatesAtStart) handle(Protocol::CheckForUpdate{});
             });
         LOG_DEBUG(lg) << "instanziated";
     }
@@ -382,7 +407,7 @@ class BackEnd
         data.shuttingDown = true;
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
-        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob})
+        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }

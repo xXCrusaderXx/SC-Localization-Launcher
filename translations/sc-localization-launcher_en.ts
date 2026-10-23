@@ -4,7 +4,7 @@
 <context>
     <name>Main</name>
     <message numerus="yes">
-        <location filename="../qml/Main.qml" line="245"/>
+        <location filename="../qml/Main.qml" line="268"/>
         <source>%n channel(s) need an update</source>
         <translation>
             <numerusform>%n channel needs an update</numerusform>
