@@ -26,6 +26,12 @@ test -f /usr/share/applications/io.github.xXCrusaderXx.SCLocalizationLauncher.de
 test -f /usr/share/icons/hicolor/256x256/apps/io.github.xXCrusaderXx.SCLocalizationLauncher.png
 test -f /usr/share/metainfo/io.github.xXCrusaderXx.SCLocalizationLauncher.metainfo.xml
 
+# The non-native FolderDialog needs Qt.labs.folderlistmodel; without it "Choose folder" does nothing
+if ! find / -path '*/qml/Qt/labs/folderlistmodel/qmldir' -print -quit 2>/dev/null | grep -q .; then
+    echo "QML module Qt.labs.folderlistmodel is missing, the folder dialog would not open" >&2
+    exit 1
+fi
+
 export HOME="$(mktemp -d)"
 export QT_QUICK_BACKEND=software
 export QT_FORCE_STDERR_LOGGING=1
