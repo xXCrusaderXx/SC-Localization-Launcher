@@ -6,7 +6,7 @@ import QtQuick.Controls.Basic
 ComboBox {
     id: control
 
-    property var languages: [] // [{ code, name, credit, notice, available }]
+    property var languages: [] // [{ code, name, credit, notice, available, action }]; an action entry opens something instead of choosing
     property string currentCode: ""
 
     signal picked(string code)
@@ -79,7 +79,7 @@ ComboBox {
                 width: parent.width
                 text: entry.modelData.available ? entry.modelData.name : qsTr("%1 (not available)").arg(entry.modelData.name)
                 textFormat: Text.PlainText
-                color: entry.index === control.currentLanguageIndex ? Theme.accent : entry.enabled ? Theme.text : Theme.disabled
+                color: entry.index === control.currentLanguageIndex || entry.modelData.action ? Theme.accent : entry.enabled ? Theme.text : Theme.disabled
                 font.pixelSize: 12
                 font.bold: entry.index === control.currentLanguageIndex
                 elide: Text.ElideRight
@@ -88,8 +88,8 @@ ComboBox {
             // Credit of the translation, required by the licenses of the community projects
             Text {
                 width: parent.width
-                visible: (entry.modelData.credit.project || "") !== ""
-                text: entry.modelData.credit.project + " · " + entry.modelData.credit.license
+                visible: ((entry.modelData.credit || {}).project || "") !== ""
+                text: entry.modelData.credit.project + (entry.modelData.credit.license ? " · " + entry.modelData.credit.license : "")
                 textFormat: Text.PlainText
                 color: Theme.muted
                 font.pixelSize: 10
@@ -118,7 +118,8 @@ ComboBox {
         y: control.height + 4
         // Wider than the button, so credit and notice lines fit
         width: Math.max(control.width, 300)
-        implicitHeight: Math.min(contentItem.implicitHeight + 8, 260)
+        // As tall as the entries need, but never past the bottom of the window
+        implicitHeight: Math.min(contentItem.implicitHeight + 8, control.Window.height - control.mapToItem(null, 0, control.height).y - 12)
         padding: 4
 
         contentItem: ListView {

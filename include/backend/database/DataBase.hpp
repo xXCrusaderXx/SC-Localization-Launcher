@@ -67,9 +67,11 @@ struct InstalledTranslation
     std::string etag;
     // SHA-256 of the installed global.ini, to notice when something else changed it
     std::string fileHash;
+    // Localization folder it went into; needed to remove an own source after its folder changed
+    std::string folder;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(InstalledTranslation, language, etag, fileHash)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(InstalledTranslation, language, etag, fileHash, folder)
 
 struct ChannelData
 {
@@ -83,6 +85,8 @@ struct ChannelData
     bool damaged = false;
     // The last update of this channel failed
     bool lastUpdateFailed = false;
+    // The user's own source, offered as language Protocol::CUSTOM
+    Protocol::CustomSource custom;
 };
 
 // What SelfUpdateManager::install() needs from a release; filled by its check() when a matching signed package exists

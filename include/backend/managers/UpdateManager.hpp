@@ -295,6 +295,7 @@ class UpdateManager
         std::string etag;
         // SHA-256 of the installed global.ini, empty for English
         std::string fileHash;
+        std::string folder;
     };
 
     static std::filesystem::path translationFile (const std::filesystem::path& installPath, const std::string& folder)
@@ -359,7 +360,7 @@ class UpdateManager
         {
             if(shuttingDown) break;
             LOG_DEBUG(lg) << "update() - Channel: " << job.channel << " :: Path: " << job.installPath << " :: Language: " << job.language;
-            Result result{job.channel, job.language, false, ""};
+            Result result{job.channel, job.language, false, "", "", job.folder};
 
             // Download first: if it fails, the translation installed so far stays in place
             if(!job.folder.empty())

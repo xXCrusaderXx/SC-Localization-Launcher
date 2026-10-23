@@ -637,6 +637,85 @@ class BackendTest : public QObject
         QCOMPARE(live.notices.at("de-full"), std::string(120, 'x') + "…");
         QVERIFY(!live.notices.contains("en"));
     }
+
+    // Waits until the LIVE row shows this own source
+    bool setCustomSource (const std::string& url, const std::string& folder)
+    {
+        size_t from = published();
+        backEnd->execute(Protocol::SetCustomSource{"LIVE", url, folder});
+        return waitForState([&] (const auto& s) { return channel(s, "LIVE").custom.url == url; }, from).has_value();
+    }
+
+    void customSourceIsInstalledLikeALanguage ()
+    {
+        QTemporaryDir game;
+        auto gamePath = std::filesystem::path(game.path().toStdString());
+        server.setFile("/custom.ini", "custom_key=Eigene Quelle\n");
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", gamePath.string()});
+        QVERIFY(setCustomSource(server.url("/custom.ini").toStdString(), "french_(france)"));
+        auto live = channel(latest(), "LIVE");
+        QVERIFY(std::find(live.availableLanguages.begin(), live.availableLanguages.end(), Protocol::CUSTOM) != live.availableLanguages.end());
+        // Only this channel offers it
+        auto ptu = channel(latest(), "PTU").availableLanguages;
+        QVERIFY(std::find(ptu.begin(), ptu.end(), Protocol::CUSTOM) == ptu.end());
+
+        QVERIFY(setLanguage("LIVE", Protocol::CUSTOM));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QCOMPARE(readFile(gamePath / "data/Localization/french_(france)/global.ini"), std::string("custom_key=Eigene Quelle\n"));
+        QVERIFY(readFile(gamePath / "user.cfg").find("g_language = french_(france)") != std::string::npos);
+        QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::Installed);
+        QCOMPARE(jsonText(readSettingsFile()["channels"]["LIVE"]["custom"]["folder"]), jsonText("french_(france)"));
+
+        // Back to English removes the files of the own source
+        QVERIFY(setLanguage("LIVE", Protocol::ENGLISH));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QVERIFY(!std::filesystem::exists(gamePath / "data"));
+    }
+
+    void changedCustomFolderRemovesTheOldOne ()
+    {
+        QTemporaryDir game;
+        auto gamePath = std::filesystem::path(game.path().toStdString());
+        server.setFile("/custom.ini", "custom_key=Eigene Quelle\n");
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", gamePath.string()});
+        QVERIFY(setCustomSource(server.url("/custom.ini").toStdString(), "french_(france)"));
+        QVERIFY(setLanguage("LIVE", Protocol::CUSTOM));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+
+        size_t from = published();
+        backEnd->execute(Protocol::SetCustomSource{"LIVE", server.url("/custom.ini").toStdString(), "spanish_(spain)"});
+        QVERIFY(waitForState([] (const auto& s) { return channel(s, "LIVE").custom.folder == "spanish_(spain)"; }, from));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QVERIFY(std::filesystem::exists(gamePath / "data/Localization/spanish_(spain)/global.ini"));
+        QVERIFY(!std::filesystem::exists(gamePath / "data/Localization/french_(france)"));
+    }
+
+    void rejectsUnsafeCustomSources ()
+    {
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetCustomSource{"LIVE", "http://example.com/global.ini", "german_(germany)"});
+        backEnd->execute(Protocol::SetCustomSource{"LIVE", server.url("/custom.ini").toStdString(), "../../outside"});
+        backEnd->execute(Protocol::SetCustomSource{"LIVE", server.url("/custom.ini").toStdString(), ""});
+        // Without a valid source "custom" cannot be chosen either
+        backEnd->execute(Protocol::SetLanguage{"LIVE", Protocol::CUSTOM});
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(channel(latest(), "LIVE").custom.url, std::string());
+        QCOMPARE(channel(latest(), "LIVE").language, Protocol::ENGLISH);
+    }
+
+    void removingTheChosenSourceFallsBackToEnglish ()
+    {
+        QVERIFY(start());
+        QVERIFY(setCustomSource(server.url("/custom.ini").toStdString(), "german_(germany)"));
+        QVERIFY(setLanguage("LIVE", Protocol::CUSTOM));
+
+        size_t from = published();
+        backEnd->execute(Protocol::SetCustomSource{"LIVE", "", ""});
+        QVERIFY(waitForState([] (const auto& s) { return channel(s, "LIVE").custom.url.empty(); }, from));
+        QCOMPARE(channel(latest(), "LIVE").language, Protocol::ENGLISH);
+    }
 };
 
 QTEST_GUILESS_MAIN(BackendTest)
