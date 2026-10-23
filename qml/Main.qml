@@ -265,8 +265,11 @@ ApplicationWindow {
                     }
 
                     Text {
-                        text: window.updateBusy ? qsTr("Downloading translations …") : window.searchBusy ? qsTr("Searching for Star Citizen installations …") : window.updateFailed ? qsTr("Update failed, see the log for details") : window.pendingUpdates > 0 ? qsTr("%n channel(s) need an update", "", window.pendingUpdates) : window.appState.update === "succeeded" ? qsTr("Translations updated") : window.updateReady ? qsTr("Ready") : qsTr("Choose a game folder or use the automatic search")
+                        text: window.updateBusy ? qsTr("Downloading translations …") : window.searchBusy ? qsTr("Searching for Star Citizen installations …") : window.updateFailed ? qsTr("Update failed. <a href=\"log\">Open the log</a>") : window.pendingUpdates > 0 ? qsTr("%n channel(s) need an update", "", window.pendingUpdates) : window.appState.update === "succeeded" ? qsTr("Translations updated") : window.updateReady ? qsTr("Ready") : qsTr("Choose a game folder or use the automatic search")
                         color: Theme.muted
+                        textFormat: Text.StyledText
+                        linkColor: Theme.accent
+                        onLinkActivated: backend.openLogFolder()
                         font.pixelSize: 11
                     }
                 }
