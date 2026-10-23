@@ -38,6 +38,38 @@
 <context>
     <name>LauncherUpdateDialog</name>
     <message>
+        <source>The update is not signed correctly and was not installed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The download is damaged and was not installed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close Star Citizen first, then try again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The installation was cancelled.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The update failed: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Update the Flatpak through your software centre or with &quot;flatpak update&quot;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This launcher was built from source; build the new version the same way.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Download the new version from the release page.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Launcher update</source>
         <translation type="unfinished"></translation>
     </message>
@@ -54,11 +86,31 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>GitHub is limiting requests right now. Please try again in an hour.</source>
+        <source>Downloading version %1 …</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>The check failed: %1</source>
+        <source>Installing … Your system may ask for your password.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Installing …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Version %1 is installed. Restart the launcher to use it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Install update</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restart now</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GitHub is limiting requests right now. Please try again in an hour.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

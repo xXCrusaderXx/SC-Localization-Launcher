@@ -55,6 +55,12 @@ struct CheckForUpdate
     static constexpr const char* name = "checkForUpdate";
 };
 
+// Downloads, verifies and installs the launcher update found by checkForUpdate
+struct InstallUpdate
+{
+    static constexpr const char* name = "installUpdate";
+};
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetLanguage, channel, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInstallPath, channel, path)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetRsiLauncherPath, path)
@@ -62,8 +68,9 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetOption, option, value)
 inline void to_json (nlohmann::json& j, const StartUpdate&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const AutoSearch&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const CheckForUpdate&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const InstallUpdate&) { j = nlohmann::json::object(); }
 
-using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, AutoSearch, CheckForUpdate>;
+using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, AutoSearch, CheckForUpdate, InstallUpdate>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

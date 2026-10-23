@@ -2,17 +2,50 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
-// Shows whether a newer launcher version is published on GitHub, with its release notes.
-// Installing happens on the release page for now.
+// Shows whether a newer launcher version is published on GitHub, with its release notes, and installs it
+// when the release has a signed package for this installation.
 Popup {
     id: dialog
 
-    // Protocol::SelfUpdate: { status, currentVersion, latestVersion, notes, url, error }
+    // Protocol::SelfUpdate: { status, currentVersion, latestVersion, notes, url, error, installType, canInstall, progress }
     property var selfUpdate: ({})
 
     signal checkRequested
+    signal installRequested
+    signal restartRequested
 
     readonly property string status: selfUpdate.status || "idle"
+    readonly property bool busy: status === "checking" || status === "downloading" || status === "installing"
+    readonly property bool packageManager: ["deb", "rpm", "arch"].indexOf(selfUpdate.installType) >= 0
+
+    function errorText(error) {
+        switch (error) {
+        case "rate limit":
+            return qsTr("GitHub is limiting requests right now. Please try again in an hour.");
+        case "invalid signature":
+            return qsTr("The update is not signed correctly and was not installed.");
+        case "checksum mismatch":
+            return qsTr("The download is damaged and was not installed.");
+        case "Star Citizen is running":
+            return qsTr("Close Star Citizen first, then try again.");
+        case "cancelled":
+            return qsTr("The installation was cancelled.");
+        default:
+            return qsTr("The update failed: %1").arg(error);
+        }
+    }
+
+    // Why the launcher cannot install this release itself
+    function manualHint() {
+        switch (selfUpdate.installType) {
+        case "flatpak":
+            return qsTr("Update the Flatpak through your software centre or with \"flatpak update\".");
+        case "source":
+            return qsTr("This launcher was built from source; build the new version the same way.");
+        default:
+            return qsTr("Download the new version from the release page.");
+        }
+    }
 
     // Button in the launcher style; `highlighted` uses the accent gradient
     component DialogButton: Button {
@@ -108,11 +141,42 @@ Popup {
                     return qsTr("Version %1 is available. You are using %2.").arg(dialog.selfUpdate.latestVersion).arg(dialog.selfUpdate.currentVersion);
                 case "upToDate":
                     return qsTr("You are using the latest version (%1).").arg(dialog.selfUpdate.currentVersion);
+                case "downloading":
+                    return qsTr("Downloading version %1 …").arg(dialog.selfUpdate.latestVersion);
+                case "installing":
+                    return dialog.packageManager ? qsTr("Installing … Your system may ask for your password.") : qsTr("Installing …");
+                case "installed":
+                    return qsTr("Version %1 is installed. Restart the launcher to use it.").arg(dialog.selfUpdate.latestVersion);
                 case "error":
-                    return dialog.selfUpdate.error === "rate limit" ? qsTr("GitHub is limiting requests right now. Please try again in an hour.") : qsTr("The check failed: %1").arg(dialog.selfUpdate.error);
+                    return dialog.errorText(dialog.selfUpdate.error);
                 default:
                     return qsTr("Version %1").arg(dialog.selfUpdate.currentVersion);
                 }
+            }
+        }
+
+        Text {
+            Layout.fillWidth: true
+            visible: dialog.status === "available" && !dialog.selfUpdate.canInstall
+            text: dialog.manualHint()
+            wrapMode: Text.Wrap
+            color: Theme.muted
+            font.pixelSize: 12
+        }
+
+        // Download progress
+        Rectangle {
+            Layout.fillWidth: true
+            visible: dialog.status === "downloading"
+            implicitHeight: 6
+            radius: 3
+            color: Theme.inputBackground
+
+            Rectangle {
+                width: parent.width * Math.min(1, dialog.selfUpdate.progress || 0)
+                height: parent.height
+                radius: parent.radius
+                color: Theme.accent
             }
         }
 
@@ -146,16 +210,31 @@ Popup {
             }
 
             DialogButton {
+                visible: dialog.status !== "installed"
                 text: qsTr("Check again")
-                enabled: dialog.status !== "checking"
+                enabled: !dialog.busy
                 onClicked: dialog.checkRequested()
             }
 
             DialogButton {
-                visible: dialog.status === "available"
+                visible: dialog.status === "available" || dialog.status === "error"
                 text: qsTr("Open download page")
+                highlighted: dialog.status === "available" && !dialog.selfUpdate.canInstall
+                onClicked: Qt.openUrlExternally(dialog.selfUpdate.url || "https://github.com/xXCrusaderXx/SC-Localization-Launcher/releases/latest")
+            }
+
+            DialogButton {
+                visible: dialog.status === "available" && dialog.selfUpdate.canInstall === true
+                text: qsTr("Install update")
                 highlighted: true
-                onClicked: Qt.openUrlExternally(dialog.selfUpdate.url)
+                onClicked: dialog.installRequested()
+            }
+
+            DialogButton {
+                visible: dialog.status === "installed"
+                text: qsTr("Restart now")
+                highlighted: true
+                onClicked: dialog.restartRequested()
             }
         }
     }

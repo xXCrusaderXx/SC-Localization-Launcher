@@ -1,12 +1,15 @@
 #pragma once
 
+#include <sodium.h>
 #include <QCryptographicHash>
 #include <QHash>
 #include <QMutex>
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QThread>
+#include <array>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <future>
@@ -14,6 +17,7 @@
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "backend/utils/paths.hpp"
 
@@ -237,4 +241,85 @@ inline std::string readFile (const std::filesystem::path& path)
 {
     std::ifstream stream(path);
     return std::string(std::istreambuf_iterator<char>(stream), {});
+}
+
+// Signs like `minisign -S` (prehashed "ED" format), with a fresh key per instance; never the project's real key
+class TestSigningKey
+{
+   private:
+    std::array<unsigned char, crypto_sign_PUBLICKEYBYTES> publicKey{};
+    std::array<unsigned char, crypto_sign_SECRETKEYBYTES> secretKey{};
+    std::array<unsigned char, 8> keyId{};
+
+    static std::string base64 (const std::vector<unsigned char>& bytes)
+    {
+        std::string text(sodium_base64_ENCODED_LEN(bytes.size(), sodium_base64_VARIANT_ORIGINAL), '\0');
+        sodium_bin2base64(text.data(), text.size(), bytes.data(), bytes.size(), sodium_base64_VARIANT_ORIGINAL);
+        text.resize(std::strlen(text.c_str()));
+        return text;
+    }
+
+   public:
+    TestSigningKey ()
+    {
+        if(sodium_init() < 0) std::abort();
+        crypto_sign_keypair(publicKey.data(), secretKey.data());
+        randombytes_buf(keyId.data(), keyId.size());
+    }
+
+    // Content of a minisign .pub file
+    std::string publicKeyFile () const
+    {
+        std::vector<unsigned char> bytes{'E', 'd'};
+        bytes.insert(bytes.end(), keyId.begin(), keyId.end());
+        bytes.insert(bytes.end(), publicKey.begin(), publicKey.end());
+        return "untrusted comment: test key\n" + base64(bytes) + "\n";
+    }
+
+    // Content of a .minisig file for `data`
+    std::string sign (const std::string& data, const std::string& trustedComment) const
+    {
+        std::array<unsigned char, crypto_generichash_BYTES_MAX> hash{};
+        crypto_generichash(hash.data(), hash.size(), reinterpret_cast<const unsigned char*>(data.data()), data.size(), nullptr, 0);
+        std::array<unsigned char, crypto_sign_BYTES> signature{};
+        crypto_sign_detached(signature.data(), nullptr, hash.data(), hash.size(), secretKey.data());
+
+        std::vector<unsigned char> line{'E', 'D'};
+        line.insert(line.end(), keyId.begin(), keyId.end());
+        line.insert(line.end(), signature.begin(), signature.end());
+
+        std::vector<unsigned char> global(signature.begin(), signature.end());
+        global.insert(global.end(), trustedComment.begin(), trustedComment.end());
+        std::array<unsigned char, crypto_sign_BYTES> globalSignature{};
+        crypto_sign_detached(globalSignature.data(), nullptr, global.data(), global.size(), secretKey.data());
+
+        return "untrusted comment: test signature\n" + base64(line) + "\ntrusted comment: " + trustedComment + "\n" +
+               base64({globalSignature.begin(), globalSignature.end()}) + "\n";
+    }
+};
+
+inline std::string sha256Hex (const std::string& data)
+{
+    return QCryptographicHash::hash(QByteArray::fromStdString(data), QCryptographicHash::Sha256).toHex().toStdString();
+}
+
+inline const std::string APPIMAGE_ASSET = "SC-Localization-Launcher-9.9.9-x86_64.AppImage";
+
+// Publishes launcher release v9.9.9 with an AppImage on the test server; checksums and signature default to correct ones
+inline void publishAppImageRelease (TestServer& server, const TestSigningKey& key, const std::string& package,
+                                    std::optional<std::string> checksums = {}, std::optional<std::string> signature = {})
+{
+    std::string sums = checksums.value_or(sha256Hex(package) + "  " + APPIMAGE_ASSET + "\n");
+    std::string sig = signature.value_or(key.sign(sums, "sc-localization-launcher v9.9.9"));
+    nlohmann::json release = {{"tag_name", "v9.9.9"},
+                              {"body", "notes"},
+                              {"html_url", "https://github.com/xXCrusaderXx/SC-Localization-Launcher/releases/tag/v9.9.9"},
+                              {"assets",
+                               {{{"name", APPIMAGE_ASSET}, {"browser_download_url", "{base}/download/package"}},
+                                {{"name", "SHA256SUMS"}, {"browser_download_url", "{base}/download/SHA256SUMS"}},
+                                {{"name", "SHA256SUMS.minisig"}, {"browser_download_url", "{base}/download/SHA256SUMS.minisig"}}}}};
+    server.setFile("/releases/latest", QByteArray::fromStdString(release.dump()));
+    server.setFile("/download/package", QByteArray::fromStdString(package));
+    server.setFile("/download/SHA256SUMS", QByteArray::fromStdString(sums));
+    server.setFile("/download/SHA256SUMS.minisig", QByteArray::fromStdString(sig));
 }
