@@ -256,8 +256,6 @@ else()
               QML_SOURCES_PATHS=${CMAKE_SOURCE_DIR}/qml
               EXTRA_PLATFORM_PLUGINS=${SC_WAYLAND_PLUGINS}
               EXTRA_QT_MODULES=waylandclient
-              LDAI_OUTPUT=${APPIMAGE_FILE}
-              LDAI_UPDATE_INFORMATION=${SC_APPIMAGE_UPDATE_INFORMATION}
             ${LINUXDEPLOY}
               --appdir ${APPDIR}
               --executable $<TARGET_FILE:${SC_LAUNCHER_BINARY}>
@@ -265,6 +263,19 @@ else()
               --icon-file ${TOOLS_DIR}/${SC_APP_ID}.png
               ${SC_LINUXDEPLOY_EXTRA_LIBS}
               --plugin qt
+    # OpenGL on Wayland needs Qt's EGL client integration plugin, which linuxdeploy-plugin-qt does not deploy.
+    # Without it Qt Quick aborts at startup on every Wayland desktop ("Failed to initialize graphics backend").
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+              ${SC_QT_PLUGIN_DIR}/wayland-graphics-integration-client
+              ${APPDIR}/usr/plugins/wayland-graphics-integration-client
+    COMMAND ${CMAKE_COMMAND} -E env
+              ARCH=x86_64
+              APPIMAGE_EXTRACT_AND_RUN=1
+              LDAI_OUTPUT=${APPIMAGE_FILE}
+              LDAI_UPDATE_INFORMATION=${SC_APPIMAGE_UPDATE_INFORMATION}
+            ${LINUXDEPLOY}
+              --appdir ${APPDIR}
+              --deploy-deps-only ${APPDIR}/usr/plugins/wayland-graphics-integration-client
               --output appimage
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Create AppImage"
