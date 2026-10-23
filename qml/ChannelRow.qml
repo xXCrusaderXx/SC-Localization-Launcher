@@ -5,7 +5,7 @@ import QtQuick.Layouts
 Rectangle {
     id: row
 
-    // Protocol::Channel: { name, installPath, language, availableLanguages }
+    // Protocol::Channel: { name, installPath, language, availableLanguages, status }
     property var channel: ({})
     // Protocol::State.languages: [{ code, name, credit }]
     property var languages: []
@@ -13,10 +13,13 @@ Rectangle {
 
     signal languagePicked(string language)
     signal pathRequested
+    signal repairRequested
 
     readonly property bool pathSet: (channel.installPath || "") !== ""
     readonly property var available: channel.availableLanguages || []
     readonly property bool choiceAvailable: available.indexOf(channel.language) >= 0
+    // Red: the installed files were changed or the last update failed
+    readonly property bool broken: channel.status === "damaged" || channel.status === "failed"
     readonly property string choiceName: {
         for (const language of languages)
             if (language.code === channel.language)
@@ -57,7 +60,7 @@ Rectangle {
             width: 8
             height: 8
             radius: 4
-            color: row.channel.status === "installed" ? Theme.success : row.pathSet ? Theme.warning : Theme.disabled
+            color: row.broken ? Theme.danger : row.channel.status === "installed" ? Theme.success : row.pathSet ? Theme.warning : Theme.disabled
         }
 
         ColumnLayout {
@@ -79,13 +82,17 @@ Rectangle {
                         return qsTr("No install path set");
                     if (!row.choiceAvailable)
                         return qsTr("%1 is currently not available for this channel").arg(row.choiceName);
+                    if (row.channel.status === "damaged")
+                        return qsTr("Files were changed – please repair");
+                    if (row.channel.status === "failed")
+                        return qsTr("The last update failed");
                     if (row.channel.status === "notInstalled")
                         return qsTr("%1 is not installed yet").arg(row.choiceName);
                     if (row.channel.status === "updateAvailable")
                         return row.channel.language === "en" ? qsTr("The translation is removed with the next update") : qsTr("Update available for %1").arg(row.choiceName);
                     return row.channel.installPath;
                 }
-                color: row.pathSet && (!row.choiceAvailable || row.channel.status !== "installed") ? Theme.warning : Theme.muted
+                color: row.broken ? Theme.danger : row.pathSet && (!row.choiceAvailable || row.channel.status !== "installed") ? Theme.warning : Theme.muted
                 font.pixelSize: 11
                 elide: Text.ElideMiddle
             }
@@ -125,6 +132,16 @@ Rectangle {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: row.pathRequested()
             }
+        }
+
+        // Downloads the translation again and rewrites user.cfg, e.g. after a game update
+        IconButton {
+            objectName: "repairButton"
+            visible: row.pathSet
+            glyph: "↻"
+            Accessible.name: qsTr("Repair")
+            onClicked: if (!row.locked)
+                row.repairRequested()
         }
 
         IconButton {

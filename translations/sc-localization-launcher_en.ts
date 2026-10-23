@@ -12,6 +12,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Files were changed – please repair</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The last update failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>%1 is not installed yet</source>
         <translation type="unfinished"></translation>
     </message>
@@ -25,6 +33,10 @@
     </message>
     <message>
         <source>Choose folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Repair</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

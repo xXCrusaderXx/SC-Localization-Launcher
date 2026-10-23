@@ -16,7 +16,7 @@ ApplicationWindow {
     readonly property bool updateFailed: appState.update === "failed"
     readonly property bool updateReady: channels.some(c => c.installPath !== "")
     // Channels whose translation is missing, outdated or still has to be removed
-    readonly property int pendingUpdates: channels.filter(c => c.status === "notInstalled" || c.status === "updateAvailable").length
+    readonly property int pendingUpdates: channels.filter(c => ["notInstalled", "updateAvailable", "damaged", "failed"].indexOf(c.status) >= 0).length
     readonly property bool launchAfterUpdate: appState.options.launchGameAfterUpdate === true
     readonly property bool searchBusy: appState.searching === true
 
@@ -214,6 +214,7 @@ ApplicationWindow {
                 locked: window.updateBusy
                 onLanguagePicked: language => backend.setLanguage(channel.name, language)
                 onPathRequested: window.choosePath(channel.name)
+                onRepairRequested: backend.repairChannel(channel.name)
             }
         }
 

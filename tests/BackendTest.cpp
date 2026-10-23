@@ -99,6 +99,25 @@ class BackendTest : public QObject
         return waitForState([&] (const auto& s) { return s.options.showUpdateProgress == value; }, from).has_value();
     }
 
+    // Like closing and opening the launcher again
+    bool restart ()
+    {
+        backEnd.reset();
+        {
+            std::lock_guard lock(mutex);
+            states.clear();
+        }
+        return start();
+    }
+
+    // Installs German into a fresh game folder on LIVE
+    bool installGerman (const QTemporaryDir& game)
+    {
+        if(!start()) return false;
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        return setLanguage("LIVE", "de") && runUpdate() == UpdateStatus::Succeeded && channel(latest(), "LIVE").status == ChannelStatus::Installed;
+    }
+
     // Runs one update and returns its final status
     std::optional<UpdateStatus> runUpdate ()
     {
@@ -532,6 +551,77 @@ class BackendTest : public QObject
         // packaging/minisign.pub is embedded at build time; a broken file would silently disable self-updates
         auto key = Minisign::parsePublicKey(UPDATE_SIGNING_KEY);
         QVERIFY2(key, "packaging/minisign.pub is missing or not a minisign public key");
+    }
+
+    void changedTranslationFileIsDamaged ()
+    {
+        QTemporaryDir game;
+        QVERIFY(installGerman(game));
+        // A game update puts its own global.ini in place while the launcher is closed
+        std::ofstream(std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini") << "from the game\n";
+
+        QVERIFY(restart());
+        QVERIFY(waitForState([] (const auto& s) { return channel(s, "LIVE").status == ChannelStatus::Damaged; }));
+    }
+
+    void missingUserCfgLineIsDamaged ()
+    {
+        QTemporaryDir game;
+        QVERIFY(installGerman(game));
+        std::ofstream(std::filesystem::path(game.path().toStdString()) / "user.cfg") << "r_DisplayInfo = 2\n";
+
+        QVERIFY(restart());
+        QVERIFY(waitForState([] (const auto& s) { return channel(s, "LIVE").status == ChannelStatus::Damaged; }));
+    }
+
+    void updateRepairsDamagedChannel ()
+    {
+        QTemporaryDir game;
+        auto ini = std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini";
+        QVERIFY(installGerman(game));
+        std::ofstream(ini) << "from the game\n";
+        QVERIFY(restart());
+        QVERIFY(waitForState([] (const auto& s) { return channel(s, "LIVE").status == ChannelStatus::Damaged; }));
+
+        // The source has not changed, but a damaged channel must not get "not modified"
+        int downloads = server.requestCount("GET /de.ini 200");
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QCOMPARE(server.requestCount("GET /de.ini 200"), downloads + 1);
+        QCOMPARE(QByteArray::fromStdString(readFile(ini)), TRANSLATION);
+        QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::Installed);
+    }
+
+    void repairDownloadsAgain ()
+    {
+        QTemporaryDir game;
+        auto ini = std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini";
+        QVERIFY(installGerman(game));
+        // Changed while the launcher runs, so the check at start has not seen it
+        std::ofstream(ini) << "broken\n";
+
+        int downloads = server.requestCount("GET /de.ini 200");
+        size_t from = published();
+        backEnd->execute(Protocol::RepairChannel{"LIVE"});
+        auto running = waitForState([] (const auto& s) { return s.update == UpdateStatus::Running; }, from);
+        QVERIFY(running);
+        QVERIFY(waitForState([] (const auto& s) { return s.update == UpdateStatus::Succeeded; }, *running + 1));
+        QCOMPARE(server.requestCount("GET /de.ini 200"), downloads + 1);
+        QCOMPARE(QByteArray::fromStdString(readFile(ini)), TRANSLATION);
+    }
+
+    void failedUpdateMarksTheChannel ()
+    {
+        QTemporaryDir game;
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        // Both German full URLs answer 404
+        QVERIFY(setLanguage("LIVE", "de-full"));
+        QCOMPARE(runUpdate(), UpdateStatus::Failed);
+        QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::Failed);
+
+        QVERIFY(setLanguage("LIVE", "de"));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::Installed);
     }
 };
 
