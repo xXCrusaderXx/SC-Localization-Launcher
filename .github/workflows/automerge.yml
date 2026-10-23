@@ -1,6 +1,6 @@
 name: Auto-merge
 
-# Turns on GitHub auto-merge for trusted PRs. GitHub then squash-merges them by
+# Turns on GitHub auto-merge for trusted PRs into dev. GitHub then merges them by
 # itself once the branch ruleset is satisfied (required checks green, branch up
 # to date). Nothing is merged before that.
 #
@@ -21,7 +21,8 @@ permissions:
 jobs:
   enable-auto-merge:
     name: Enable auto-merge
-    if: ${{ !github.event.pull_request.draft }}
+    # Only feature PRs into dev; dev -> main is merged by the maintainer at release points.
+    if: ${{ !github.event.pull_request.draft && github.event.pull_request.base.ref == 'dev' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -38,7 +39,7 @@ jobs:
         if: env.IS_DEPENDABOT == 'true'
         uses: dependabot/fetch-metadata@v3
 
-      - name: Enable squash auto-merge for trusted PRs
+      - name: Enable auto-merge (merge commit) for trusted PRs
         env:
           UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
         run: |
@@ -54,4 +55,4 @@ jobs:
             echo "::notice::Not enabling auto-merge (author association $ASSOCIATION). A maintainer reviews and merges this PR."
             exit 0
           fi
-          gh pr merge --auto --squash "$PR_URL"
+          gh pr merge --auto --merge "$PR_URL"

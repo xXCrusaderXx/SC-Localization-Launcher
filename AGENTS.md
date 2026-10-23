@@ -6,7 +6,7 @@ These rules apply to every AI agent (Claude Code, Codex, Copilot, Cursor, …) t
 
 - An agent works on behalf of a human contributor. That human reviews every change, understands it, and answers for it in the PR.
 - **Never add a `Signed-off-by` line yourself, and never tick the sign-off box.** The DCO sign-off is a legal statement only the human can make. A `Co-Authored-By` trailer for the agent is welcome.
-- Do not open, approve, merge, or close pull requests, push to `main`, create tags or releases, or change repository settings unless the human explicitly asks for that specific action.
+- Do not open, approve, merge, or close pull requests, push to `main` or `dev`, merge `dev` into `main`, create tags or releases, or change repository settings unless the human explicitly asks for that specific action.
 - Never bypass checks: no `--no-verify`, no disabling CI jobs, no weakening `.github/workflows/` or the DCO check to make a PR pass.
 - Disclose agent use in the PR description (the template has a checkbox).
 
@@ -32,13 +32,13 @@ Translation texts belong to their community projects (e.g. [StarCitizen-Deutsch-
 - `include/frontend/BackendBridge.hpp`: the Qt bridge. It exposes `state` to QML and turns QML calls into protocol commands.
 - `qml/`: the Qt Quick UI. `Theme.qml` is a singleton for colours and sizes; register new QML files in `SC_QML_FILES` in `CMakeLists.txt` (the GUI test uses the same list).
 - `packaging/`, `flatpak/`, `misc/`: AppImage, Flatpak, desktop file, and install scripts.
-- `languages.json`: the catalogue of game languages. The launcher loads it from `main`, so changes reach users without a release; keep it valid JSON and backwards compatible (`"version": 1`).
+- `languages.json`: the catalogue of game languages. The launcher loads it from `main`, so changes reach users when `dev` is merged into `main` (no launcher update needed); keep it valid JSON and backwards compatible (`"version": 1`).
 - `translations/*.ts`: translations of the launcher's own interface. Every user-visible QML string goes through `qsTr()`; the English text is the source.
 - [ROADMAP.md](ROADMAP.md): phases and milestones. Each closed milestone becomes a release. Work on a roadmap item references its issue, and a change to a phase updates ROADMAP.md in the same PR.
 
 ## Code
 
-- C++20, `.clang-format` style (Allman braces, 4-space indent, 150 columns). Format only the lines you change: `git clang-format origin/main`.
+- C++20, `.clang-format` style (Allman braces, 4-space indent, 150 columns). Format only the lines you change: `git clang-format origin/dev`.
 - Comments and log messages are written in English. A comment states intent the code cannot show; do not narrate history or the change you just made.
 - Log through the project's `LOG_DEBUG` / `LOG_INFO` / `LOG_ERROR` macros, not `std::cout` or `qDebug`.
 - Network access uses libcurl with HTTPS only. Downloaded files must never be written outside the target localization folder.
@@ -51,7 +51,7 @@ Translation texts belong to their community projects (e.g. [StarCitizen-Deutsch-
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSC_BUILD_TESTS=ON
 cmake --build build
 ctest --test-dir build --output-on-failure
-git clang-format --diff origin/main
+git clang-format --diff origin/dev
 ```
 
 A change is done only when it builds and the tests pass. Backend behaviour belongs in `tests/BackendTest.cpp`, UI flows in `tests/GuiTest.cpp`. Say so in the PR if you could not run the app or test a code path by hand.
@@ -60,6 +60,7 @@ A change is done only when it builds and the tests pass. Backend behaviour belon
 
 - Changes you did not make belong to the human or another agent. Do not commit, revert, stash, or unstage them. Check `git diff --cached --name-only` before you commit.
 - Do not commit build output (`build/`, `release/`, `build-appimage/`) or downloaded tools (`misc/*.appimage`).
-- Never switch branches in the main checkout; it stays on `main`. Work on a branch in your own worktree (`git worktree add <dir> -b <branch> origin/main`).
+- Branch from `dev` and open PRs against `dev` (merge commit, no squash). `main` only receives `dev` at release points, merged by the human.
+- Never switch branches in the main checkout; it stays on `dev`. Work on a branch in your own worktree (`git worktree add <dir> -b <branch> origin/dev`).
 - Don't edit `CHANGELOG.md` in feature PRs; it is written once per release. Put the user-visible change in the PR title instead.
 - Clean up after every merge: remove your worktree and local branch (`git worktree remove <dir>`, `git branch -D <branch>`) and run `git fetch --prune`. The `Clean up merged branches` workflow deletes the remote branch.

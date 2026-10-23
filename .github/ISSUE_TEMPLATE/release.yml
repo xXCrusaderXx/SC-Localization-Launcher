@@ -18,7 +18,8 @@ body:
         - label: Every other issue and PR of the milestone is closed or moved to the next milestone.
         - label: "`CHANGELOG.md`: a `[X.Y.Z] - YYYY-MM-DD` section written from the merged PRs of the milestone, with a fresh empty `Unreleased` section above it."
         - label: "`ROADMAP.md` reflects what was actually delivered."
-        - label: CI on `main` is green.
+        - label: CI on `dev` is green.
+        - label: PR `dev` → `main` is merged (merge commit), and CI on `main` is green.
         - label: A manual run of the `Release` workflow (dry run) built and tested all packages.
   - type: markdown
     attributes:
