@@ -32,13 +32,15 @@ Download the file for your system from the [releases page](https://github.com/xX
 | System | File | Install |
 | ------ | ---- | ------- |
 | Any distribution | `SC-Localization-Launcher-*-x86_64.AppImage` | `chmod +x SC-Localization-Launcher-*.AppImage && ./SC-Localization-Launcher-*.AppImage` |
-| Any distribution, Steam Deck | `SC-Localization-Launcher-*-x86_64.flatpak` | `flatpak install --user ./SC-Localization-Launcher-*.flatpak` |
+| Any distribution, Steam Deck | Flatpak repository (updates through `flatpak update`) | `flatpak install --user https://xxcrusaderxx.github.io/SC-Localization-Launcher/io.github.xXCrusaderXx.SCLocalizationLauncher.flatpakref` |
 | Ubuntu 24.04 or newer | `sc-localization-launcher-*-ubuntu24.04-x86_64.deb` | `sudo apt install ./sc-localization-launcher-*-ubuntu24.04-x86_64.deb` |
 | Debian 12 or newer | `sc-localization-launcher-*-debian12-x86_64.deb` | `sudo apt install ./sc-localization-launcher-*-debian12-x86_64.deb` |
 | Fedora | `sc-localization-launcher-*-fedora-x86_64.rpm` | `sudo dnf install ./sc-localization-launcher-*-fedora-x86_64.rpm` |
 | Arch Linux, Manjaro, CachyOS | `sc-localization-launcher-*-arch-x86_64.pkg.tar.zst` | `sudo pacman -U ./sc-localization-launcher-*-arch-x86_64.pkg.tar.zst` |
 
 For openSUSE, Ubuntu 22.04 and other distributions, use the AppImage or the Flatpak. The AppImage brings its own Qt and runs on every distribution with glibc 2.35 or newer.
+
+The Flatpak repository is signed with [`packaging/flatpak-signing-key.asc`](packaging/flatpak-signing-key.asc); the `.flatpakref` carries that key and pulls the KDE runtime from Flathub. Every release also has a single-file bundle (`SC-Localization-Launcher-*-x86_64.flatpak`) for offline installs, which does not update by itself.
 
 The Flatpak can read game folders anywhere (`--filesystem=host`) and starts the game outside the sandbox through `flatpak-spawn --host` (`--talk-name=org.freedesktop.Flatpak`).
 
@@ -101,6 +103,7 @@ The release pipeline builds every package with the scripts in [`packaging/`](pac
 packaging/appimage/build-in-docker.sh     # AppImage, built on Ubuntu 22.04
 packaging/native/build-in-docker.sh       # .deb (Ubuntu 24.04, Debian 12) and .rpm (Fedora)
 flatpak-builder --user --install build-flatpak flatpak/io.github.xXCrusaderXx.SCLocalizationLauncher.json
+packaging/flatpak/build-repo.sh . 0.0.0-dev flatpak-out  # repository + bundle as in a release (unsigned without the key)
 ```
 
 For your own distribution package, use the FHS layout:
