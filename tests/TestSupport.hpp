@@ -6,9 +6,11 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QThread>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <future>
+#include <iostream>
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
@@ -178,13 +180,31 @@ inline QHash<QByteArray, QByteArray> fixtureFiles ()
 inline std::filesystem::path settingsFilePath () { return PATHS::JSON_FILES::SETTINGS_USER; }
 
 // Every test starts without settings and without cached downloads
+// The tests delete and overwrite the launcher's user folders. Started outside ctest (e.g. ./tests/GuiTest), those are the
+// real folders of the person running them, so stop before touching anything that is not inside the ctest home.
+inline void requireTestHome (const std::filesystem::path& path)
+{
+    const char* testHome = std::getenv("SC_TEST_HOME");
+    std::string prefix = testHome && *testHome ? std::string(testHome) + "/" : std::string();
+    if(prefix.empty() || path.string().rfind(prefix, 0) != 0)
+    {
+        std::cerr << "Refusing to touch " << path << ": run the tests through ctest, which gives them their own HOME.\n";
+        std::abort();
+    }
+}
+
 inline void resetUserDir ()
 {
-    for(const auto& dir : {PATHS::CONFIG_USER, PATHS::CACHE_USER, PATHS::LEGACY_ROOT_USER}) std::filesystem::remove_all(dir);
+    for(const auto& dir : {PATHS::CONFIG_USER, PATHS::CACHE_USER, PATHS::LEGACY_ROOT_USER})
+    {
+        requireTestHome(dir);
+        std::filesystem::remove_all(dir);
+    }
 }
 
 inline void writeSettingsFile (const nlohmann::json& json, const std::filesystem::path& path = settingsFilePath())
 {
+    requireTestHome(path);
     std::filesystem::create_directories(path.parent_path());
     std::ofstream(path) << json.dump(4);
 }
