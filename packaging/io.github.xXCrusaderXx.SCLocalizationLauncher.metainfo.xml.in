@@ -42,11 +42,10 @@
     <category>Game</category>
   </categories>
 
+  <!-- Filled in by CMake: the version being built and its build date (SOURCE_DATE_EPOCH if set) -->
   <releases>
-    <release version="0.1.0" date="2026-10-22">
-      <description>
-        <p>First Linux release with the new interface.</p>
-      </description>
+    <release version="@SC_FULL_VERSION@" date="@SC_RELEASE_DATE@">
+      <url type="details">https://github.com/xXCrusaderXx/SC-Localization-Launcher/releases/tag/v@SC_FULL_VERSION@</url>
     </release>
   </releases>
 </component>

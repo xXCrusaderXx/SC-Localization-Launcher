@@ -162,7 +162,10 @@ endif()
 
 set(SC_DESKTOP_FILE "${CMAKE_SOURCE_DIR}/packaging/${SC_APP_ID}.desktop")
 set(SC_ICON_FILE "${CMAKE_SOURCE_DIR}/resources/icon.png")
-set(SC_METAINFO_FILE "${CMAKE_SOURCE_DIR}/packaging/${SC_APP_ID}.metainfo.xml")
+# The release entry carries the version being built, so the metainfo never names an outdated release
+string(TIMESTAMP SC_RELEASE_DATE "%Y-%m-%d" UTC)
+set(SC_METAINFO_FILE "${CMAKE_BINARY_DIR}/${SC_APP_ID}.metainfo.xml")
+configure_file("${CMAKE_SOURCE_DIR}/packaging/${SC_APP_ID}.metainfo.xml.in" "${SC_METAINFO_FILE}" @ONLY)
 
 #############################################################
 # --- INSTALL ---
