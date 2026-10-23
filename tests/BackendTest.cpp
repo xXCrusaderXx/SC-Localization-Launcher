@@ -8,6 +8,7 @@
 #include <optional>
 
 #include "TestSupport.hpp"
+#include "UpdateSigningKey.hpp"
 #include "backend/BackEnd.hpp"
 #include "logging/logger/custom_logger/custom_logger.h"
 
@@ -524,6 +525,13 @@ class BackendTest : public QObject
         auto update = checkAndInstall();
         QCOMPARE(jsonText(update.status), jsonText(Protocol::SelfUpdateStatus::Available));
         QVERIFY(!update.canInstall);
+    }
+
+    void projectSigningKeyIsUsable ()
+    {
+        // packaging/minisign.pub is embedded at build time; a broken file would silently disable self-updates
+        auto key = Minisign::parsePublicKey(UPDATE_SIGNING_KEY);
+        QVERIFY2(key, "packaging/minisign.pub is missing or not a minisign public key");
     }
 };
 
