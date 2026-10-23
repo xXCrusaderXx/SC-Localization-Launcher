@@ -70,6 +70,7 @@
                         "build",
                         "build-appimage",
                         "build-flatpak",
+                        "flatpak-out",
                         "release",
                         "misc/appimagetool-x86_64.appimage",
                         "misc/linuxdeploy-x86_64.appimage",
