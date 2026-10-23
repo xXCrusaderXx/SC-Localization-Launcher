@@ -360,6 +360,8 @@ class GuiTest : public QObject
         QPointF center = repair->mapToScene(QPointF(repair->width() / 2, repair->height() / 2));
         QTest::mouseClick(window, Qt::LeftButton, {}, center.toPoint());
         QTRY_COMPARE_WITH_TIMEOUT(QByteArray::fromStdString(readFile(ini)), TRANSLATION, 30000);
+        // The file is written before the update reports back; until then the channel rows stay locked
+        QTRY_COMPARE(bridge->state()["update"].toString(), QString("succeeded"));
     }
 
     void ownSourceThroughTheDialog ()
@@ -370,6 +372,8 @@ class GuiTest : public QObject
         // Open the LIVE picker (the topmost one) and choose the entry for an own source
         QQuickItem* picker = languagePicker();
         QVERIFY(picker);
+        // Locked while an update runs, a click would be lost
+        QTRY_VERIFY(picker->isEnabled());
         QPointF center = picker->mapToScene(QPointF(picker->width() / 2, picker->height() / 2));
         QTest::mouseClick(window, Qt::LeftButton, {}, center.toPoint());
         QTRY_VERIFY(findText("Own source …"));
