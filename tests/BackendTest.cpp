@@ -1,5 +1,4 @@
 #include <QProcess>
-#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
 #include <algorithm>
@@ -194,6 +193,11 @@ class BackendTest : public QObject
         std::lock_guard lock(mutex);
         return states[*done].game;
     }
+
+    // Wine names the process after the Windows program; the fake one only sleeps.
+    // The tests watch for this name instead of "RSI Launcher.exe" (SC_RSI_LAUNCHER_PROGRAM in tests/CMakeLists.txt).
+    static constexpr const char* FAKE_RSI_LAUNCHER =
+        "exec -a 'C:\\Program Files\\Roberts Space Industries\\RSI Launcher\\RSI Test Launcher.exe' sleep 30\n";
 
    private slots:
     void initTestCase () { LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>()); }
@@ -552,11 +556,11 @@ class BackendTest : public QObject
         qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
         publishAppImageRelease(server, releaseKey, "new version");
 
-        // A process named like the game: a copy of sleep
-        auto game = std::filesystem::path(dir.path().toStdString()) / "StarCitizen.exe";
-        std::filesystem::copy_file(QStandardPaths::findExecutable("sleep", {"/usr/bin", "/bin"}).toStdString(), game);
+        // A process named like the game under Wine (SC_GAME_PROGRAM in tests/CMakeLists.txt)
+        qputenv("PATH", "/usr/bin:/bin");
         QProcess running;
-        running.start(QString::fromStdString(game.string()), {"30"});
+        running.start("/bin/bash",
+                      {"-c", "exec -a 'C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\Bin64\\StarCitizen Test.exe' sleep 30"});
         QVERIFY(running.waitForStarted());
 
         QVERIFY(start());
@@ -757,17 +761,74 @@ class BackendTest : public QObject
         qputenv("PATH", "/usr/bin:/bin");
         QTemporaryDir prefix;
         auto root = std::filesystem::path(prefix.path().toStdString());
-        // Wine names the process after the Windows program
-        auto rsiLauncher = lugPrefix(prefix,
-                                     "echo \"${ELECTRON_RUN_AS_NODE-unset}\" > electron-env\n"
-                                     "echo $$ > pid\n"
-                                     "exec -a 'C:\\Program Files\\Roberts Space Industries\\RSI Launcher\\RSI Launcher.exe' sleep 30\n");
+        auto rsiLauncher =
+            lugPrefix(prefix, std::string("echo \"${ELECTRON_RUN_AS_NODE-unset}\" > electron-env\necho $$ > pid\n") + FAKE_RSI_LAUNCHER);
 
         auto result = updateAndStartGame(rsiLauncher);
         QProcess::execute("kill", {QString::fromStdString(readFile(root / "pid")).trimmed()});
         qunsetenv("ELECTRON_RUN_AS_NODE");
         QCOMPARE(result, std::optional(GameStart::Running));
         QCOMPARE(readFile(root / "electron-env"), std::string("unset\n"));
+        // Once it quits, the launcher is ready to start it again
+        QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Idle; }, published() - 1));
+    }
+
+    void startsTheGameWithoutUpdate ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir prefix;
+        auto root = std::filesystem::path(prefix.path().toStdString());
+        auto rsiLauncher = lugPrefix(prefix, std::string("echo $$ > pid\n") + FAKE_RSI_LAUNCHER);
+
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetRsiLauncherPath{rsiLauncher.string()});
+        backEnd->execute(Protocol::StartGame{});
+        auto running = waitForState([] (const auto& s) { return s.game == GameStart::Running; });
+        QProcess::execute("kill", {QString::fromStdString(readFile(root / "pid")).trimmed()});
+        QVERIFY(running);
+        // Nothing was downloaded
+        QCOMPARE(latest().update, UpdateStatus::Idle);
+    }
+
+    void noticesAnRsiLauncherStartedElsewhere ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QVERIFY(start());
+        QProcess rsiLauncher;
+        rsiLauncher.start("/bin/bash", {"-c", FAKE_RSI_LAUNCHER});
+        QVERIFY(rsiLauncher.waitForStarted());
+        auto running = waitForState([] (const auto& s) { return s.game == GameStart::Running; });
+        rsiLauncher.kill();
+        rsiLauncher.waitForFinished();
+        QVERIFY(running);
+        QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Idle; }, *running));
+    }
+
+    void doesNotUpdateWhileTheGameRuns ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir gameFolder;
+        QVERIFY(installGerman(gameFolder));
+        QProcess game;
+        game.start("/bin/bash",
+                   {"-c", "exec -a 'C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\Bin64\\StarCitizen Test.exe' sleep 30"});
+        QVERIFY(game.waitForStarted());
+        auto playing = waitForState([] (const auto& s) { return s.game == GameStart::Playing; });
+
+        // Ignored while the game reads the files; the marker shows the command has been handled
+        size_t from = published();
+        backEnd->execute(Protocol::StartUpdate{});
+        QVERIFY(waitForPreviousCommands());
+        bool updated = false;
+        {
+            std::lock_guard lock(mutex);
+            for(size_t i = from; i < states.size(); ++i) updated |= states[i].update == UpdateStatus::Running;
+        }
+        game.kill();
+        game.waitForFinished();
+        QVERIFY(playing);
+        QVERIFY(!updated);
+        QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Idle; }, *playing));
     }
 
     void reportsWhenTheRsiLauncherQuitsAtOnce ()

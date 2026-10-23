@@ -251,10 +251,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>RSI Launcher started</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Translations updated</source>
         <translation type="unfinished"></translation>
     </message>
@@ -275,6 +271,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Game running</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Update &amp; start</source>
         <translation type="unfinished"></translation>
     </message>
@@ -283,7 +287,19 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Star Citizen is running</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>RSI Launcher is running</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Starting game …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Start</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

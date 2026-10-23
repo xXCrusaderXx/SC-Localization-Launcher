@@ -240,10 +240,6 @@
         <translation>Spiel kann nicht gestartet werden: Installiere es mit dem LUG Helper oder Lutris</translation>
     </message>
     <message>
-        <source>RSI Launcher started</source>
-        <translation>RSI Launcher gestartet</translation>
-    </message>
-    <message>
         <source>Translations updated</source>
         <translation>Übersetzungen aktualisiert</translation>
     </message>
@@ -267,12 +263,28 @@
         <translation>Update fehlgeschlagen. &lt;a href=&quot;log&quot;&gt;Log öffnen&lt;/a&gt;</translation>
     </message>
     <message>
+        <source>Star Citizen is running</source>
+        <translation>Star Citizen läuft</translation>
+    </message>
+    <message>
+        <source>RSI Launcher is running</source>
+        <translation>RSI Launcher läuft</translation>
+    </message>
+    <message>
         <source>Updating …</source>
         <translation>Aktualisiere …</translation>
     </message>
     <message>
         <source>No game folder set</source>
         <translation>Kein Spielordner gesetzt</translation>
+    </message>
+    <message>
+        <source>Game running</source>
+        <translation>Spiel läuft</translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation>Läuft</translation>
     </message>
     <message>
         <source>Update &amp; start</source>
@@ -285,6 +297,10 @@
     <message>
         <source>Starting game …</source>
         <translation>Spiel wird gestartet …</translation>
+    </message>
+    <message>
+        <source>Start</source>
+        <translation>Starten</translation>
     </message>
     <message>
         <source>RSI Launcher folder</source>

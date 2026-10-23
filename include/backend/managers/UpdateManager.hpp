@@ -24,6 +24,9 @@
 
 class UpdateManager
 {
+   public:
+    using GameProcess = Database::GameProcess;
+
    private:
     LoggerFramework::LogEx lg;
     const std::atomic<bool>& shuttingDown;
@@ -292,22 +295,38 @@ class UpdateManager
         return pid;
     }
 
-    static bool processExists (qint64 pid) { return std::filesystem::exists("/proc/" + std::to_string(pid)); }
-
-    // Wine names a process after its Windows program: the first argument is e.g. "C:\...\RSI Launcher.exe"
-    static bool rsiLauncherIsRunning ()
+    // Wine names a process after its Windows program: the first argument is e.g. "C:\\...\\RSI Launcher.exe"
+    static std::string rsiLauncherProgram ()
     {
-        std::error_code ec;
-        for(const auto& entry : std::filesystem::directory_iterator("/proc", ec))
-        {
-            std::ifstream cmdline(entry.path() / "cmdline");
-            std::string program;
-            if(!std::getline(cmdline, program, '\0')) continue;
-            auto name = program.substr(program.find_last_of("\\/") + 1);
-            if(strcasecmp(name.c_str(), "RSI Launcher.exe") == 0 || strcasecmp(name.c_str(), "StarCitizen.exe") == 0) return true;
-        }
-        return false;
+#ifdef SC_TESTING
+        // Test builds only: a real RSI Launcher on the test machine must not count
+        if(const char* program = std::getenv("SC_RSI_LAUNCHER_PROGRAM")) return program;
+#endif
+        return "RSI Launcher.exe";
     }
+
+    static std::string gameProgram ()
+    {
+#ifdef SC_TESTING
+        if(const char* program = std::getenv("SC_GAME_PROGRAM")) return program;
+#endif
+        return "StarCitizen.exe";
+    }
+
+    // The host's /proc is not visible inside the Flatpak; pgrep matches the joined command line instead
+    static GameProcess runningOnFlatpakHost ()
+    {
+        auto running = [] (const std::string& program)
+        {
+            QProcess pgrep;
+            pgrep.start("flatpak-spawn", {"--host", "pgrep", "-f", QString::fromStdString("(^|\\\\)" + program + "( |$)")});
+            return pgrep.waitForFinished(5000) && pgrep.exitStatus() == QProcess::NormalExit && pgrep.exitCode() == 0;
+        };
+        if(running("StarCitizen\\.exe")) return GameProcess::Game;
+        return running("RSI Launcher\\.exe") ? GameProcess::Launcher : GameProcess::None;
+    }
+
+    static bool processExists (qint64 pid) { return std::filesystem::exists("/proc/" + std::to_string(pid)); }
 
     // Last lines of the LUG launch log; the RSI Launcher writes why it quit there
     static std::string tailOf (const std::filesystem::path& file, size_t lines)
@@ -325,6 +344,26 @@ class UpdateManager
     }
 
    public:
+    // What of Star Citizen is running, started by this launcher or not
+    static GameProcess runningGameProcess ()
+    {
+        if(inFlatpak()) return runningOnFlatpakHost();
+        auto launcher = rsiLauncherProgram();
+        auto game = gameProgram();
+        auto found = GameProcess::None;
+        std::error_code ec;
+        for(const auto& entry : std::filesystem::directory_iterator("/proc", ec))
+        {
+            std::ifstream cmdline(entry.path() / "cmdline");
+            std::string program;
+            if(!std::getline(cmdline, program, '\0')) continue;
+            auto name = program.substr(program.find_last_of("\\/") + 1);
+            if(strcasecmp(name.c_str(), game.c_str()) == 0) return GameProcess::Game;
+            if(strcasecmp(name.c_str(), launcher.c_str()) == 0) found = GameProcess::Launcher;
+        }
+        return found;
+    }
+
     // One channel to update, prepared by the backend
     struct Job
     {
@@ -492,7 +531,7 @@ class UpdateManager
         std::optional<Clock::time_point> runningSince;
         while(!shuttingDown && Clock::now() < deadline)
         {
-            if(!rsiLauncherIsRunning())
+            if(runningGameProcess() == GameProcess::None)
                 runningSince.reset();
             else if(!runningSince)
                 runningSince = Clock::now();

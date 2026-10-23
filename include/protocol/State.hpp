@@ -65,12 +65,15 @@ NLOHMANN_JSON_SERIALIZE_ENUM(UpdateStatus, {{UpdateStatus::Idle, "idle"},
                                             {UpdateStatus::Succeeded, "succeeded"},
                                             {UpdateStatus::Failed, "failed"}})
 
-// Start of the RSI Launcher after an update
+// The RSI Launcher: started by this launcher, or seen running
 enum class GameStart
 {
     Idle,
     Starting,
+    // The RSI Launcher is open, also when started without this launcher
     Running,
+    // StarCitizen.exe runs; translations are not updated meanwhile
+    Playing,
     // Started, but the RSI Launcher did not appear or quit right away
     Failed,
     // Neither the LUG Helper's sc-launch.sh nor Lutris was found
@@ -80,6 +83,7 @@ enum class GameStart
 NLOHMANN_JSON_SERIALIZE_ENUM(GameStart, {{GameStart::Idle, "idle"},
                                          {GameStart::Starting, "starting"},
                                          {GameStart::Running, "running"},
+                                         {GameStart::Playing, "playing"},
                                          {GameStart::Failed, "failed"},
                                          {GameStart::NoStarter, "noStarter"}})
 

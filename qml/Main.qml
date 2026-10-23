@@ -26,8 +26,12 @@ ApplicationWindow {
 
     readonly property bool updateBusy: appState.update === "running"
     readonly property bool updateFailed: appState.update === "failed"
-    // The RSI Launcher is starting after an update; the button stays busy until it runs or failed
+    // The button stays busy until the RSI Launcher runs or failed
     readonly property bool gameStarting: appState.game === "starting"
+    // The RSI Launcher or the game is open, started here or elsewhere
+    readonly property bool gameRunning: appState.game === "running" || appState.game === "playing"
+    // StarCitizen.exe runs; translations can't be updated meanwhile
+    readonly property bool gamePlaying: appState.game === "playing"
     readonly property bool gameFailed: appState.game === "failed" || appState.game === "noStarter"
     readonly property bool updateReady: channels.some(c => c.installPath !== "")
     // Channels whose translation is missing, outdated or still has to be removed
@@ -226,7 +230,8 @@ ApplicationWindow {
 
                 channel: window.visibleChannels[index] || ({})
                 languages: window.appState.languages || []
-                locked: window.updateBusy
+                // The running game reads the translation files
+                locked: window.updateBusy || window.gamePlaying
                 onLanguagePicked: language => backend.setLanguage(channel.name, language)
                 onPathRequested: window.choosePath(channel.name)
                 onRepairRequested: backend.repairChannel(channel.name)
@@ -392,8 +397,10 @@ ApplicationWindow {
                                 return qsTr("Cannot start the game: install it with the LUG Helper or Lutris");
                             if (window.pendingUpdates > 0)
                                 return qsTr("%n channel(s) need an update", "", window.pendingUpdates);
-                            if (window.appState.game === "running")
-                                return qsTr("RSI Launcher started");
+                            if (window.gamePlaying)
+                                return qsTr("Star Citizen is running");
+                            if (window.gameRunning)
+                                return qsTr("RSI Launcher is running");
                             if (window.appState.update === "succeeded")
                                 return qsTr("Translations updated");
                             return window.updateReady ? qsTr("Ready") : qsTr("Choose a game folder or use the automatic search");
@@ -415,13 +422,17 @@ ApplicationWindow {
                 id: updateButton
 
                 readonly property bool busy: window.updateBusy || window.gameStarting
-                readonly property bool clickable: window.updateReady && !busy
+                // With the game start switched on, the button only updates when something is outdated, otherwise it just starts
+                readonly property bool startsOnly: window.launchAfterUpdate && window.pendingUpdates === 0
+                // Starting again while the RSI Launcher is open would do nothing; updating translations still works
+                // until the game itself runs
+                readonly property bool clickable: window.updateReady && !busy && !window.gamePlaying && !(window.launchAfterUpdate && window.gameRunning)
 
                 Layout.preferredWidth: 270
                 Layout.preferredHeight: 52
                 radius: 26
                 clip: true
-                opacity: clickable || busy ? 1 : 0.45
+                opacity: clickable || busy || window.gameRunning ? 1 : 0.45
                 scale: updateMouse.pressed ? 0.97 : updateMouse.containsMouse && clickable ? 1.03 : 1
                 gradient: Gradient {
                     orientation: Gradient.Horizontal
@@ -460,7 +471,21 @@ ApplicationWindow {
 
                 Text {
                     anchors.centerIn: parent
-                    text: window.updateBusy ? qsTr("Updating …") : window.gameStarting ? qsTr("Starting game …") : !window.updateReady ? qsTr("No game folder set") : window.launchAfterUpdate ? qsTr("Update & start") : qsTr("Update translations")
+                    text: {
+                        if (window.updateBusy)
+                            return qsTr("Updating …");
+                        if (window.gameStarting)
+                            return qsTr("Starting game …");
+                        if (!window.updateReady)
+                            return qsTr("No game folder set");
+                        if (window.gamePlaying)
+                            return qsTr("Game running");
+                        if (!window.launchAfterUpdate)
+                            return qsTr("Update translations");
+                        if (window.gameRunning)
+                            return qsTr("Running");
+                        return updateButton.startsOnly ? qsTr("Start") : qsTr("Update & start");
+                    }
                     color: "white"
                     font.pixelSize: 15
                     font.bold: true
@@ -472,7 +497,7 @@ ApplicationWindow {
                     hoverEnabled: true
                     enabled: updateButton.clickable
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: backend.startUpdate()
+                    onClicked: updateButton.startsOnly ? backend.startGame() : backend.startUpdate()
                 }
             }
         }
