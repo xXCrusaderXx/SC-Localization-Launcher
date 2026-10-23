@@ -9,6 +9,7 @@
 #include "backend/BackEnd.hpp"
 #include "logging/logger/custom_logger/custom_logger.h"
 
+using Protocol::ChannelStatus;
 using Protocol::UpdateStatus;
 using Codes = std::vector<std::string>;
 
@@ -113,6 +114,7 @@ class BackendTest : public QObject
     void init ()
     {
         qputenv("SC_LANGUAGES_URL", server.url("/languages.json").toUtf8());
+        server.setFile("/de.ini", TRANSLATION);
         resetUserDir();
         std::lock_guard lock(mutex);
         states.clear();
@@ -263,6 +265,85 @@ class BackendTest : public QObject
         QVERIFY(waitForPreviousCommands());
         QVERIFY(latest().update == UpdateStatus::Idle);
         QCOMPARE(readFile(ini), std::string("installed earlier\n"));
+    }
+
+    void statusFollowsInstallation ()
+    {
+        QTemporaryDir game;
+        QVERIFY(start());
+        QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::NoPath);
+
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        QVERIFY(setLanguage("LIVE", "de"));
+        QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::NotInstalled);
+
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::Installed);
+        auto installed = readSettingsFile()["channels"]["LIVE"]["installed"];
+        QCOMPARE(jsonText(installed["language"]), jsonText("de"));
+        QVERIFY(!installed["etag"].get<std::string>().empty());
+
+        // Back to English: the German files are still there until the next update removes them
+        QVERIFY(setLanguage("LIVE", Protocol::ENGLISH));
+        QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::UpdateAvailable);
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::Installed);
+    }
+
+    void unchangedTranslationIsNotDownloadedAgain ()
+    {
+        QTemporaryDir game;
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        QVERIFY(setLanguage("LIVE", "de"));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        int downloads = server.requestCount("GET /de.ini 200");
+        int notModified = server.requestCount("GET /de.ini 304");
+
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QCOMPARE(server.requestCount("GET /de.ini 200"), downloads);
+        QCOMPARE(server.requestCount("GET /de.ini 304"), notModified + 1);
+        QCOMPARE(
+            QByteArray::fromStdString(readFile(std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini")),
+            TRANSLATION);
+    }
+
+    void newerVersionIsFoundAtStart ()
+    {
+        QTemporaryDir game;
+        auto ini = std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini";
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        QVERIFY(setLanguage("LIVE", "de"));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+
+        // The translation project publishes a new version while the launcher is closed
+        const QByteArray newVersion = "test_key=Neuer Testtext\n";
+        server.setFile("/de.ini", newVersion);
+        backEnd.reset();
+        {
+            std::lock_guard lock(mutex);
+            states.clear();
+        }
+        QVERIFY(start());
+        QVERIFY(waitForState([] (const auto& s) { return channel(s, "LIVE").status == ChannelStatus::UpdateAvailable; }));
+
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QCOMPARE(QByteArray::fromStdString(readFile(ini)), newVersion);
+        QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::Installed);
+    }
+
+    void translationOfTheFormerLauncherNeedsAnUpdate ()
+    {
+        // Installed by the former SC Deutsch Launcher: the files are there, but their version is unknown
+        QTemporaryDir game;
+        auto ini = std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini";
+        std::filesystem::create_directories(ini.parent_path());
+        std::ofstream(ini) << "old version\n";
+        writeSettingsFile(legacySettings(game.path().toStdString(), "de", false), PATHS::JSON_FILES::SETTINGS_LEGACY);
+
+        QVERIFY(start());
+        QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::UpdateAvailable);
     }
 };
 

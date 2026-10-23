@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 
+#include "backend/database/DataBase.hpp"
 #include "backend/utils/paths.hpp"
 #include "logging/logging.h"
 #include "protocol/State.hpp"
@@ -17,9 +18,10 @@ struct ChannelSettings
     std::string installPath;
     // A language code from languages.json or Protocol::ENGLISH
     std::string language = Protocol::ENGLISH;
+    Database::InstalledTranslation installed;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelSettings, installPath, language)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelSettings, installPath, language, installed)
 
 struct SettingsFile
 {
