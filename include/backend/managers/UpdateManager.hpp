@@ -326,7 +326,16 @@ class UpdateManager
         return running("RSI Launcher\\.exe") ? GameProcess::Launcher : GameProcess::None;
     }
 
-    static bool processExists (qint64 pid) { return std::filesystem::exists("/proc/" + std::to_string(pid)); }
+    // A process that ended stays a zombie until its parent reaps it, which a container's PID 1 may never do
+    static bool processExists (qint64 pid)
+    {
+        std::ifstream stat("/proc/" + std::to_string(pid) + "/stat");
+        std::string line;
+        if(!std::getline(stat, line)) return false;
+        // "pid (name) state …"; the name may contain spaces and parentheses
+        auto end = line.rfind(')');
+        return end != std::string::npos && end + 2 < line.size() && line[end + 2] != 'Z' && line[end + 2] != 'X';
+    }
 
     // Last lines of the LUG launch log; the RSI Launcher writes why it quit there
     static std::string tailOf (const std::filesystem::path& file, size_t lines)
