@@ -237,14 +237,12 @@ jobs:
           path: screenshot.png
           if-no-files-found: ignore
 
-  publish:
-    name: publish release
+  # Runs in dry runs too, so a secret that does not match packaging/minisign.pub shows up before a real release
+  sign:
+    name: checksums and signature
     needs: [version, test, flatpak]
-    if: needs.version.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: write
     steps:
       # For packaging/minisign.pub
       - name: Checkout
@@ -272,26 +270,48 @@ jobs:
         env:
           MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
           VERSION: ${{ needs.version.outputs.version }}
+          PUBLISH: ${{ needs.version.outputs.publish }}
         run: |
           set -euo pipefail
+          cd dist
+          sha256sum -- * > SHA256SUMS
           if [ -z "$MINISIGN_SECRET_KEY" ]; then
-            echo "::error::Secret MINISIGN_SECRET_KEY is missing; releases are only published signed"
-            exit 1
+            if [ "$PUBLISH" = "true" ]; then
+              echo "::error::Secret MINISIGN_SECRET_KEY is missing; releases are only published signed"
+              exit 1
+            fi
+            echo "::warning::Secret MINISIGN_SECRET_KEY is missing; this dry run is not signed"
+            exit 0
           fi
           key="$RUNNER_TEMP/minisign.key"
           (umask 077 && printf '%s\n' "$MINISIGN_SECRET_KEY" > "$key")
           trap 'rm -f "$key"' EXIT
 
-          cd dist
-          sha256sum -- * > SHA256SUMS
           minisign -S -s "$key" -m SHA256SUMS -t "sc-localization-launcher v$VERSION"
-
           # Catches a secret that does not belong to the public key the launcher ships
-          if [ -f "$GITHUB_WORKSPACE/packaging/minisign.pub" ]; then
-            minisign -V -p "$GITHUB_WORKSPACE/packaging/minisign.pub" -m SHA256SUMS
-          else
-            echo "::warning::packaging/minisign.pub not found, the signature was not checked against it"
-          fi
+          minisign -V -p "$GITHUB_WORKSPACE/packaging/minisign.pub" -m SHA256SUMS
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-files
+          path: dist/*
+
+  publish:
+    name: publish release
+    needs: [version, sign]
+    if: needs.version.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-files
+          path: dist
+
+      - name: Require the signature
+        run: test -s dist/SHA256SUMS.minisig
 
       # For a tag push the tag exists; otherwise gh creates it on the commit that was built
       - name: Create GitHub Release
