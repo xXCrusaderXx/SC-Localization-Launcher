@@ -149,8 +149,52 @@ class GuiTest : public QObject
 
     void choosePathWithDialog ()
     {
-        // The first "Choose folder" belongs to PTU
-        QVERIFY(click("Choose folder"));
+        // Channels without a folder are only listed in the settings, not on the main page
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        QVERIFY(panel);
+        QVERIFY(!findText("PTU"));
+
+        QVERIFY(click("⚙"));
+        QTRY_VERIFY(panel->property("open").toBool());
+
+        // The ✎ next to the "PTU" label in the settings' install path list
+        QQuickItem* label = findText("PTU");
+        QVERIFY(label);
+        QQuickItem* row = label;
+        while(row && !row->property("changeRequested").isValid() && row->property("label").toString() != "PTU") row = row->parentItem();
+        QVERIFY(row);
+        std::function<QQuickItem*(QQuickItem*)> findEdit = [&] (QQuickItem* item) -> QQuickItem*
+        {
+            if(QString(item->metaObject()->className()).startsWith("QQuickText") && item->property("text").toString() == "✎") return item;
+            for(auto* child : item->childItems())
+                if(auto* found = findEdit(child)) return found;
+            return nullptr;
+        };
+        QQuickItem* edit = findEdit(row);
+        QVERIFY(edit);
+
+        // The path list may start below the visible part of the panel: scroll the row into view
+        QQuickItem* flickable = row;
+        while(flickable && !flickable->inherits("QQuickFlickable")) flickable = flickable->parentItem();
+        QVERIFY(flickable);
+        QQuickItem* content = flickable->property("contentItem").value<QQuickItem*>();
+        qreal rowY = row->mapToItem(content, QPointF(0, 0)).y();
+        qreal maxY = std::max(0.0, flickable->property("contentHeight").toReal() - flickable->height());
+        flickable->setProperty("contentY", std::clamp(rowY - flickable->height() / 2, 0.0, maxY));
+
+        // The panel slides in; click only once the button stays put inside the window (slow CI machines need longer)
+        QPointF last(-1, -1);
+        auto settled = [&]
+        {
+            QPointF pos = edit->mapToScene(QPointF(edit->width() / 2, edit->height() / 2));
+            bool inside = pos.x() >= 0 && pos.x() < window->width() && pos.y() >= 0 && pos.y() < window->height();
+            bool stable = pos == last && inside;
+            last = pos;
+            return stable;
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(settled(), 10000);
+        QTest::mouseClick(window, Qt::LeftButton, {}, last.toPoint());
+
         auto* dialog = engine->rootObjects().first()->findChild<QObject*>("folderDialog");
         QVERIFY(dialog);
         QTRY_COMPARE(dialog->property("target").toString(), QString("PTU"));
@@ -162,6 +206,12 @@ class GuiTest : public QObject
         QMetaObject::invokeMethod(dialog, "accept");
         QTRY_COMPARE(channel("PTU")["installPath"].toString(), ptuDir.path());
         QCOMPARE(jsonText(readSettingsFile()["channels"]["PTU"]["installPath"]), jsonText(ptuDir.path().toStdString()));
+
+        // With a folder, PTU shows up on the main page
+        // (the panel is gone, so the text can only come from the main page)
+        panel->setProperty("open", false);
+        QTRY_VERIFY_WITH_TIMEOUT(!panel->property("visible").toBool(), 10000);
+        QTRY_VERIFY(findText("PTU"));
     }
 
     void runUpdate ()
