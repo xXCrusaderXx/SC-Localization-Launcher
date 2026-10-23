@@ -29,7 +29,9 @@ int main (int argc, char *argv[])
     // A second start only brings the running launcher to the front, before any backend work starts
     // After an update the old launcher is still quitting; wait for it instead of activating it
     SingleInstance instance(SC_APP_ID, app.arguments().contains("--after-update") ? 10000 : 100);
-    if(!instance.isPrimary()) return instance.activatePrimary() ? 0 : 1;
+    if(!instance.isPrimary() && instance.activatePrimary()) return 0;
+    // No answer: the lock is left over from a launcher that is gone, e.g. a native one seen from the Flatpak
+    if(!instance.isPrimary() && !instance.takeOver()) return 1;
 
     LoggerFramework::LogEx lg("main");
     LOG_DEBUG(lg) << "Start SC Localization Launcher " << SC_VERSION;

@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - The RSI Launcher now also starts when the launcher itself was started from VS Code or another Electron app; before, it quit at once with "bad option".
 - The launcher update now recognises a running Star Citizen under Wine and waits; before, it did not notice the game.
+- The launcher starts again after it crashed or was killed, and the Flatpak starts even if a native launcher left its lock behind. Before, it quit without a window until the next login.
 
 ## [0.6.1] - 2026-10-23
 
