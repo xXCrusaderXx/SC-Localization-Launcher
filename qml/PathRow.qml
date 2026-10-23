@@ -8,6 +8,8 @@ Rectangle {
     property string label
     property string path: ""
     property bool locked: false
+    // False for paths the user cannot change, e.g. the log folder
+    property bool editable: true
 
     signal changeRequested
 
@@ -50,6 +52,7 @@ Rectangle {
         }
 
         IconButton {
+            visible: row.editable
             glyph: "✎"
             onClicked: if (!row.locked)
                 row.changeRequested()

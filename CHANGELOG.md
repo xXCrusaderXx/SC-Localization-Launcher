@@ -31,6 +31,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A language drop-down per channel replaces the fixed language buttons.
 - Translations are downloaded directly from the translation projects; the launcher no longer contacts the servers of other launchers.
 - Settings moved to `~/.config/sc-localization-launcher/` (migrated automatically from `~/SC-Deutsch-Launcher`), logs to `~/.local/state/sc-localization-launcher/logs/`.
+- The settings show the folder with the log files, and a failed update links straight to it.
+- Settings that are not implemented yet are hidden instead of being shown as "coming soon".
 
 ### Fixed
 
