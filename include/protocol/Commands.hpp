@@ -57,6 +57,15 @@ struct RepairChannel
     std::string channel;
 };
 
+// Sets the user's own global.ini source for one channel; an empty url removes it
+struct SetCustomSource
+{
+    static constexpr const char* name = "setCustomSource";
+    std::string channel;
+    std::string url;
+    std::string folder;
+};
+
 // Asks GitHub whether a newer launcher version exists; nothing is installed
 struct CheckForUpdate
 {
@@ -74,13 +83,14 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInstallPath, channel, path)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetRsiLauncherPath, path)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetOption, option, value)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RepairChannel, channel)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetCustomSource, channel, url, folder)
 inline void to_json (nlohmann::json& j, const StartUpdate&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const AutoSearch&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const CheckForUpdate&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const InstallUpdate&) { j = nlohmann::json::object(); }
 
-using Command =
-    std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, AutoSearch, CheckForUpdate, InstallUpdate, RepairChannel>;
+using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, AutoSearch, CheckForUpdate, InstallUpdate,
+                             RepairChannel, SetCustomSource>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

@@ -40,21 +40,6 @@ class LanguageCatalogParser
         return LANGUAGES_URL;
     }
 
-    static bool isAllowedUrl (const std::string& url)
-    {
-#ifdef SC_TESTING
-        if(url.starts_with("http://127.0.0.1:")) return true;
-#endif
-        return url.starts_with("https://");
-    }
-
-    // The folder becomes a path component inside the game directory, which is written and deleted
-    static bool isSafeFolderName (const std::string& folder)
-    {
-        static const std::regex allowed("[A-Za-z0-9_()-]+");
-        return std::regex_match(folder, allowed);
-    }
-
     static std::string normalizeChannelName (const std::string& name)
     {
         auto it = CHANNEL_ALIASES.find(name);
@@ -215,6 +200,22 @@ class LanguageCatalogParser
     }
 
    public:
+    // Also used for the sources users enter themselves
+    static bool isAllowedUrl (const std::string& url)
+    {
+#ifdef SC_TESTING
+        if(url.starts_with("http://127.0.0.1:")) return true;
+#endif
+        return url.starts_with("https://");
+    }
+
+    // The folder becomes a path component inside the game directory, which is written and deleted
+    static bool isSafeFolderName (const std::string& folder)
+    {
+        static const std::regex allowed("[A-Za-z0-9_()-]+");
+        return std::regex_match(folder, allowed);
+    }
+
     LanguageCatalogParser ()
         : lg("LanguageCatalogParser")
     {

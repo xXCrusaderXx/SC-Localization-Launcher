@@ -4,6 +4,18 @@
 <context>
     <name>ChannelRow</name>
     <message>
+        <source>Own source</source>
+        <translation>Eigene Quelle</translation>
+    </message>
+    <message>
+        <source>Change own source …</source>
+        <translation>Eigene Quelle ändern …</translation>
+    </message>
+    <message>
+        <source>Own source …</source>
+        <translation>Eigene Quelle …</translation>
+    </message>
+    <message>
         <source>No install path set</source>
         <translation>Kein Installationspfad gesetzt</translation>
     </message>
@@ -38,6 +50,37 @@
     <message>
         <source>Repair</source>
         <translation>Reparieren</translation>
+    </message>
+</context>
+<context>
+    <name>CustomSourceDialog</name>
+    <message>
+        <source>Own source for %1</source>
+        <translation>Eigene Quelle für %1</translation>
+    </message>
+    <message>
+        <source>Link to a global.ini, e.g. a translation you are testing. Only use sources you trust: the file replaces the game texts.</source>
+        <translation>Link zu einer global.ini, z. B. einer Übersetzung, die du testest. Nutze nur Quellen, denen du vertraust: Die Datei ersetzt die Spieltexte.</translation>
+    </message>
+    <message>
+        <source>Address (HTTPS)</source>
+        <translation>Adresse (HTTPS)</translation>
+    </message>
+    <message>
+        <source>Language folder in the game</source>
+        <translation>Sprachordner im Spiel</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Entfernen</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <source>Save and use</source>
+        <translation>Speichern und verwenden</translation>
     </message>
 </context>
 <context>

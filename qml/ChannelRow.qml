@@ -5,7 +5,7 @@ import QtQuick.Layouts
 Rectangle {
     id: row
 
-    // Protocol::Channel: { name, installPath, language, availableLanguages, status, notices }
+    // Protocol::Channel: { name, installPath, language, availableLanguages, status, notices, custom }
     property var channel: ({})
     // Protocol::State.languages: [{ code, name, credit }]
     property var languages: []
@@ -14,6 +14,7 @@ Rectangle {
     signal languagePicked(string language)
     signal pathRequested
     signal repairRequested
+    signal customSourceRequested
 
     readonly property bool pathSet: (channel.installPath || "") !== ""
     readonly property var available: channel.availableLanguages || []
@@ -23,19 +24,43 @@ Rectangle {
     // Notice of the translation project for the chosen language on this channel
     readonly property string notice: (channel.notices || {})[channel.language] || ""
     readonly property string choiceName: {
-        for (const language of languages)
-            if (language.code === channel.language)
-                return language.name;
+        for (const option of options)
+            if (option.code === channel.language)
+                return option.name;
         return channel.language || "";
     }
-    // Every known language; the ones this channel does not offer right now are shown but cannot be picked
-    readonly property var options: languages.map(l => ({
-                code: l.code,
-                name: l.name,
-                credit: l.credit,
-                notice: (channel.notices || {})[l.code] || "",
-                available: available.indexOf(l.code) >= 0
-            }))
+    readonly property string customUrl: (channel.custom || {}).url || ""
+    // Every known language; the ones this channel does not offer right now are shown but cannot be picked.
+    // Then the channel's own source, if set, and the entry that opens the dialog for it.
+    readonly property var options: {
+        const list = languages.map(l => ({
+                    code: l.code,
+                    name: l.name,
+                    credit: l.credit,
+                    notice: (channel.notices || {})[l.code] || "",
+                    available: available.indexOf(l.code) >= 0
+                }));
+        if (customUrl !== "")
+            list.push({
+                code: "custom",
+                name: qsTr("Own source"),
+                credit: {
+                    project: customUrl.replace(/^https?:\/\//, "").split("/")[0],
+                    license: ""
+                },
+                notice: "",
+                available: true
+            });
+        list.push({
+            code: "__customSource",
+            name: customUrl !== "" ? qsTr("Change own source …") : qsTr("Own source …"),
+            credit: {},
+            notice: "",
+            available: true,
+            action: true
+        });
+        return list;
+    }
 
     Layout.fillWidth: true
     implicitHeight: 56
@@ -110,7 +135,7 @@ Rectangle {
             enabled: !row.locked
             languages: row.options
             currentCode: row.channel.language || ""
-            onPicked: code => row.languagePicked(code)
+            onPicked: code => code === "__customSource" ? row.customSourceRequested() : row.languagePicked(code)
         }
 
         // Shown as a pill when no path is set, as a small edit button otherwise

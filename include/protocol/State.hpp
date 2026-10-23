@@ -12,8 +12,20 @@ namespace Protocol
 // Channels in display order
 inline const std::vector<std::string> CHANNEL_NAMES{"LIVE", "PTU", "EPTU", "HOTFIX", "TECH-PREVIEW"};
 
-// The original game text: no translation installed. Every other language code comes from languages.json.
+// The original game text: no translation installed. Every other language code comes from languages.json,
+// except CUSTOM: the source the user entered for one channel.
 inline const std::string ENGLISH = "en";
+inline const std::string CUSTOM = "custom";
+
+// A global.ini the user chose for one channel instead of a catalogue language; empty url = none
+struct CustomSource
+{
+    std::string url;
+    // Star Citizen localization folder the file goes into, e.g. "german_(germany)"
+    std::string folder;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CustomSource, url, folder)
 
 // Who made a translation and under which license; shown wherever the translation is offered
 struct Credit
@@ -34,9 +46,11 @@ struct Language
     std::string name;
     // Empty for ENGLISH, the original game text
     Credit credit;
+    // Star Citizen localization folder, empty for ENGLISH
+    std::string folder;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Language, code, name, credit)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Language, code, name, credit, folder)
 
 enum class UpdateStatus
 {
@@ -99,9 +113,11 @@ struct Channel
     ChannelStatus status = ChannelStatus::NoPath;
     // Language code -> short notice of the translation project for this channel; plain text
     std::map<std::string, std::string> notices;
+    // The user's own source for this channel, offered as language CUSTOM when set
+    CustomSource custom;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status, notices)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status, notices, custom)
 
 // Updates of the launcher itself, from the GitHub releases of the project
 enum class SelfUpdateStatus
