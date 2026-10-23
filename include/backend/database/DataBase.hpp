@@ -61,9 +61,11 @@ struct InstalledTranslation
     std::string language;
     // ETag of the downloaded global.ini, to find out whether a newer version exists
     std::string etag;
+    // SHA-256 of the installed global.ini, to notice when something else changed it
+    std::string fileHash;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(InstalledTranslation, language, etag)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(InstalledTranslation, language, etag, fileHash)
 
 struct ChannelData
 {
@@ -73,6 +75,10 @@ struct ChannelData
     InstalledTranslation installed;
     // ETag the source reports for the chosen language right now; empty until checked
     std::string remoteEtag;
+    // The installed files no longer match what was installed; found by the check at start
+    bool damaged = false;
+    // The last update of this channel failed
+    bool lastUpdateFailed = false;
 };
 
 // What SelfUpdateManager::install() needs from a release; filled by its check() when a matching signed package exists

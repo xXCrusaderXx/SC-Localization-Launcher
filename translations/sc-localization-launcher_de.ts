@@ -12,6 +12,14 @@
         <translation>%1 ist für diesen Kanal derzeit nicht verfügbar</translation>
     </message>
     <message>
+        <source>Files were changed – please repair</source>
+        <translation>Dateien verändert – bitte reparieren</translation>
+    </message>
+    <message>
+        <source>The last update failed</source>
+        <translation>Letztes Update fehlgeschlagen</translation>
+    </message>
+    <message>
         <source>%1 is not installed yet</source>
         <translation>%1 ist noch nicht installiert</translation>
     </message>
@@ -26,6 +34,10 @@
     <message>
         <source>Choose folder</source>
         <translation>Ordner wählen</translation>
+    </message>
+    <message>
+        <source>Repair</source>
+        <translation>Reparieren</translation>
     </message>
 </context>
 <context>
