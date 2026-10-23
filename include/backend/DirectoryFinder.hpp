@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <future>
 #include <map>
 #include <optional>
@@ -26,6 +28,18 @@ class DirectoryFinder
 
    private:
     mutable LoggerFramework::LogEx lg;
+    std::vector<std::filesystem::path> mountRoots;
+
+    static std::vector<std::filesystem::path> defaultMountRoots ()
+    {
+        std::vector<std::filesystem::path> roots{"/mnt", "/media"};
+        if(const char* user = std::getenv("USER"); user && *user)
+        {
+            roots.push_back(std::filesystem::path("/run/media") / user);
+            roots.push_back(std::filesystem::path("/media") / user);
+        }
+        return roots;
+    }
 
     std::string rootTarget = "/Roberts Space Industries/RSI Launcher";
     std::vector<std::string> executables{"RSI Launcher.exe", "StarCitizen_Launcher.exe"};
@@ -91,9 +105,65 @@ class DirectoryFinder
         return std::nullopt;
     }
 
+    // Wine prefixes from the Lutris game configs ("prefix: /path"); placeholders like $GAMEDIR are skipped
+    static std::vector<std::filesystem::path> lutrisPrefixes (const std::filesystem::path& home)
+    {
+        std::vector<std::filesystem::path> prefixes;
+        for(const auto& dir : {home / ".config/lutris/games", home / ".local/share/lutris/games"})
+        {
+            std::error_code ec;
+            for(const auto& entry : std::filesystem::directory_iterator(dir, ec))
+            {
+                if(entry.path().extension() != ".yml") continue;
+                std::ifstream file(entry.path());
+                std::string line;
+                while(std::getline(file, line))
+                {
+                    auto start = line.find_first_not_of(" \t");
+                    if(start == std::string::npos || line.compare(start, 7, "prefix:") != 0) continue;
+                    std::string value = line.substr(start + 7);
+                    value.erase(0, value.find_first_not_of(" \t'\""));
+                    value.erase(value.find_last_not_of(" \t'\"\r") + 1);
+                    if(value.starts_with("/")) prefixes.emplace_back(value);
+                }
+            }
+        }
+        return prefixes;
+    }
+
+    // The same folder names on every mounted disk, e.g. /mnt/Games_1T/star-citizen
+    static std::vector<std::filesystem::path> prefixesOnMountedDisks (const std::vector<std::filesystem::path>& mountRoots)
+    {
+        std::vector<std::filesystem::path> prefixes;
+        for(const auto& root : mountRoots)
+        {
+            std::error_code ec;
+            for(const auto& disk : std::filesystem::directory_iterator(root, std::filesystem::directory_options::skip_permission_denied, ec))
+                for(const char* name : {"star-citizen", "Games/star-citizen", "Lutris/star-citizen", "StarCitizen"})
+                    prefixes.push_back(disk.path() / name);
+        }
+        return prefixes;
+    }
+
+    // Where the LUG Helper and Lutris install Star Citizen by default, the prefixes Lutris knows about and
+    // the same names on mounted disks
+    static std::vector<std::filesystem::path> knownLauncherPaths (const std::filesystem::path& home,
+                                                                  const std::vector<std::filesystem::path>& mountRoots)
+    {
+        std::vector<std::filesystem::path> prefixes{home / "Games/star-citizen", home / ".wine"};
+        for(const auto& prefix : lutrisPrefixes(home)) prefixes.push_back(prefix);
+        for(const auto& prefix : prefixesOnMountedDisks(mountRoots)) prefixes.push_back(prefix);
+
+        std::vector<std::filesystem::path> paths;
+        for(const auto& prefix : prefixes) paths.push_back(prefix / "drive_c/Program Files/Roberts Space Industries/RSI Launcher");
+        return paths;
+    }
+
    public:
-    DirectoryFinder ()
+    // mountRoots: where other disks are mounted; the tests pass their own
+    explicit DirectoryFinder (std::vector<std::filesystem::path> mountRoots = defaultMountRoots())
         : lg("DirectoryFinder")
+        , mountRoots(std::move(mountRoots))
     {
         LOG_DEBUG(lg) << "instanziated";
     };
@@ -104,6 +174,18 @@ class DirectoryFinder
     std::optional<Result> findRsiInstallation (const std::atomic<bool>& shuttingDown)
     {
         LOG_DEBUG(lg) << "findRsiInstallation() - target: " << rootTarget;
+
+        // The usual places take milliseconds, the full scan below can take minutes on large disks
+        if(const char* home = std::getenv("HOME"); home && *home)
+        {
+            for(const auto& path : knownLauncherPaths(home, mountRoots))
+            {
+                std::error_code ec;
+                if(!std::filesystem::is_directory(path, ec) || !hasLauncherExecutable(path)) continue;
+                LOG_DEBUG(lg) << "[FOUND] at a known place: " << path;
+                return readInstallation(path);
+            }
+        }
 
         std::vector<std::string> rootPaths = {"/home", "/opt", "/usr", "/mnt", "/media"};
         std::vector<std::future<std::optional<Result>>> tasks;
