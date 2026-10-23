@@ -6,7 +6,7 @@ import QtQuick.Controls.Basic
 ComboBox {
     id: control
 
-    property var languages: [] // [{ code, name, credit, available }]
+    property var languages: [] // [{ code, name, credit, notice, available }]
     property string currentCode: ""
 
     signal picked(string code)
@@ -46,6 +46,7 @@ ComboBox {
     contentItem: Text {
         // Not displayText: ComboBox resets currentIndex whenever the model changes
         text: control.currentLanguageIndex >= 0 ? control.languages[control.currentLanguageIndex].name : control.currentCode
+        textFormat: Text.PlainText
         color: Theme.text
         font.pixelSize: 12
         font.bold: true
@@ -77,6 +78,7 @@ ComboBox {
             Text {
                 width: parent.width
                 text: entry.modelData.available ? entry.modelData.name : qsTr("%1 (not available)").arg(entry.modelData.name)
+                textFormat: Text.PlainText
                 color: entry.index === control.currentLanguageIndex ? Theme.accent : entry.enabled ? Theme.text : Theme.disabled
                 font.pixelSize: 12
                 font.bold: entry.index === control.currentLanguageIndex
@@ -88,7 +90,19 @@ ComboBox {
                 width: parent.width
                 visible: (entry.modelData.credit.project || "") !== ""
                 text: entry.modelData.credit.project + " · " + entry.modelData.credit.license
+                textFormat: Text.PlainText
                 color: Theme.muted
+                font.pixelSize: 10
+                elide: Text.ElideRight
+            }
+
+            // Notice of the translation project for this channel, e.g. "in preparation"
+            Text {
+                width: parent.width
+                visible: (entry.modelData.notice || "") !== ""
+                text: entry.modelData.notice || ""
+                textFormat: Text.PlainText
+                color: Theme.warning
                 font.pixelSize: 10
                 elide: Text.ElideRight
             }
@@ -102,7 +116,8 @@ ComboBox {
 
     popup: Popup {
         y: control.height + 4
-        width: control.width
+        // Wider than the button, so credit and notice lines fit
+        width: Math.max(control.width, 300)
         implicitHeight: Math.min(contentItem.implicitHeight + 8, 260)
         padding: 4
 

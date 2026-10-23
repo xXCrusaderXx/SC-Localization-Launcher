@@ -623,6 +623,20 @@ class BackendTest : public QObject
         QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
         QVERIFY(channel(latest(), "LIVE").status == ChannelStatus::Installed);
     }
+
+    void noticesPerChannelAndLanguage ()
+    {
+        QVERIFY(start());
+        auto live = channel(latest(), "LIVE");
+        auto ptu = channel(latest(), "PTU");
+
+        QCOMPARE(live.notices.at("de"), std::string("Wird vorbereitet"));
+        QCOMPARE(ptu.notices.at("de"), std::string("Allgemeiner Hinweis"));
+        // Shown as plain text: the markup stays visible as characters, the line break becomes a space
+        QCOMPARE(live.notices.at("fr"), std::string("<b>Bêta</b> zweite Zeile"));
+        QCOMPARE(live.notices.at("de-full"), std::string(120, 'x') + "…");
+        QVERIFY(!live.notices.contains("en"));
+    }
 };
 
 QTEST_GUILESS_MAIN(BackendTest)

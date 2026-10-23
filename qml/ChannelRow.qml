@@ -5,7 +5,7 @@ import QtQuick.Layouts
 Rectangle {
     id: row
 
-    // Protocol::Channel: { name, installPath, language, availableLanguages, status }
+    // Protocol::Channel: { name, installPath, language, availableLanguages, status, notices }
     property var channel: ({})
     // Protocol::State.languages: [{ code, name, credit }]
     property var languages: []
@@ -20,6 +20,8 @@ Rectangle {
     readonly property bool choiceAvailable: available.indexOf(channel.language) >= 0
     // Red: the installed files were changed or the last update failed
     readonly property bool broken: channel.status === "damaged" || channel.status === "failed"
+    // Notice of the translation project for the chosen language on this channel
+    readonly property string notice: (channel.notices || {})[channel.language] || ""
     readonly property string choiceName: {
         for (const language of languages)
             if (language.code === channel.language)
@@ -31,6 +33,7 @@ Rectangle {
                 code: l.code,
                 name: l.name,
                 credit: l.credit,
+                notice: (channel.notices || {})[l.code] || "",
                 available: available.indexOf(l.code) >= 0
             }))
 
@@ -86,13 +89,17 @@ Rectangle {
                         return qsTr("Files were changed – please repair");
                     if (row.channel.status === "failed")
                         return qsTr("The last update failed");
+                    if (row.notice !== "")
+                        return row.notice;
                     if (row.channel.status === "notInstalled")
                         return qsTr("%1 is not installed yet").arg(row.choiceName);
                     if (row.channel.status === "updateAvailable")
                         return row.channel.language === "en" ? qsTr("The translation is removed with the next update") : qsTr("Update available for %1").arg(row.choiceName);
                     return row.channel.installPath;
                 }
-                color: row.broken ? Theme.danger : row.pathSet && (!row.choiceAvailable || row.channel.status !== "installed") ? Theme.warning : Theme.muted
+                color: row.broken ? Theme.danger : row.pathSet && (!row.choiceAvailable || row.notice !== "" || row.channel.status !== "installed") ? Theme.warning : Theme.muted
+                // Notices and language names come from the internet
+                textFormat: Text.PlainText
                 font.pixelSize: 11
                 elide: Text.ElideMiddle
             }
