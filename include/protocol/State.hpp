@@ -1,4 +1,5 @@
 #pragma once
+#include <map>
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
@@ -96,9 +97,11 @@ struct Channel
     // independent of the install path
     std::vector<std::string> availableLanguages;
     ChannelStatus status = ChannelStatus::NoPath;
+    // Language code -> short notice of the translation project for this channel; plain text
+    std::map<std::string, std::string> notices;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status, notices)
 
 // Updates of the launcher itself, from the GitHub releases of the project
 enum class SelfUpdateStatus

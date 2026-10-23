@@ -229,6 +229,20 @@ class BackEnd
                  });
     }
 
+    // Language code -> notice for this channel; a channel's own notice wins over the one for all channels
+    std::map<std::string, std::string> notices (const std::string& channel) const
+    {
+        std::map<std::string, std::string> result;
+        for(const auto& language : data.languages)
+        {
+            if(auto it = language.notices.find(channel); it != language.notices.end())
+                result[language.code] = it->second;
+            else if(auto all = language.notices.find("*"); all != language.notices.end())
+                result[language.code] = all->second;
+        }
+        return result;
+    }
+
     Protocol::State snapshot () const
     {
         Protocol::State state;
@@ -244,7 +258,8 @@ class BackEnd
         for(const auto& name : names)
         {
             const auto& channel = data.channels.at(name);
-            state.channels.push_back({name, channel.installPath.string(), channel.language, availableLanguages(name), channelStatus(channel)});
+            state.channels.push_back(
+                {name, channel.installPath.string(), channel.language, availableLanguages(name), channelStatus(channel), notices(name)});
         }
 
         state.rsiLauncherPath = data.rsiLauncherPath.string();

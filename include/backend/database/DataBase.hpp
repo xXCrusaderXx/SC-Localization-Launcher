@@ -33,9 +33,11 @@ struct LanguageDefinition
     std::string folder;
     LanguageSource source;
     Protocol::Credit credit;
+    // Short notice per channel, e.g. "translation in preparation"; "*" applies to every channel
+    std::map<std::string, std::string> notices;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(LanguageDefinition, code, name, folder, source, credit)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(LanguageDefinition, code, name, folder, source, credit, notices)
 
 struct LanguageCatalog
 {
@@ -53,6 +55,8 @@ struct AvailableLanguage
     std::string folder;
     std::map<std::string, std::vector<std::string>> urls;
     Protocol::Credit credit;
+    // Channel name or "*" -> notice, already checked and shortened
+    std::map<std::string, std::string> notices;
 };
 
 // What the launcher last installed into a channel. Empty language: nothing, the game shows English.

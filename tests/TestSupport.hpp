@@ -168,6 +168,10 @@ inline QHash<QByteArray, QByteArray> fixtureFiles ()
           {{"code", "nocredit"}, {"name", "No credit"}, {"folder", "nocredit"}, {"source", {{"channels", {{"LIVE", {"{base}/de.ini"}}}}}}}}}};
     for(auto& language : languages["languages"])
         if(language["code"] != "nocredit") language["credit"] = testCredit();
+    // Notices: a channel's own one wins over "*"; markup and line breaks arrive as one line of plain text; long ones are cut
+    languages["languages"][0]["notices"] = {{"LIVE", "Wird vorbereitet"}, {"*", "Allgemeiner Hinweis"}};
+    languages["languages"][1]["notices"] = {{"LIVE", std::string(200, 'x')}};
+    languages["languages"][2]["notices"] = {{"*", "<b>Bêta</b>\nzweite Zeile"}};
     nlohmann::json channels = {{"channels",
                                 {{{"active", 1}, {"description", "LIVE"}, {"server1", "{base}/fr.ini"}},
                                  {{"active", 0}, {"description", "PTU"}, {"server1", "{base}/fr.ini"}}}},

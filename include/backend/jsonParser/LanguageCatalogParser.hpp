@@ -181,6 +181,25 @@ class LanguageCatalogParser
         return channels;
     }
 
+    // Notices come from the internet and are shown in the UI: plain text, one line, short
+    static std::string cleanNotice (std::string text)
+    {
+        for(char& c : text)
+            if(c == '\n' || c == '\r' || c == '\t') c = ' ';
+        text.erase(0, text.find_first_not_of(' '));
+        text.erase(text.find_last_not_of(' ') + 1);
+        constexpr size_t maxLength = 120;
+        if(text.size() > maxLength)
+        {
+            text.resize(maxLength);
+            // Do not cut a UTF-8 character in half
+            while(!text.empty() && (static_cast<unsigned char>(text.back()) & 0xC0) == 0x80) text.pop_back();
+            if(!text.empty() && (static_cast<unsigned char>(text.back()) & 0x80)) text.pop_back();
+            text += "…";
+        }
+        return text;
+    }
+
     std::vector<std::string> allowedUrls (const std::vector<std::string>& urls) const
     {
         std::vector<std::string> result;
@@ -212,7 +231,9 @@ class LanguageCatalogParser
         for(const auto& definition : loadCatalog().languages)
         {
             if(!isValid(definition, languages)) continue;
-            Database::AvailableLanguage language{definition.code, definition.name, definition.folder, {}, definition.credit};
+            Database::AvailableLanguage language{definition.code, definition.name, definition.folder, {}, definition.credit, {}};
+            for(const auto& [channel, notice] : definition.notices)
+                if(auto text = cleanNotice(notice); !text.empty()) language.notices[channel == "*" ? channel : normalizeChannelName(channel)] = text;
 
             if(!definition.source.channelList.empty())
             {
