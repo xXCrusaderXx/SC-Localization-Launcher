@@ -4,6 +4,7 @@
 #include <functional>
 #include <thread>
 
+#include "UpdateSigningKey.hpp"
 #include "backend/DirectoryFinder.hpp"
 #include "backend/utils/TaskQueue.hpp"
 #include "backend/utils/paths.hpp"
@@ -51,6 +52,15 @@ class BackEnd
     {
         if(job.joinable()) job.join();
         job = std::thread(std::move(function));
+    }
+
+    static std::string updateSigningKey ()
+    {
+#ifdef SC_TESTING
+        // Test builds only: the tests sign their releases with a key of their own
+        if(const char* key = std::getenv("SC_UPDATE_SIGNING_KEY")) return key;
+#endif
+        return UPDATE_SIGNING_KEY;
     }
 
     const Database::AvailableLanguage* findLanguage (const std::string& code) const
@@ -336,16 +346,66 @@ class BackEnd
 
     void handle (const Protocol::CheckForUpdate&)
     {
-        if(data.selfUpdate.status == Protocol::SelfUpdateStatus::Checking) return;
-        data.selfUpdate.status = Protocol::SelfUpdateStatus::Checking;
+        using Protocol::SelfUpdateStatus;
+        auto status = data.selfUpdate.status;
+        if(status == SelfUpdateStatus::Checking || status == SelfUpdateStatus::Downloading || status == SelfUpdateStatus::Installing) return;
+        data.selfUpdate.status = SelfUpdateStatus::Checking;
         startJob(selfUpdateJob,
                  [this, version = data.selfUpdate.currentVersion]
                  {
-                     auto result = selfUpdateManager.check(version);
+                     auto installation = SelfUpdateManager::detectInstallation();
+                     auto result = selfUpdateManager.check(version, installation);
                      queue.post(
-                         [this, result]
+                         [this, result, installation]
                          {
-                             data.selfUpdate = result;
+                             data.selfUpdate = result.update;
+                             data.releaseAssets = result.assets;
+                             data.installation = installation;
+                             publish();
+                         });
+                 });
+    }
+
+    void handle (const Protocol::InstallUpdate&)
+    {
+        using Protocol::SelfUpdateStatus;
+        if(data.selfUpdate.status != SelfUpdateStatus::Available || !data.selfUpdate.canInstall || !data.releaseAssets)
+        {
+            LOG_ERROR(lg) << "installUpdate - no installable update";
+            return;
+        }
+
+        data.selfUpdate.status = SelfUpdateStatus::Downloading;
+        data.selfUpdate.progress = 0;
+        data.selfUpdate.error.clear();
+        startJob(selfUpdateJob,
+                 [this, release = *data.releaseAssets, installation = data.installation, version = data.selfUpdate.currentVersion]
+                 {
+                     // Whole percents are enough for the GUI and keep the state updates few
+                     auto lastPercent = std::make_shared<int>(-1);
+                     auto error = selfUpdateManager.install(release, installation, version,
+                                                            [this, lastPercent] (double progress)
+                                                            {
+                                                                int percent = static_cast<int>(progress * 100);
+                                                                if(percent == *lastPercent) return;
+                                                                *lastPercent = percent;
+                                                                queue.post(
+                                                                    [this, progress]
+                                                                    {
+                                                                        data.selfUpdate.progress = progress;
+                                                                        // After the download only the installation is left
+                                                                        if(progress >= 1)
+                                                                            data.selfUpdate.status = Protocol::SelfUpdateStatus::Installing;
+                                                                        publish();
+                                                                    });
+                                                            });
+                     queue.post(
+                         [this, error]
+                         {
+                             data.selfUpdate.status = error ? Protocol::SelfUpdateStatus::Error : Protocol::SelfUpdateStatus::Installed;
+                             data.selfUpdate.error = error.value_or("");
+                             // A failed attempt can be retried after checking again
+                             data.selfUpdate.canInstall = false;
                              publish();
                          });
                  });
@@ -386,7 +446,7 @@ class BackEnd
         : lg("BackEnd")
         , settingsJsonParser(PATHS::JSON_FILES::SETTINGS_USER)
         , updateManager(data.shuttingDown)
-        , selfUpdateManager(data.shuttingDown)
+        , selfUpdateManager(data.shuttingDown, updateSigningKey())
         , stateCallback(std::move(stateCallback))
     {
         data.selfUpdate.currentVersion = std::move(version);

@@ -30,7 +30,8 @@ int main (int argc, char *argv[])
     if(translator.load(QLocale(), "sc-localization-launcher", "_", ":/i18n")) app.installTranslator(&translator);
 
     // A second start only brings the running launcher to the front, before any backend work starts
-    SingleInstance instance(SC_APP_ID);
+    // After an update the old launcher is still quitting; wait for it instead of activating it
+    SingleInstance instance(SC_APP_ID, app.arguments().contains("--after-update") ? 10000 : 100);
     if(!instance.isPrimary()) return instance.activatePrimary() ? 0 : 1;
 
     // Declared before the engine, so QML is torn down before the backend

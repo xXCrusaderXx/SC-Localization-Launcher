@@ -25,6 +25,23 @@ class GuiTest : public QObject
     std::unique_ptr<BackendBridge> bridge;
     std::unique_ptr<QQmlApplicationEngine> engine;
     QQuickWindow* window = nullptr;
+    TestSigningKey releaseKey;
+
+    QQuickItem* findButton (const QString& text) const
+    {
+        for(auto* item : window->contentItem()->findChildren<QQuickItem*>())
+            if(item->inherits("QQuickAbstractButton") && item->isVisible() && item->property("text") == text) return item;
+        return nullptr;
+    }
+
+    bool clickButton (const QString& text)
+    {
+        QQuickItem* button = findButton(text);
+        if(!button) return false;
+        QPointF center = button->mapToScene(QPointF(button->width() / 2, button->height() / 2));
+        QTest::mouseClick(window, Qt::LeftButton, {}, center.toPoint());
+        return true;
+    }
 
     // Visible Text item showing exactly this text
     QQuickItem* findText (const QString& text) const
@@ -84,6 +101,7 @@ class GuiTest : public QObject
         LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>());
         qputenv("SC_LANGUAGES_URL", server.url("/languages.json").toUtf8());
         qputenv("SC_RELEASES_URL", server.url("/releases/latest").toUtf8());
+        qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
         QCoreApplication::setApplicationVersion("0.6.0");
         resetUserDir();
         // Starts with the game launch switched on, the first test turns it off before any update runs
@@ -248,6 +266,34 @@ class GuiTest : public QObject
                         { return item->inherits("QQuickAbstractButton") && item->isVisible() && item->property("text") == "Open download page"; }));
         QTest::keyClick(window, Qt::Key_Escape);
         QTRY_VERIFY(!dialog->property("visible").toBool());
+    }
+
+    void installsLauncherUpdateFromTheDialog ()
+    {
+        QTemporaryDir dir;
+        auto appImage = std::filesystem::path(dir.path().toStdString()) / "SC-Localization-Launcher.AppImage";
+        std::ofstream(appImage) << "old version";
+        qputenv("APPIMAGE", QByteArray::fromStdString(appImage.string()));
+        publishAppImageRelease(server, releaseKey, "new version");
+
+        auto* button = engine->rootObjects().first()->findChild<QQuickItem*>("launcherUpdateButton");
+        QVERIFY(button);
+        QPointF center = button->mapToScene(QPointF(button->width() / 2, button->height() / 2));
+        QTest::mouseClick(window, Qt::LeftButton, {}, center.toPoint());
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("launcherUpdateDialog");
+        QTRY_VERIFY(dialog->property("opened").toBool());
+
+        // The earlier check knew no package for this installation; checking again finds the signed AppImage
+        QTRY_VERIFY(clickButton("Check again"));
+        QTRY_VERIFY(findButton("Install update"));
+        QVERIFY(clickButton("Install update"));
+        QTRY_VERIFY_WITH_TIMEOUT(findButton("Restart now"), 30000);
+        QCOMPARE(readFile(appImage), std::string("new version"));
+
+        // Restarting would start the fake AppImage, so the test stops here
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        qunsetenv("APPIMAGE");
     }
 };
 

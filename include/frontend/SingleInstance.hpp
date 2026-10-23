@@ -31,8 +31,9 @@ class SingleInstance : public QObject
     }
 
    public:
-    // name must be unique per user, e.g. the app ID
-    explicit SingleInstance (const QString& name, QObject* parent = nullptr)
+    // name must be unique per user, e.g. the app ID. waitMs: how long to wait for a running launcher to end,
+    // e.g. after an update restart
+    explicit SingleInstance (const QString& name, int waitMs = 100, QObject* parent = nullptr)
         : QObject(parent)
         , lg("SingleInstance")
         , name(name)
@@ -40,7 +41,7 @@ class SingleInstance : public QObject
     {
         // A lock of a crashed launcher is taken over, QLockFile checks whether its process still runs
         lockFile.setStaleLockTime(0);
-        primary = lockFile.tryLock(100);
+        primary = lockFile.tryLock(waitMs);
         if(!primary)
         {
             LOG_DEBUG(lg) << "another launcher is running";
