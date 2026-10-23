@@ -120,8 +120,20 @@ The launcher's own interface is English by default and follows the system langua
 | `main` | Released code only. Changes come exclusively from `dev`, merged by a maintainer at a release point. |
 | `dev` | Integration branch and default branch. All feature and fix PRs go here. |
 | `feat/…`, `fix/…`, `docs/…`, `chore/…` | One topic each, branched from `dev`, deleted after the merge. |
+| `hotfix/…` | Urgent fix for the released version, branched from `main` (see [Hotfixes](#hotfixes)). |
 
-PRs are merged with a merge commit, never squashed or rebased, so the history shows which commits belong to which branch. After `dev` is merged into `main`, work simply continues on `dev`.
+PRs are merged with a merge commit, never squashed or rebased, so the history shows which commits belong to which branch. After `dev` is merged into `main`, work simply continues on `dev`; the `Back-merge main into dev` workflow keeps `dev` containing everything from `main`.
+
+**Clean up your branch before the PR.** Every commit of your branch ends up in the history. Combine work-in-progress commits such as "fix typo" or "format" into meaningful commits (`git rebase -i origin/dev`, or `git reset --soft origin/dev` and commit again) before you open the PR, and use clear commit messages.
+
+### Hotfixes
+
+A hotfix is only for a problem in the **released** version that cannot wait for the next regular release: a crash, a broken download, a wrong install path. Everything else goes through `dev`.
+
+1. Branch from `main`: `hotfix/<topic>`. Only the fix goes in.
+2. Open a PR against `main`. CI runs as usual; a maintainer merges it (never automatic).
+3. A maintainer runs the `Release` workflow on `main` with the next patch version (e.g. `0.6.1`). No milestone is needed.
+4. The `Back-merge main into dev` workflow then opens a PR `main` → `dev` that merges by itself, so the fix is in `dev` too.
 
 ### How a PR gets merged
 
