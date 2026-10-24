@@ -194,13 +194,15 @@ class BackendTest : public QObject
         return states[*done].game;
     }
 
-    // Wine names the process after the Windows program; the fake one only sleeps.
-    // The tests watch for this name instead of "RSI Launcher.exe" (SC_RSI_LAUNCHER_PROGRAM in tests/CMakeLists.txt).
-    static constexpr const char* FAKE_RSI_LAUNCHER =
-        "exec -a 'C:\\Program Files\\Roberts Space Industries\\RSI Launcher\\RSI Test Launcher.exe' sleep 30\n";
+    // Watched instead of "RSI Launcher.exe", see watchOwnTestPrograms()
+    static std::string fakeRsiLauncher () { return fakeWineProcess(testRsiLauncherProgram()); }
 
    private slots:
-    void initTestCase () { LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>()); }
+    void initTestCase ()
+    {
+        LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>());
+        watchOwnTestPrograms();
+    }
 
     void init ()
     {
@@ -612,11 +614,10 @@ class BackendTest : public QObject
         qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
         publishAppImageRelease(server, releaseKey, "new version");
 
-        // A process named like the game under Wine (SC_GAME_PROGRAM in tests/CMakeLists.txt)
+        // A process named like the game under Wine
         qputenv("PATH", "/usr/bin:/bin");
         QProcess running;
-        running.start("/bin/bash",
-                      {"-c", "exec -a 'C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\Bin64\\StarCitizen Test.exe' sleep 30"});
+        running.start("/bin/bash", {"-c", QString::fromStdString(fakeWineProcess(testGameProgram()))});
         QVERIFY(running.waitForStarted());
 
         QVERIFY(start());
@@ -1033,7 +1034,7 @@ class BackendTest : public QObject
         QTemporaryDir prefix;
         auto root = std::filesystem::path(prefix.path().toStdString());
         auto rsiLauncher =
-            lugPrefix(prefix, std::string("echo \"${ELECTRON_RUN_AS_NODE-unset}\" > electron-env\necho $$ > pid\n") + FAKE_RSI_LAUNCHER);
+            lugPrefix(prefix, std::string("echo \"${ELECTRON_RUN_AS_NODE-unset}\" > electron-env\necho $$ > pid\n") + fakeRsiLauncher());
 
         auto result = updateAndStartGame(rsiLauncher);
         QProcess::execute("kill", {QString::fromStdString(readFile(root / "pid")).trimmed()});
@@ -1049,7 +1050,7 @@ class BackendTest : public QObject
         qputenv("PATH", "/usr/bin:/bin");
         QTemporaryDir prefix;
         auto root = std::filesystem::path(prefix.path().toStdString());
-        auto rsiLauncher = lugPrefix(prefix, std::string("echo $$ > pid\n") + FAKE_RSI_LAUNCHER);
+        auto rsiLauncher = lugPrefix(prefix, std::string("echo $$ > pid\n") + fakeRsiLauncher());
 
         QVERIFY(start());
         backEnd->execute(Protocol::SetRsiLauncherPath{rsiLauncher.string()});
@@ -1066,7 +1067,7 @@ class BackendTest : public QObject
         qputenv("PATH", "/usr/bin:/bin");
         QVERIFY(start());
         QProcess rsiLauncher;
-        rsiLauncher.start("/bin/bash", {"-c", FAKE_RSI_LAUNCHER});
+        rsiLauncher.start("/bin/bash", {"-c", QString::fromStdString(fakeRsiLauncher())});
         QVERIFY(rsiLauncher.waitForStarted());
         auto running = waitForState([] (const auto& s) { return s.game == GameStart::Running; });
         rsiLauncher.kill();
@@ -1081,8 +1082,7 @@ class BackendTest : public QObject
         QTemporaryDir gameFolder;
         QVERIFY(installGerman(gameFolder));
         QProcess game;
-        game.start("/bin/bash",
-                   {"-c", "exec -a 'C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\Bin64\\StarCitizen Test.exe' sleep 30"});
+        game.start("/bin/bash", {"-c", QString::fromStdString(fakeWineProcess(testGameProgram()))});
         QVERIFY(game.waitForStarted());
         auto playing = waitForState([] (const auto& s) { return s.game == GameStart::Playing; });
 
@@ -1254,8 +1254,8 @@ class BackendTest : public QObject
     {
         qputenv("PATH", "/usr/bin:/bin");
         QProcess starCitizen;
-        // Named like the game under Wine (SC_GAME_PROGRAM in tests/CMakeLists.txt)
-        starCitizen.start("/bin/bash", {"-c", "exec -a 'C:\\Games\\StarCitizen\\LIVE\\Bin64\\StarCitizen Test.exe' sleep 30"});
+        // Named like the game under Wine
+        starCitizen.start("/bin/bash", {"-c", QString::fromStdString(fakeWineProcess(testGameProgram()))});
         QVERIFY(starCitizen.waitForStarted());
         QTest::qWait(200);
 

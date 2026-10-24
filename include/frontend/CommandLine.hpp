@@ -219,10 +219,11 @@ class CommandLine
 
         LOG_INFO(lg) << "update from the command line";
         backEnd.execute(Protocol::StartUpdate{.channels = names, .allowGameStart = false});
-        // This is the only command sent, so the first state that counts it shows whether the update started
+        // This is the only command sent and nothing else starts an update here, so once it is handled, a status
+        // other than idle means it started; it may already have finished by the time this thread looks
         auto handled = waitFor([] (const Protocol::State& s) { return s.handledCommands >= 1; }, std::chrono::seconds(30));
         if(!handled) return Error;
-        if(handled->update != Protocol::UpdateStatus::Running)
+        if(handled->update == Protocol::UpdateStatus::Idle)
         {
             if(handled->game == Protocol::GameStart::Playing)
             {
