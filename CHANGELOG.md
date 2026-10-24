@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-24
+
+Item names with their values.
+
+### Added
+
+- New setting "Add size, class and grade to item names" (off by default): ship components, ship and personal weapons, missiles and turrets show size, class and grade in their name, e.g. "Holdstrong (S4 Militär A)". The data comes from the [Star Citizen Wiki API](https://api.star-citizen.wiki) (CC BY-NC-SA 4.0, credited in the settings) and is applied to every freshly downloaded translation.
+- `item-mapping.json` links `global.ini` keys to Wiki items. It is rebuilt every week and contains keys and IDs only, no game texts.
+
+### Changed
+
+- The Star Citizen Wiki content is credited under CC BY-NC-SA 4.0 (was wrongly listed as CC BY-SA).
+
 ## [0.8.0] - 2026-10-24
 
 The launcher now works in the background.
@@ -104,7 +117,8 @@ First release as *SC Localization Launcher*.
 - When switching languages, the previous language's folder is removed only after the new download succeeded.
 - Only one launcher runs at a time; starting it again brings the open window to the front instead of running two launchers that write the same settings and game folders.
 
-[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.6.0...v0.6.1
