@@ -40,7 +40,8 @@ endif()
 include(GNUInstallDirs)
 
 # 6.4 is the oldest Qt shipped by current LTS distributions (Ubuntu 24.04, Debian 12)
-find_package(Qt6 6.4 REQUIRED COMPONENTS Quick Network)
+# Widgets: the system tray of the KDE platform theme builds on QApplication
+find_package(Qt6 6.4 REQUIRED COMPONENTS Quick Network Widgets)
 message(STATUS "Using Qt ${Qt6_VERSION}")
 if(QT_KNOWN_POLICY_QTP0004)
   qt_policy(SET QTP0004 NEW)
@@ -136,6 +137,7 @@ endif()
 target_link_libraries(${SC_LAUNCHER_BINARY} PRIVATE
   Qt6::Quick
   Qt6::Network
+  Qt6::Widgets
   PkgConfig::SODIUM
   nlohmann_json::nlohmann_json
   CURL::libcurl
@@ -326,7 +328,7 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "games")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 # QML modules are loaded at runtime, shlibdeps cannot see them
 set(CPACK_DEBIAN_PACKAGE_DEPENDS
-  "qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-dialogs, qml6-module-qtquick-layouts, qml6-module-qtquick-templates, qml6-module-qtquick-window, qml6-module-qtqml-workerscript, qml6-module-qt-labs-folderlistmodel, qt6-wayland")
+  "qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-dialogs, qml6-module-qtquick-layouts, qml6-module-qtquick-templates, qml6-module-qtquick-window, qml6-module-qtqml-workerscript, qml6-module-qt-labs-folderlistmodel, qml6-module-qt-labs-platform, qt6-wayland")
 
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-or-later")

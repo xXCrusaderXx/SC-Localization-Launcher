@@ -9,6 +9,8 @@ Item {
     // Protocol::State
     property var appState: ({})
     property bool locked: false
+    // A system tray exists; "close to tray" is offered only then
+    property bool trayAvailable: false
     property bool open: false
 
     signal pathChangeRequested(string target)
@@ -154,6 +156,16 @@ Item {
                         description: qsTr("Asks GitHub for a newer version of this launcher")
                         checked: panel.options.checkLauncherUpdatesAtStart === true
                         onSwitched: on => backend.setOption("checkLauncherUpdatesAtStart", on)
+                    }
+
+                    Toggle {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        visible: panel.trayAvailable
+                        text: qsTr("Keep running in the system tray")
+                        description: qsTr("Closing the window keeps the launcher in the tray, so it goes on checking")
+                        checked: panel.options.closeToTray === true
+                        onSwitched: on => backend.setOption("closeToTray", on)
                     }
                 }
 
