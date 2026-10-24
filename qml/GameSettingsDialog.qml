@@ -30,6 +30,8 @@ Popup {
             return qsTr("Star Citizen ignored these settings at its last start (not whitelisted): %1").arg(channel.ignoredSettings.join(", "));
         if (channel.settingsChecked)
             return qsTr("Star Citizen accepted these settings at its last start.");
+        if (!(settings.maxFps > 0 || settings.maxIdleFps > 0 || (settings.customLines || "") !== ""))
+            return "";
         return qsTr("Takes effect at the next game start; afterwards the launcher shows whether Star Citizen accepted it.");
     }
 
@@ -186,7 +188,7 @@ Popup {
 
         Text {
             Layout.fillWidth: true
-            visible: (dialog.channel.gameSettings !== undefined) && dialog.channelName !== ""
+            visible: text !== ""
             text: dialog.statusText()
             wrapMode: Text.Wrap
             color: dialog.channel.settingsError || (dialog.channel.ignoredSettings || []).length > 0 ? Theme.warning : Theme.muted

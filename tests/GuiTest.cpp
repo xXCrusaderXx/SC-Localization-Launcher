@@ -155,6 +155,12 @@ class GuiTest : public QObject
             QMetaObject::invokeMethod(dialog, "close");
             QTRY_VERIFY(!dialog->property("visible").toBool());
         }
+        // The settings panel's backdrop would catch the next test's clicks as well
+        if(auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel"); panel && panel->property("open").toBool())
+        {
+            panel->setProperty("open", false);
+            QTRY_VERIFY(!panel->property("visible").toBool());
+        }
         qunsetenv("APPIMAGE");
     }
 
@@ -167,7 +173,8 @@ class GuiTest : public QObject
         QVERIFY(clickButton("OK"));
         QTRY_VERIFY(!dialog->property("visible").toBool());
         QTRY_COMPARE(QString::fromStdString(readSettingsFile().value("lastSeenVersion", "")), QString("0.6.0"));
-        QVERIFY(bridge->state()["whatsNew"].toMap()["version"].toString().isEmpty());
+        // The settings file is saved before the state reaches the bridge
+        QTRY_VERIFY(bridge->state()["whatsNew"].toMap()["version"].toString().isEmpty());
     }
 
     void toggleShowsBackendState ()
@@ -553,6 +560,7 @@ class GuiTest : public QObject
         custom->setProperty("text", "r_DisplayInfo = 1");
         window->grabWindow();
         QVERIFY(clickButton("Save"));
+        QTRY_COMPARE(channel("LIVE")["gameSettings"].toMap()["customLines"].toString(), QString("r_DisplayInfo = 1"));
         QTRY_VERIFY(findText("Takes effect at the next game start; afterwards the launcher shows whether Star Citizen accepted it."));
         QFile cfg(liveDir.filePath("user.cfg"));
         QVERIFY(cfg.open(QIODevice::ReadOnly));
