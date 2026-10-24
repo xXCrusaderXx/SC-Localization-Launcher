@@ -42,6 +42,10 @@ struct SetOption
 struct StartUpdate
 {
     static constexpr const char* name = "startUpdate";
+    // Only these channels; empty = all
+    std::vector<std::string> channels;
+    // False for the command line: a script never starts the game, whatever the option says
+    bool allowGameStart = true;
 };
 
 // Starts the RSI Launcher without updating anything
@@ -88,9 +92,9 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetLanguage, channel, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInstallPath, channel, path)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetRsiLauncherPath, path)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetOption, option, value)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(StartUpdate, channels, allowGameStart)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RepairChannel, channel)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetCustomSource, channel, url, folder)
-inline void to_json (nlohmann::json& j, const StartUpdate&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const StartGame&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const AutoSearch&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const CheckForUpdate&) { j = nlohmann::json::object(); }

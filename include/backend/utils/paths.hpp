@@ -13,10 +13,7 @@ inline std::filesystem::path getUserRootPath ()
 {
     const char* homeDir = std::getenv("HOME");
     if(homeDir && *homeDir != '\0')
-    {
-        std::cout << "Home directory: " << homeDir << "\n";
         return std::filesystem::path(homeDir);
-    }
     else
     {
         std::cerr << "HOME environment variable is not gesetzt oder leer!\n";

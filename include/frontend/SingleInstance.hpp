@@ -48,11 +48,32 @@ class SingleInstance : public QObject
                 {
                     while(QLocalSocket* socket = server->nextPendingConnection())
                     {
-                        connect(socket, &QLocalSocket::disconnected, socket, &QObject::deleteLater);
-                        socket->disconnectFromServer();
-                        emit activationRequested();
+                        // The caller says what it wants and hangs up: "ping" only asks whether a launcher runs.
+                        // Anything else, also nothing (launchers before 0.8.0), brings the window to the front.
+                        connect(socket, &QLocalSocket::disconnected, socket,
+                                [this, socket]
+                                {
+                                    if(!socket->readAll().startsWith("ping")) emit activationRequested();
+                                    socket->deleteLater();
+                                });
                     }
                 });
+    }
+
+    bool send (const QByteArray& request)
+    {
+        QLocalSocket socket;
+        socket.connectToServer(socketPath(name));
+        bool connected = socket.waitForConnected(1000);
+        if(!connected)
+        {
+            LOG_ERROR(lg) << "cannot reach the running launcher: " << socket.errorString().toStdString();
+            return false;
+        }
+        socket.write(request);
+        socket.waitForBytesWritten(1000);
+        socket.disconnectFromServer();
+        return true;
     }
 
    public:
@@ -74,15 +95,10 @@ class SingleInstance : public QObject
     bool isPrimary () const { return primary; }
 
     // Called by a second launcher: asks the running one to show its window
-    bool activatePrimary ()
-    {
-        QLocalSocket socket;
-        socket.connectToServer(socketPath(name));
-        bool connected = socket.waitForConnected(1000);
-        if(!connected) LOG_ERROR(lg) << "cannot reach the running launcher: " << socket.errorString().toStdString();
-        socket.disconnectFromServer();
-        return connected;
-    }
+    bool activatePrimary () { return send("show"); }
+
+    // Whether the launcher holding the lock answers, without bringing its window to the front
+    bool primaryAnswers () { return send("ping"); }
 
     // Called when activatePrimary() failed: the lock belongs to a launcher that is gone but whose lock
     // QLockFile cannot judge, e.g. one from the native build seen inside the Flatpak (other PID namespace)
