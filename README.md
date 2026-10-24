@@ -19,9 +19,15 @@ What comes next — item values, blueprints, tray and background updates, backup
 - Downloads the translation safely: a failed download never replaces a working one, and only the language lines in your `user.cfg` are changed.
 - Optionally starts Star Citizen after the update, through the LUG Helper's `sc-launch.sh` or Lutris.
 - Keeps working offline with the last known channel list.
+- Checks and updates from the command line, e.g. from a `systemd --user` timer, without opening a window.
+- Checks for new translation versions every hour while it is open. With "Update translations automatically" it installs them, and waits until Star Citizen has been closed if the game runs.
+- Shows the overall status as a coloured light in the system tray, with "Update translations" and "Open" in its menu. With "Keep running in the system tray", closing the window leaves the launcher running there. Desktops without a tray (GNOME without the AppIndicator extension) simply don't show it.
+- Clears shader caches (Settings → Tools): the game's own cache in the Wine prefix, DXVK/VKD3D, and the Mesa and NVIDIA caches, with the size and the result per entry. Graphics settings are kept, and nothing is deleted while Star Citizen runs.
+- Checks the installation without changing anything (Settings → Help → "Check installation …"): Wine prefix, folders, write permissions, `global.ini` and `user.cfg` per channel, free disk space. "Save report (ZIP)" puts the results, the settings and the launcher's logs into your Downloads folder for a bug report, with your home folder and user name replaced; `Game.log` is not included.
+- Backs up keybindings, profile settings, saved characters and `user.cfg` per channel (Settings → Tools → "Backups …") and restores them after asking once; a restore first backs up what it replaces, and nothing is restored while Star Citizen runs. The newest 10 backups per channel are kept in `~/.local/share/sc-localization-launcher/backups`.
 - The interface follows your system language (English and German).
 
-Planned, not available yet: updating automatically at start or in the background, minimising to the tray, starting with the system, and a progress view. They appear as **BALD** (soon) in the settings.
+Planned, not available yet: starting with the system, and a progress view.
 
 The translation texts are maintained by community projects such as [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI). Report wrong or missing texts there, not here.
 
@@ -53,7 +59,7 @@ minisign -Vm SHA256SUMS -p minisign.pub
 sha256sum --check --ignore-missing SHA256SUMS
 ```
 
-The AppImage carries update information, so [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate) can update it in place.
+The launcher updates its AppImage itself and downloads only the blocks that changed (usually about 1 % of the file), using the release's `.zsync` file. The same update information also works with [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate).
 
 ### Where your data is stored
 
@@ -64,6 +70,55 @@ The AppImage carries update information, so [AppImageUpdate](https://github.com/
 | Logs | `~/.local/state/sc-localization-launcher/logs/` |
 
 The `XDG_*_HOME` variables are respected. The Flatpak keeps its data under `~/.var/app/io.github.xXCrusaderXx.SCLocalizationLauncher/`. Settings from the old `~/SC-Deutsch-Launcher` folder are taken over on the first start.
+
+## Command line
+
+Without options the launcher opens its window. With one of these options it works without a window and needs no display:
+
+```sh
+sc-localization-launcher --check               # which channels need an update; changes nothing
+sc-localization-launcher --update              # update every channel that has a game folder
+sc-localization-launcher --update --channel LIVE --channel PTU
+sc-localization-launcher --version
+```
+
+It uses the channels, languages and game folders set in the window. It never starts the game, even with "Start Star Citizen afterwards" switched on.
+
+| Exit code | Meaning |
+| --------- | ------- |
+| 0 | Every channel is up to date, or the update succeeded |
+| 1 | `--check` only: at least one channel needs an update |
+| 2 | Error: no game folder set, unknown channel, update failed, the launcher window is open, or Star Citizen is running |
+
+While the window is open or Star Citizen runs, the command line changes nothing and exits with 2.
+
+In the Flatpak, call it as `flatpak run io.github.xXCrusaderXx.SCLocalizationLauncher --update`, and for the AppImage as `./SC-Localization-Launcher-*.AppImage --update`.
+
+### Updating daily with a systemd timer
+
+A user service and timer run `--update` once a day and catch up after the computer was off. The `.deb`, `.rpm` and Arch packages install them, switched off; enable the timer for your user:
+
+```sh
+systemctl --user enable --now sc-localization-launcher-update.timer
+```
+
+For other installations, copy them from [`packaging/systemd`](packaging/systemd) to `~/.config/systemd/user/` first:
+
+```sh
+cp packaging/systemd/sc-localization-launcher-update.* ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now sc-localization-launcher-update.timer
+```
+
+The service runs `/usr/bin/sc-localization-launcher`, as installed by the `.deb`, `.rpm` and Arch packages. For the Flatpak or the AppImage, replace the command with `systemctl --user edit sc-localization-launcher-update.service`:
+
+```ini
+[Service]
+ExecStart=
+ExecStart=/usr/bin/flatpak run io.github.xXCrusaderXx.SCLocalizationLauncher --update
+```
+
+`systemctl --user status sc-localization-launcher-update.service` shows the last result; the log is in the folder named under [Where your data is stored](#where-your-data-is-stored).
 
 ## Building from source
 
@@ -105,6 +160,8 @@ packaging/native/build-in-docker.sh       # .deb (Ubuntu 24.04, Debian 12) and .
 flatpak-builder --user --install build-flatpak flatpak/io.github.xXCrusaderXx.SCLocalizationLauncher.json
 packaging/flatpak/build-repo.sh . 0.0.0-dev flatpak-out  # repository + bundle as in a release (unsigned without the key)
 ```
+
+Every release also updates the AUR package `sc-localization-launcher` through [`packaging/aur/publish.sh`](packaging/aur/publish.sh). It needs the secret `AUR_SSH_PRIVATE_KEY` (the SSH key of the AUR account); without it the step is skipped with a warning.
 
 For your own distribution package, use the FHS layout:
 

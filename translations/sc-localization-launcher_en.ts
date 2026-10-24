@@ -2,6 +2,148 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_US">
 <context>
+    <name>BackupDialog</name>
+    <message>
+        <source>Backup saved.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Backup restored. The files it replaced were backed up first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This channel has no keybindings, characters or user.cfg yet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close Star Citizen first; the game rewrites these files.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Profile backups</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose a game folder first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keybindings, profile settings, saved characters and user.cfg of a channel. The newest 10 backups per channel are kept.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Back up %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No backups yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 KB</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restore</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restore %1 from %2? The current files are backed up first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restore now</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>CacheDialog</name>
+    <message>
+        <source>%1 GB</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 MB</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 KB</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Star Citizen shader cache</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>DXVK/VKD3D cache</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Graphics driver cache in the Wine prefix</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Graphics driver cache of all programs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Deleted</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not found</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not be deleted</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Star Citizen is running</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Clear shader caches</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close Star Citizen first; the game uses these caches while it runs.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Looking for caches …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No caches found for the chosen game folders.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Helps against stutter or graphics errors after a game or driver update. The caches are rebuilt on the next start, which then takes longer. Graphics settings are kept.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>ChannelRow</name>
     <message>
         <source>Own source</source>
@@ -80,6 +222,133 @@
     </message>
     <message>
         <source>Save and use</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>DiagnosticsDialog</name>
+    <message>
+        <source>System</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Launcher version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Language list loaded</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Language list not loaded – offline?</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No RSI Launcher folder set</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>RSI Launcher folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>RSI Launcher folder is missing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Wine prefix</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No Wine prefix found above the game folders</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Game start: looked up outside the Flatpak when starting</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Game start</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Neither the LUG Helper&apos;s sc-launch.sh nor Lutris found</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Game folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Game folder is missing</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Game folder is writable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No write permission for the game folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No translation chosen (English)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Translation installed, but not current</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Translation installed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Translation file is missing or empty</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>user.cfg selects the translation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>user.cfg does not select the translation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Free disk space</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Little free disk space</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check the installation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Checking …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Only reads, changes nothing. The report contains these results, your settings and the launcher&apos;s logs, with your home folder and user name replaced. Game.log is not included.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The report could not be saved.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Saved: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show in folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save report (ZIP)</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -251,6 +520,10 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Star Citizen is running – the update follows when it closes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Translations updated</source>
         <translation type="unfinished"></translation>
     </message>
@@ -303,6 +576,26 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>No game folder chosen</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A translation is damaged or its update failed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>All translations are up to date</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>RSI Launcher folder</source>
         <translation type="unfinished"></translation>
     </message>
@@ -337,11 +630,27 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Update translations automatically</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Checks every hour and installs new versions; waits while Star Citizen runs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Check for launcher updates on start</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Asks GitHub for a newer version of this launcher</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keep running in the system tray</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Closing the window keeps the launcher in the tray, so it goes on checking</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -369,7 +678,35 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>TOOLS</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Shader caches of the game and the graphics driver; clearing them helps against stutter after updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Clear caches …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keybindings, profile settings, characters and user.cfg per channel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Backups …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>HELP</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Checks folders, rights and translation files and saves a report for a bug report</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Check installation …</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -381,6 +718,17 @@
     <name>Toggle</name>
     <message>
         <source>SOON</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>WhatsNewDialog</name>
+    <message>
+        <source>What&apos;s new in version %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

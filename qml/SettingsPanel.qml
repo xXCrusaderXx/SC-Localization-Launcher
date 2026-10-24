@@ -9,9 +9,14 @@ Item {
     // Protocol::State
     property var appState: ({})
     property bool locked: false
+    // A system tray exists; "close to tray" is offered only then
+    property bool trayAvailable: false
     property bool open: false
 
     signal pathChangeRequested(string target)
+    signal cacheCleanerRequested
+    signal diagnosticsRequested
+    signal backupsRequested
 
     readonly property var options: appState.options || {}
     readonly property var channels: appState.channels || []
@@ -141,10 +146,29 @@ Item {
                     Toggle {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
+                        text: qsTr("Update translations automatically")
+                        description: qsTr("Checks every hour and installs new versions; waits while Star Citizen runs")
+                        checked: panel.options.installNewTranslations === true
+                        onSwitched: on => backend.setOption("installNewTranslations", on)
+                    }
+
+                    Toggle {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
                         text: qsTr("Check for launcher updates on start")
                         description: qsTr("Asks GitHub for a newer version of this launcher")
                         checked: panel.options.checkLauncherUpdatesAtStart === true
                         onSwitched: on => backend.setOption("checkLauncherUpdatesAtStart", on)
+                    }
+
+                    Toggle {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        visible: panel.trayAvailable
+                        text: qsTr("Keep running in the system tray")
+                        description: qsTr("Closing the window keeps the launcher in the tray, so it goes on checking")
+                        checked: panel.options.closeToTray === true
+                        onSwitched: on => backend.setOption("closeToTray", on)
                     }
                 }
 
@@ -280,7 +304,74 @@ Item {
 
                 SectionTitle {
                     Layout.topMargin: 12
+                    text: qsTr("TOOLS")
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Shader caches of the game and the graphics driver; clearing them helps against stutter after updates")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("Clear caches …")
+                        enabled: !panel.locked
+                        onClicked: panel.cacheCleanerRequested()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Keybindings, profile settings, characters and user.cfg per channel")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("Backups …")
+                        enabled: !panel.locked
+                        onClicked: panel.backupsRequested()
+                    }
+                }
+
+                SectionTitle {
+                    Layout.topMargin: 12
                     text: qsTr("HELP")
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Checks folders, rights and translation files and saves a report for a bug report")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("Check installation …")
+                        onClicked: panel.diagnosticsRequested()
+                    }
                 }
 
                 // Log files are what a bug report needs; the path is shown so it can be mentioned

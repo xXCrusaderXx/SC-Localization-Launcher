@@ -1,0 +1,13 @@
+# Enable with: systemctl --user enable --now sc-localization-launcher-update.timer
+[Unit]
+Description=Update Star Citizen community translations daily
+Documentation=https://github.com/xXCrusaderXx/SC-Localization-Launcher#command-line
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=1h
+# Catches up on a missed run after the computer was off
+Persistent=true
+
+[Install]
+WantedBy=timers.target

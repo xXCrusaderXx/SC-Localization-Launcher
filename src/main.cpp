@@ -1,4 +1,4 @@
-#include <QGuiApplication>
+#include <QApplication>
 #include <QIcon>
 #include <QLocale>
 #include <QQmlApplicationEngine>
@@ -7,16 +7,30 @@
 #include <QTimer>
 #include <QTranslator>
 
+#include <iostream>
+
 #include "frontend/BackendBridge.hpp"
+#include "frontend/CommandLine.hpp"
 #include "frontend/SingleInstance.hpp"
 #include "logging/logger/custom_logger/custom_logger.h"
 #include "logging/logging.h"
 
 int main (int argc, char *argv[])
 {
+    // --check, --update, --version: no window and no display needed, e.g. for a systemd timer
+    if(CommandLine::requested(argc, argv))
+    {
+        LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>(false));
+        QCoreApplication app(argc, argv);
+        app.setApplicationVersion(SC_VERSION);
+        return CommandLine(SC_APP_ID, SC_VERSION, std::cout, std::cerr).run(app.arguments());
+    }
+
     LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>());
 
-    QGuiApplication app(argc, argv);
+    // QApplication, not QGuiApplication: platform themes create the tray icon (Qt.labs.platform) with widgets,
+    // the KDE theme aborts without it
+    QApplication app(argc, argv);
     app.setWindowIcon(QIcon(":/logo.png"));
     app.setApplicationVersion(SC_VERSION);
     // Lets Wayland compositors match the window to the installed .desktop file and its icon
