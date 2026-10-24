@@ -83,6 +83,8 @@ class BackendBridge : public QObject
     }
 
     Q_INVOKABLE void startUpdate () { backEnd.execute(Protocol::StartUpdate{}); }
+    // From the tray menu: only the translations, the game is not started
+    Q_INVOKABLE void updateTranslations () { backEnd.execute(Protocol::StartUpdate{.channels = {}, .allowGameStart = false}); }
     Q_INVOKABLE void startGame () { backEnd.execute(Protocol::StartGame{}); }
 
     // An empty url removes the channel's own source; the backend checks url and folder again

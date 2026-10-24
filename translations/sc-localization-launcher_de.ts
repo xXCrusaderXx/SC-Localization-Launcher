@@ -307,6 +307,26 @@
         <translation>Starten</translation>
     </message>
     <message>
+        <source>No game folder chosen</source>
+        <translation>Kein Spielordner gewählt</translation>
+    </message>
+    <message>
+        <source>A translation is damaged or its update failed</source>
+        <translation>Eine Übersetzung ist beschädigt oder ihr Update ist fehlgeschlagen</translation>
+    </message>
+    <message>
+        <source>All translations are up to date</source>
+        <translation>Alle Übersetzungen sind aktuell</translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation>Öffnen</translation>
+    </message>
+    <message>
+        <source>Quit</source>
+        <translation>Beenden</translation>
+    </message>
+    <message>
         <source>RSI Launcher folder</source>
         <translation>Ordner des RSI Launchers</translation>
     </message>
@@ -355,6 +375,14 @@
     <message>
         <source>Asks GitHub for a newer version of this launcher</source>
         <translation>Fragt bei GitHub nach einer neueren Version dieses Launchers</translation>
+    </message>
+    <message>
+        <source>Keep running in the system tray</source>
+        <translation>Im Infobereich weiterlaufen</translation>
+    </message>
+    <message>
+        <source>Closing the window keeps the launcher in the tray, so it goes on checking</source>
+        <translation>Beim Schließen des Fensters bleibt der Launcher im Infobereich und prüft weiter</translation>
     </message>
     <message>
         <source>HELP</source>

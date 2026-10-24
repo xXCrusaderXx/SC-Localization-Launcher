@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Dialogs
 import QtQuick.Layouts
+import Qt.labs.platform as Platform
 
 ApplicationWindow {
     id: window
@@ -38,6 +39,16 @@ ApplicationWindow {
     readonly property int pendingUpdates: channels.filter(c => ["notInstalled", "updateAvailable", "damaged", "failed"].indexOf(c.status) >= 0).length
     readonly property bool launchAfterUpdate: appState.options.launchGameAfterUpdate === true
     readonly property bool searchBusy: appState.searching === true
+    // Status light of the tray icon: "idle" (no game folder), "error", "pending" or "ok"
+    readonly property string overallStatus: {
+        if (!updateReady)
+            return "idle";
+        if (updateFailed || channels.some(c => c.status === "damaged" || c.status === "failed"))
+            return "error";
+        return pendingUpdates > 0 ? "pending" : "ok";
+    }
+    // Without a tray (e.g. GNOME without the AppIndicator extension) closing always quits, so the window can't get lost
+    readonly property bool closesToTray: tray.available && appState.options.closeToTray === true
     // Release notes of an update that was not shown yet
     readonly property bool hasWhatsNew: ((appState.whatsNew || {}).notes || "") !== ""
 
@@ -46,11 +57,23 @@ ApplicationWindow {
             whatsNewDialog.open();
     }
     Component.onCompleted: backend.loadWhatsNew()
+    onClosing: close => {
+        if (closesToTray) {
+            close.accepted = false;
+            window.hide();
+        }
+    }
 
     // target is a channel name or "RSI" for the RSI Launcher folder
     function choosePath(target) {
         folderDialog.target = target;
         folderDialog.open();
+    }
+
+    function showWindow() {
+        window.showNormal();
+        window.raise();
+        window.requestActivate();
     }
 
     width: 880
@@ -524,6 +547,7 @@ ApplicationWindow {
 
         anchors.fill: parent
         appState: window.appState
+        trayAvailable: tray.available
         locked: window.updateBusy
         onPathChangeRequested: target => window.choosePath(target)
     }
@@ -552,6 +576,52 @@ ApplicationWindow {
 
         whatsNew: window.appState.whatsNew || ({})
         onClosed: backend.dismissWhatsNew()
+    }
+
+    Platform.SystemTrayIcon {
+        id: tray
+
+        visible: available
+        icon.source: "qrc:/tray/" + window.overallStatus + ".png"
+        tooltip: {
+            let status;
+            if (window.updateBusy)
+                status = qsTr("Downloading translations …");
+            else if (window.overallStatus === "idle")
+                status = qsTr("No game folder chosen");
+            else if (window.overallStatus === "error")
+                status = qsTr("A translation is damaged or its update failed");
+            else if (window.overallStatus === "pending")
+                status = qsTr("%n channel(s) need an update", "", window.pendingUpdates);
+            else
+                status = qsTr("All translations are up to date");
+            return "SC Localization Launcher\n" + status;
+        }
+        onActivated: reason => {
+            if (reason === Platform.SystemTrayIcon.Trigger)
+                window.visible ? window.hide() : window.showWindow();
+        }
+
+        menu: Platform.Menu {
+            Platform.MenuItem {
+                text: qsTr("Open")
+                onTriggered: window.showWindow()
+            }
+
+            Platform.MenuItem {
+                text: qsTr("Update translations")
+                // Like the main button: nothing while the game reads the files or another update runs
+                enabled: window.pendingUpdates > 0 && !window.updateBusy && !window.gameStarting && !window.gamePlaying
+                onTriggered: backend.updateTranslations()
+            }
+
+            Platform.MenuSeparator {}
+
+            Platform.MenuItem {
+                text: qsTr("Quit")
+                onTriggered: Qt.quit()
+            }
+        }
     }
 
     Shortcut {

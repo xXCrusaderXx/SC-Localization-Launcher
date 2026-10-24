@@ -379,6 +379,39 @@ class GuiTest : public QObject
         QTRY_COMPARE(bridge->state()["update"].toString(), QString("succeeded"));
     }
 
+    // The offscreen platform has no system tray, like GNOME without the AppIndicator extension
+    void closeToTrayNeedsATray ()
+    {
+        QObject* root = engine->rootObjects().first();
+        QVERIFY(!root->findChild<QObject*>("settingsPanel")->property("trayAvailable").toBool());
+        bridge->setOption("closeToTray", true);
+        QTRY_VERIFY(bridge->state()["options"].toMap()["closeToTray"].toBool());
+        // Closing must still quit, or the window would be gone with no icon to bring it back
+        QVERIFY(!root->property("closesToTray").toBool());
+        QVERIFY(!findText("Keep running in the system tray"));
+        bridge->setOption("closeToTray", false);
+        QTRY_VERIFY(!bridge->state()["options"].toMap()["closeToTray"].toBool());
+    }
+
+    void trayStatusFollowsTheChannels ()
+    {
+        QObject* root = engine->rootObjects().first();
+        auto expected = [this]
+        {
+            QString status = "ok";
+            for(const auto& c : bridge->state()["channels"].toList())
+            {
+                QString s = c.toMap()["status"].toString();
+                if(c.toMap()["installPath"].toString().isEmpty()) continue;
+                if(s == "damaged" || s == "failed") return QString("error");
+                if(s == "notInstalled" || s == "updateAvailable") status = "pending";
+            }
+            return status;
+        };
+        QTRY_COMPARE(root->property("overallStatus").toString(), expected());
+        QVERIFY(QFile::exists(":/tray/" + root->property("overallStatus").toString() + ".png"));
+    }
+
     void ownSourceThroughTheDialog ()
     {
         // The dialog only accepts HTTPS; nothing is downloaded in this test
