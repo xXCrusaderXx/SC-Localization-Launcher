@@ -638,6 +638,14 @@
         <translation>Prüft stündlich und installiert neue Versionen; wartet, solange Star Citizen läuft</translation>
     </message>
     <message>
+        <source>Add size, class and grade to item names</source>
+        <translation>Größe, Klasse und Grad an Gegenstandsnamen anhängen</translation>
+    </message>
+    <message>
+        <source>e.g. &quot;Holdstrong (S4 Military A)&quot;, from the Star Citizen Wiki; applies with the next update</source>
+        <translation>z. B. &quot;Holdstrong (S4 Militär A)&quot;, aus dem Star Citizen Wiki; wirkt mit dem nächsten Update</translation>
+    </message>
+    <message>
         <source>Check for launcher updates on start</source>
         <translation>Beim Start nach Launcher-Updates suchen</translation>
     </message>
@@ -692,6 +700,14 @@
     <message>
         <source>INSTALLATIONS</source>
         <translation>INSTALLATIONEN</translation>
+    </message>
+    <message>
+        <source>Item values</source>
+        <translation>Gegenstandswerte</translation>
+    </message>
+    <message>
+        <source>the Star Citizen Wiki community</source>
+        <translation>der Star-Citizen-Wiki-Community</translation>
     </message>
     <message>
         <source>Searching …</source>

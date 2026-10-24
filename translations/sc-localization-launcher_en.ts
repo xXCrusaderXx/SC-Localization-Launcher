@@ -614,6 +614,14 @@
 <context>
     <name>SettingsPanel</name>
     <message>
+        <source>Item values</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>the Star Citizen Wiki community</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Settings</source>
         <translation type="unfinished"></translation>
     </message>
@@ -635,6 +643,14 @@
     </message>
     <message>
         <source>Checks every hour and installs new versions; waits while Star Citizen runs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add size, class and grade to item names</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>e.g. &quot;Holdstrong (S4 Military A)&quot;, from the Star Citizen Wiki; applies with the next update</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

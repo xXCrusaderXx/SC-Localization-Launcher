@@ -37,6 +37,8 @@ class BackEnd
     SettingsJsonParser settingsJsonParser;
     LanguageCatalogParser languageCatalogParser;
     UpdateManager updateManager;
+    // Only used by the update job
+    ItemValues itemValues;
     SelfUpdateManager selfUpdateManager;
     DirectoryFinder directoryFinder;
     CacheCleaner cacheCleaner;
@@ -161,6 +163,8 @@ class BackEnd
         // Installed by hand, by the former SC Deutsch Launcher or as another language of the same folder: version unknown
         if(channel.installed.language != channel.language) return ChannelStatus::UpdateAvailable;
         if(channel.damaged) return ChannelStatus::Damaged;
+        // Switched on or off since the file was installed
+        if(data.options.itemNameDetails != !channel.installed.itemValues.empty()) return ChannelStatus::UpdateAvailable;
         if(!channel.remoteEtag.empty() && channel.remoteEtag != channel.installed.etag) return ChannelStatus::UpdateAvailable;
         return ChannelStatus::Installed;
     }
@@ -267,6 +271,7 @@ class BackEnd
         // Same language as installed and intact: the source can answer "not modified" instead of sending the file again
         bool reuse = !force && !channel.damaged && channel.installed.language == channel.language;
         UpdateManager::Job job{name, channel.installPath, channel.language, "", {}, managedFolders(channel), reuse ? channel.installed.etag : ""};
+        if(channel.installed.language == channel.language) job.installedItemValues = channel.installed.itemValues;
         if(auto language = languageFor(name, channel.language))
         {
             job.folder = language->folder;
@@ -341,14 +346,40 @@ class BackEnd
 
     bool gamePlaying () const { return data.gameProcess == Database::GameProcess::Game; }
 
+    // Runs in the update job: one plan per language, and a file whose values change is downloaded again instead of
+    // reused, so values are only ever added to a file as downloaded
+    void prepareItemValues (std::vector<UpdateManager::Job>& jobs, bool nameDetails)
+    {
+        std::map<std::string, std::shared_ptr<const ItemValues::Plan>> plans;
+        for(auto& job : jobs)
+        {
+            if(job.folder.empty()) continue;
+            std::shared_ptr<const ItemValues::Plan> plan;
+            if(nameDetails)
+            {
+                if(!plans.contains(job.language))
+                {
+                    auto built = itemValues.build(job.language);
+                    plans[job.language] = built ? std::make_shared<const ItemValues::Plan>(std::move(*built)) : nullptr;
+                }
+                plan = plans[job.language];
+                // Wiki or mapping unreachable: an unchanged file keeps the values it has
+                if(!plan) continue;
+            }
+            job.itemValues = plan;
+            if((plan ? plan->signature : "") != job.installedItemValues) job.etag.clear();
+        }
+    }
+
     void runUpdate (std::vector<UpdateManager::Job> jobs, bool launchGame)
     {
         data.update = Protocol::UpdateStatus::Running;
         // A repair may run while the RSI Launcher is still starting; that start reports its own result
         if(data.game != Protocol::GameStart::Starting) data.game = Protocol::GameStart::Idle;
         startJob(updateJob,
-                 [this, jobs, launchGame]
+                 [this, jobs, launchGame, nameDetails = data.options.itemNameDetails] () mutable
                  {
+                     prepareItemValues(jobs, nameDetails);
                      auto results = updateManager.update(jobs);
                      queue.post(
                          [this, results, launchGame, jobCount = jobs.size()]
@@ -361,7 +392,7 @@ class BackEnd
                                  channel.lastUpdateFailed = !result.success;
                                  if(!result.success) continue;
                                  bool english = result.language == Protocol::ENGLISH;
-                                 channel.installed = {english ? "" : result.language, result.etag, result.fileHash, result.folder};
+                                 channel.installed = {english ? "" : result.language, result.etag, result.fileHash, result.folder, result.itemValues};
                                  channel.damaged = false;
                                  if(channel.language == result.language) channel.remoteEtag = result.etag;
                              }
@@ -525,7 +556,7 @@ class BackEnd
         options[command.option] = command.value;
         data.options = options.get<Protocol::Options>();
         // Switched on: what the last check found is installed right away
-        if(command.option == "installNewTranslations" && command.value) updateInBackground();
+        if((command.option == "installNewTranslations" && command.value) || command.option == "itemNameDetails") updateInBackground();
     }
 
     void handle (const Protocol::StartUpdate& command)
@@ -948,6 +979,7 @@ class BackEnd
         : lg("BackEnd")
         , settingsJsonParser(PATHS::JSON_FILES::SETTINGS_USER)
         , updateManager(data.shuttingDown)
+        , itemValues(data.shuttingDown)
         , selfUpdateManager(data.shuttingDown, updateSigningKey())
         , stateCallback(std::move(stateCallback))
     {
