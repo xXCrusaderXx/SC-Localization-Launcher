@@ -35,6 +35,7 @@ Add ideas through a [roadmap proposal](https://github.com/xXCrusaderXx/SC-Locali
 | ---- | ------ | --------------- |
 | Translations | The community projects listed in [`languages.json`](languages.json), e.g. [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI) | Set by each project, e.g. CC BY-NC-SA 4.0. Credited in the launcher. |
 | Item values, blueprints, missions | [Star Citizen Wiki API](https://api.star-citizen.wiki) | Wiki content under CC BY-SA; credited in the launcher. |
+| Which `global.ini` entry belongs to which Wiki item | [`item-mapping.json`](item-mapping.json), generated weekly by `tools/build-item-mapping.py` | Keys and Wiki item IDs only, no game texts; see [LEGAL.md](LEGAL.md#game-data). |
 | Earned blueprints, statistics | The player's own `Game.log` | Stays on the player's computer. |
 
 The launcher never hosts translation texts or game data itself. See [LEGAL.md](LEGAL.md).
