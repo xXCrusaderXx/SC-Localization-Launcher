@@ -455,6 +455,9 @@ class BackendTest : public QObject
         QVERIFY(!SelfUpdateManager::isNewer("v0.6.0", "0.6.0"));
         QVERIFY(!SelfUpdateManager::isNewer("0.5.9", "0.6.0"));
         QVERIFY(!SelfUpdateManager::isNewer("nightly", "0.6.0"));
+        // A local build after v0.8.0 is 0.9.0-dev+<commit>: the 0.8.0 release is no update for it
+        QVERIFY(!SelfUpdateManager::isNewer("v0.8.0", "0.9.0-dev+4aec743"));
+        QVERIFY(SelfUpdateManager::isNewer("v0.10.0", "0.9.0-dev+4aec743"));
     }
 
     // os-release values of real distributions

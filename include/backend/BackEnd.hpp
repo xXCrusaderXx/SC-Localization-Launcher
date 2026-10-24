@@ -725,6 +725,8 @@ class BackEnd
         const std::string current = data.selfUpdate.currentVersion;
         const std::string since = data.lastSeenVersion;
         if(!data.whatsNew.version.empty()) return;
+        // A local development build (0.9.0-dev+<commit>) is no release: it must not mark 0.9.0's notes as seen
+        if(current.find("-dev") != std::string::npos) return;
         if(since.empty())
         {
             // A new installation has nothing to catch up on; a launcher that is already set up came from a version
