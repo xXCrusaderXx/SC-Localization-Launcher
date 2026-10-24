@@ -1102,6 +1102,114 @@ class BackendTest : public QObject
         QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Idle; }, *playing));
     }
 
+    // A LUG Helper prefix with the game's caches, the GraphicsSettings beside them, the prefix's Mesa cache, the DXVK and
+    // vkd3d caches of LIVE, and a "shaders" symlink that leads out of the prefix. Returns the LIVE folder.
+    static std::filesystem::path cachePrefix (const std::filesystem::path& prefix, const std::filesystem::path& outside)
+    {
+        auto write = [] (const std::filesystem::path& file, size_t bytes)
+        {
+            std::filesystem::create_directories(file.parent_path());
+            std::ofstream(file, std::ios::binary) << std::string(bytes, 'x');
+        };
+        auto version = prefix / "drive_c/users/steamuser/AppData/Local/Star Citizen/starcitizen_(sc-alpha-4.8.0)_abc_0";
+        write(version / "shaders/a.bin", 1000);
+        write(version / "vulkanshadercache/b.bin", 2000);
+        write(version / "GraphicsSettings/GraphicsSettings.json", 10);
+        write(prefix / "mesa_shader_cache/index", 300);
+        auto live = prefix / "drive_c/Program Files/Roberts Space Industries/StarCitizen/LIVE";
+        write(live / "StarCitizen.dxvk-cache", 40);
+        write(live / "Bin64/vkd3d-proton.cache", 50);
+        write(live / "Bin64/StarCitizen.exe", 5);
+        write(outside / "keep.bin", 70);
+        auto other = prefix / "drive_c/users/steamuser/AppData/Local/Star Citizen/starcitizen_(sc-alpha-4.7.0)_abc_0";
+        std::filesystem::create_directories(other);
+        std::filesystem::create_directory_symlink(outside, other / "shaders");
+        return live;
+    }
+
+    Protocol::Caches scanCaches ()
+    {
+        size_t from = published();
+        backEnd->execute(Protocol::ScanCaches{});
+        auto found = waitForState([] (const auto& s) { return s.caches.scanned && !s.caches.busy; }, from);
+        if(!found) return {};
+        std::lock_guard lock(mutex);
+        return states[*found].caches;
+    }
+
+    void clearsOnlyTheShaderCachesItFound ()
+    {
+        QTemporaryDir prefixDir, outsideDir;
+        std::filesystem::path prefix = prefixDir.path().toStdString();
+        std::filesystem::path outside = outsideDir.path().toStdString();
+        auto live = cachePrefix(prefix, outside);
+        auto userCache = PATHS::xdgDir("XDG_CACHE_HOME", ".cache") / "mesa_shader_cache";
+        requireTestHome(userCache);
+        std::filesystem::create_directories(userCache);
+        std::ofstream(userCache / "index") << "shared";
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", live.string()});
+
+        auto caches = scanCaches();
+        std::map<std::string, std::pair<std::string, uint64_t>> found;
+        for(const auto& entry : caches.entries) found[entry.path] = {entry.kind, entry.bytes};
+        auto version = prefix / "drive_c/users/steamuser/AppData/Local/Star Citizen/starcitizen_(sc-alpha-4.8.0)_abc_0";
+        std::map<std::string, std::pair<std::string, uint64_t>> expected{{(version / "shaders").string(), {"game", 1000}},
+                                                                         {(version / "vulkanshadercache").string(), {"game", 2000}},
+                                                                         {(prefix / "mesa_shader_cache").string(), {"prefix", 300}},
+                                                                         {(live / "StarCitizen.dxvk-cache").string(), {"dxvk", 40}},
+                                                                         {(live / "Bin64/vkd3d-proton.cache").string(), {"dxvk", 50}},
+                                                                         {userCache.string(), {"user", 6}}};
+        QCOMPARE(found, expected);
+
+        // Everything but the cache shared with other programs, plus paths the scan never offered
+        std::vector<std::string> paths;
+        for(const auto& [path, entry] : expected)
+            if(entry.first != "user") paths.push_back(path);
+        paths.push_back((outside / "keep.bin").string());
+        paths.push_back((version / "GraphicsSettings").string());
+        size_t from = published();
+        backEnd->execute(Protocol::ClearCaches{paths});
+        auto done =
+            waitForState([] (const auto& s)
+                         { return !s.caches.busy && !s.caches.entries.empty() && s.caches.entries[0].result != Protocol::CacheResult::None; }, from);
+        QVERIFY(done);
+        {
+            std::lock_guard lock(mutex);
+            for(const auto& entry : states[*done].caches.entries)
+                QCOMPARE(jsonText(entry.result), jsonText(entry.kind == "user" ? Protocol::CacheResult::None : Protocol::CacheResult::Deleted));
+        }
+        for(const auto& [path, entry] : expected) QCOMPARE(std::filesystem::exists(path), entry.first == "user");
+        QVERIFY(std::filesystem::exists(version / "GraphicsSettings/GraphicsSettings.json"));
+        QVERIFY(std::filesystem::exists(outside / "keep.bin"));
+        QVERIFY(std::filesystem::exists(live / "Bin64/StarCitizen.exe"));
+    }
+
+    void doesNotClearCachesWhileTheGameRuns ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir prefixDir, outsideDir;
+        auto live = cachePrefix(prefixDir.path().toStdString(), outsideDir.path().toStdString());
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", live.string()});
+        auto caches = scanCaches();
+        QVERIFY(!caches.entries.empty());
+
+        QProcess game;
+        game.start("/bin/bash",
+                   {"-c", "exec -a 'C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\Bin64\\StarCitizen Test.exe' sleep 30"});
+        QVERIFY(game.waitForStarted());
+        QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Playing; }));
+        std::string path = caches.entries.front().path;
+        size_t from = published();
+        backEnd->execute(Protocol::ClearCaches{{path}});
+        auto refused = waitForState([] (const auto& s) { return s.caches.entries.front().result == Protocol::CacheResult::GameRunning; }, from);
+        game.kill();
+        game.waitForFinished();
+        QVERIFY(refused);
+        QVERIFY(std::filesystem::exists(path));
+    }
+
     void reportsWhenTheRsiLauncherQuitsAtOnce ()
     {
         qputenv("PATH", "/usr/bin:/bin");

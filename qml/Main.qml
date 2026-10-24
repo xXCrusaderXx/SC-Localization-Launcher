@@ -550,6 +550,18 @@ ApplicationWindow {
         trayAvailable: tray.available
         locked: window.updateBusy
         onPathChangeRequested: target => window.choosePath(target)
+        onCacheCleanerRequested: {
+            cacheDialog.open();
+            backend.scanCaches();
+        }
+    }
+
+    CacheDialog {
+        id: cacheDialog
+
+        caches: window.appState.caches || ({})
+        gamePlaying: window.gamePlaying
+        onClearRequested: paths => backend.clearCaches(paths)
     }
 
     CustomSourceDialog {

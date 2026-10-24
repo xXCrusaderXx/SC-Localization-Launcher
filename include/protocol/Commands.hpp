@@ -108,6 +108,19 @@ struct DismissWhatsNew
     static constexpr const char* name = "dismissWhatsNew";
 };
 
+// Looks for shader caches of the configured game folders and their Wine prefixes, see State.caches
+struct ScanCaches
+{
+    static constexpr const char* name = "scanCaches";
+};
+
+// Deletes these caches; only paths of the last scan are accepted. Refused while Star Citizen runs.
+struct ClearCaches
+{
+    static constexpr const char* name = "clearCaches";
+    std::vector<std::string> paths;
+};
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetLanguage, channel, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInstallPath, channel, path)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetRsiLauncherPath, path)
@@ -122,9 +135,12 @@ inline void to_json (nlohmann::json& j, const CheckForUpdate&) { j = nlohmann::j
 inline void to_json (nlohmann::json& j, const InstallUpdate&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const LoadWhatsNew&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const DismissWhatsNew&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const ScanCaches&) { j = nlohmann::json::object(); }
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClearCaches, paths)
 
-using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
-                             InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew>;
+using Command =
+    std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate, InstallUpdate,
+                 RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches, ClearCaches>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)
