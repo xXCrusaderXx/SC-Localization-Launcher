@@ -279,6 +279,29 @@ struct Diagnostics
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Diagnostics, busy, checks, reportPath, error)
 
+// A profile backup of a game channel, see ProfileBackup
+struct BackupEntry
+{
+    std::string channel;
+    // File name, e.g. LIVE-20261024-203000.zip; also tells the time
+    std::string name;
+    std::uint64_t bytes = 0;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(BackupEntry, channel, name, bytes)
+
+struct Backups
+{
+    bool busy = false;
+    // Newest first, all channels
+    std::vector<BackupEntry> entries;
+    // Of the last CreateBackup or RestoreBackup: "created" or "restored", or an error such as "Star Citizen is running"
+    std::string result;
+    std::string resultChannel;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Backups, busy, entries, result, resultChannel)
+
 struct State
 {
     // All known languages in display order, ENGLISH first
@@ -297,9 +320,10 @@ struct State
     WhatsNew whatsNew;
     Caches caches;
     Diagnostics diagnostics;
+    Backups backups;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
-                                                handledCommands, whatsNew, caches, diagnostics)
+                                                handledCommands, whatsNew, caches, diagnostics, backups)
 
 }  // namespace Protocol

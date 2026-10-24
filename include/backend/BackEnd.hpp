@@ -15,6 +15,7 @@
 #include "logging/logging.h"
 #include "managers/CacheCleaner.hpp"
 #include "managers/Diagnostics.hpp"
+#include "managers/ProfileBackup.hpp"
 #include "managers/SelfUpdateManager.hpp"
 #include "managers/UpdateManager.hpp"
 #include "protocol/Commands.hpp"
@@ -40,6 +41,7 @@ class BackEnd
     DirectoryFinder directoryFinder;
     CacheCleaner cacheCleaner;
     Diagnostics diagnostics;
+    ProfileBackup profileBackup;
     StateCallback stateCallback;
 
     std::thread languagesJob;
@@ -53,6 +55,7 @@ class BackEnd
     std::thread whatsNewJob;
     std::thread cacheJob;
     std::thread diagnosticsJob;
+    std::thread backupJob;
 
     // Declared last: its thread uses all members above
     TaskQueue queue;
@@ -415,6 +418,7 @@ class BackEnd
         state.whatsNew = data.whatsNew;
         state.caches = data.caches;
         state.diagnostics = data.diagnostics;
+        state.backups = data.backups;
         return state;
     }
 
@@ -877,6 +881,59 @@ class BackEnd
     void handle (const Protocol::RunDiagnostics&) { runDiagnostics(false); }
     void handle (const Protocol::SaveReport&) { runDiagnostics(true); }
 
+    // Runs a backup job; `work` returns the result text, the list is read again afterwards
+    void backupJobFor (const std::string& channel, std::function<std::string()> work)
+    {
+        data.backups.busy = true;
+        data.backups.result.clear();
+        data.backups.resultChannel = channel;
+        startJob(backupJob,
+                 [this, work = std::move(work)]
+                 {
+                     std::string result = work ? work() : "";
+                     auto entries = profileBackup.list();
+                     queue.post(
+                         [this, result, entries]
+                         {
+                             data.backups.busy = false;
+                             data.backups.result = result;
+                             data.backups.entries = entries;
+                             // A restored user.cfg may select another language than the one installed
+                             if(result == "restored") checkChannels();
+                             publish();
+                         });
+                 });
+    }
+
+    void handle (const Protocol::LoadBackups&)
+    {
+        if(!data.backups.busy) backupJobFor("", nullptr);
+    }
+
+    void handle (const Protocol::CreateBackup& command)
+    {
+        auto* channel = findChannel(command.channel);
+        if(!channel || channel->installPath.empty() || data.backups.busy) return;
+        backupJobFor(command.channel, [this, name = command.channel, path = channel->installPath, version = data.selfUpdate.currentVersion]
+                     { return profileBackup.create(name, path, version) ? std::string("created") : std::string("nothing to back up"); });
+    }
+
+    void handle (const Protocol::RestoreBackup& command)
+    {
+        auto* channel = findChannel(command.channel);
+        if(!channel || channel->installPath.empty() || data.backups.busy) return;
+        // The game rewrites these files while it runs and when it quits
+        if(gamePlaying())
+        {
+            data.backups.result = "Star Citizen is running";
+            data.backups.resultChannel = command.channel;
+            return;
+        }
+        backupJobFor(command.channel,
+                     [this, name = command.channel, backup = command.backup, path = channel->installPath, version = data.selfUpdate.currentVersion]
+                     { return profileBackup.restore(name, backup, path, version).value_or("restored"); });
+    }
+
     void handle (const Protocol::DismissWhatsNew&)
     {
         if(data.whatsNew.version.empty()) return;
@@ -914,7 +971,7 @@ class BackEnd
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
         for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob, &checkTimerJob,
-                         &whatsNewJob, &cacheJob, &diagnosticsJob})
+                         &whatsNewJob, &cacheJob, &diagnosticsJob, &backupJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }

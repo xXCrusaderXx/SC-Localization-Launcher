@@ -1281,6 +1281,138 @@ class BackendTest : public QObject
         std::filesystem::remove(result.reportPath);
     }
 
+    // A channel folder as the game leaves it: user.cfg, a profile, an exported mapping, a saved character (binary),
+    // plus files that are no part of a profile backup
+    static void writeProfile (const std::filesystem::path& game)
+    {
+        auto write = [&game] (const std::string& file, const std::string& content)
+        {
+            std::filesystem::create_directories((game / file).parent_path());
+            std::ofstream(game / file, std::ios::binary) << content;
+        };
+        write("user.cfg", "r_DisplayInfo = 2\n");
+        write("user/client/0/Profiles/default/actionmaps.xml", "<ActionMaps version=\"1\"/>\n");
+        write("user/client/0/Profiles/default/attributes.xml", "<Attributes/>\n");
+        write("user/client/0/controls/mappings/hotas.xml", "<ActionMaps/>\n");
+        write("user/client/0/CustomCharacters/pilot.chf", std::string("CHF\0\x01\x02", 6));
+        write("user/client/0/game.cfg", "sys_spec = -1\n");
+        write("Data.p4k", "game data");
+    }
+
+    Protocol::Backups backupCommand (const Protocol::Command& command)
+    {
+        size_t from = published();
+        backEnd->execute(command);
+        // The job publishes once it is done, with busy off again
+        auto done = waitForState([] (const auto& s) { return !s.backups.busy && !s.backups.result.empty(); }, from);
+        if(!done) return {};
+        std::lock_guard lock(mutex);
+        return states[*done].backups;
+    }
+
+    void acceptsOnlyProfilePathsInBackups ()
+    {
+        for(const char* path : {"user.cfg", "user/client/0/Profiles/default/actionmaps.xml", "user/client/0/controls/mappings/a.xml",
+                                "user/client/0/CustomCharacters/pilot.chf"})
+            QVERIFY2(ProfileBackup::isProfilePath(path), path);
+        for(const char* path : {"../user.cfg", "/etc/passwd", "user.cfg.bak", "Data.p4k", "user/client/0/game.cfg", "user/client/0/Other/x.xml",
+                                "user/client/0/Profiles/../../../Bin64/StarCitizen.exe", "user/client/../0/Profiles/x", "user/client/0/Profiles\\x"})
+            QVERIFY2(!ProfileBackup::isProfilePath(path), path);
+    }
+
+    void backsUpAndRestoresAProfile ()
+    {
+        QTemporaryDir game;
+        auto path = std::filesystem::path(game.path().toStdString());
+        writeProfile(path);
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", path.string()});
+
+        auto created = backupCommand(Protocol::CreateBackup{"LIVE"});
+        QCOMPARE(created.result, std::string("created"));
+        QCOMPARE(created.entries.size(), size_t(1));
+        std::string backup = created.entries.front().name;
+        QVERIFY(backup.starts_with("LIVE-") && backup.ends_with(".zip"));
+
+        // The player changes a keybinding, loses a character and the game changes its own files
+        std::ofstream(path / "user/client/0/Profiles/default/actionmaps.xml") << "<ActionMaps version=\"2\"/>\n";
+        std::filesystem::remove(path / "user/client/0/CustomCharacters/pilot.chf");
+        std::ofstream(path / "Data.p4k") << "patched";
+        auto restored = backupCommand(Protocol::RestoreBackup{"LIVE", backup});
+        QCOMPARE(restored.result, std::string("restored"));
+        QCOMPARE(readFile(path / "user/client/0/Profiles/default/actionmaps.xml"), std::string("<ActionMaps version=\"1\"/>\n"));
+        QCOMPARE(readFile(path / "user/client/0/CustomCharacters/pilot.chf"), std::string("CHF\0\x01\x02", 6));
+        QCOMPARE(readFile(path / "Data.p4k"), std::string("patched"));
+        // What the restore replaced was backed up first
+        QCOMPARE(restored.entries.size(), size_t(2));
+        QVERIFY(restored.entries.front().name != backup);
+    }
+
+    void keepsTheNewestBackups ()
+    {
+        QTemporaryDir game;
+        writeProfile(game.path().toStdString());
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        Protocol::Backups backups;
+        std::vector<std::string> names;
+        for(size_t i = 0; i < ProfileBackup::KEEP + 2; ++i)
+        {
+            backups = backupCommand(Protocol::CreateBackup{"LIVE"});
+            names.push_back(backups.entries.front().name);
+        }
+        QCOMPARE(backups.entries.size(), ProfileBackup::KEEP);
+        // Newest first, the two oldest are gone
+        for(size_t i = 0; i < ProfileBackup::KEEP; ++i) QCOMPARE(backups.entries[i].name, names[names.size() - 1 - i]);
+    }
+
+    void refusesBackupsThatWriteElsewhere ()
+    {
+        QTemporaryDir game;
+        auto path = std::filesystem::path(game.path().toStdString());
+        writeProfile(path);
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", path.string()});
+        auto folder = ProfileBackup().folder() / "LIVE";
+        requireTestHome(folder);
+        std::filesystem::create_directories(folder);
+        {
+            ZipWriter zip(folder / "LIVE-20990101-000000-000.zip");
+            zip.add("user.cfg", "g_language = evil\n");
+            zip.add("user/client/0/Profiles/../../../Bin64/evil.dll", "evil");
+            QVERIFY(zip.finish());
+        }
+        auto result = backupCommand(Protocol::RestoreBackup{"LIVE", "LIVE-20990101-000000-000.zip"});
+        QCOMPARE(result.result, std::string("damaged backup"));
+        QCOMPARE(readFile(path / "user.cfg"), std::string("r_DisplayInfo = 2\n"));
+        QVERIFY(!std::filesystem::exists(path / "Bin64/evil.dll"));
+        QCOMPARE(backupCommand(Protocol::RestoreBackup{"LIVE", "../../evil.zip"}).result, std::string("unknown backup"));
+    }
+
+    void doesNotRestoreWhileTheGameRuns ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir game;
+        auto path = std::filesystem::path(game.path().toStdString());
+        writeProfile(path);
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", path.string()});
+        std::string backup = backupCommand(Protocol::CreateBackup{"LIVE"}).entries.front().name;
+        std::ofstream(path / "user.cfg") << "changed\n";
+
+        QProcess running;
+        running.start("/bin/bash", {"-c", QString::fromStdString(fakeWineProcess(testGameProgram()))});
+        QVERIFY(running.waitForStarted());
+        QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Playing; }));
+        size_t from = published();
+        backEnd->execute(Protocol::RestoreBackup{"LIVE", backup});
+        auto refused = waitForState([] (const auto& s) { return s.backups.result == "Star Citizen is running"; }, from);
+        running.kill();
+        running.waitForFinished();
+        QVERIFY(refused);
+        QCOMPARE(readFile(path / "user.cfg"), std::string("changed\n"));
+    }
+
     void reportsWhenTheRsiLauncherQuitsAtOnce ()
     {
         qputenv("PATH", "/usr/bin:/bin");

@@ -2,6 +2,69 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_US">
 <context>
+    <name>BackupDialog</name>
+    <message>
+        <source>Backup saved.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Backup restored. The files it replaced were backed up first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This channel has no keybindings, characters or user.cfg yet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close Star Citizen first; the game rewrites these files.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Profile backups</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose a game folder first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keybindings, profile settings, saved characters and user.cfg of a channel. The newest 10 backups per channel are kept.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Back up %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No backups yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 KB</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restore</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restore %1 from %2? The current files are backed up first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Restore now</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>CacheDialog</name>
     <message>
         <source>%1 GB</source>
@@ -624,6 +687,14 @@
     </message>
     <message>
         <source>Clear caches …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keybindings, profile settings, characters and user.cfg per channel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Backups …</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
