@@ -187,6 +187,17 @@ struct SelfUpdate
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SelfUpdate, status, currentVersion, latestVersion, notes, url, error, installType, canInstall,
                                                 progress)
 
+// Release notes shown once after the launcher was updated, by whatever means
+struct WhatsNew
+{
+    // The running version; empty while there is nothing to show
+    std::string version;
+    // Markdown, one "## <version>" section per release since the last version seen, newest first
+    std::string notes;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(WhatsNew, version, notes)
+
 struct State
 {
     // All known languages in display order, ENGLISH first
@@ -202,9 +213,10 @@ struct State
     SelfUpdate selfUpdate;
     // Commands handled so far; a client that counts what it sent knows when its last command was answered
     std::uint64_t handledCommands = 0;
+    WhatsNew whatsNew;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
-                                                handledCommands)
+                                                handledCommands, whatsNew)
 
 }  // namespace Protocol

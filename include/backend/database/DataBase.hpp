@@ -148,6 +148,8 @@ struct BackendData
     // Set by the last check; what an installation of the launcher update needs
     std::optional<ReleaseAssets> releaseAssets;
     Installation installation;
+    std::string lastSeenVersion;
+    Protocol::WhatsNew whatsNew;
 
     // Set when the app closes; background jobs read it to stop early
     std::atomic<bool> shuttingDown{false};

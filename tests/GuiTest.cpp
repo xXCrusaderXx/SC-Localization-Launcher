@@ -110,6 +110,9 @@ class GuiTest : public QObject
         resetUserDir();
         // Starts with the game launch switched on, the first test turns it off before any update runs
         writeSettingsFile(legacySettings(liveDir.path().toStdString(), "eng", true), PATHS::JSON_FILES::SETTINGS_LEGACY);
+        // The settings come from a version before release notes were shown, so the window opens with those of 0.6.0
+        nlohmann::json releases = nlohmann::json::array({{{"tag_name", "v0.6.0"}, {"body", "- Notes of this version"}}});
+        server.setFile("/releases", QByteArray::fromStdString(releases.dump()));
 
         bridge = std::make_unique<BackendBridge>();
         engine = std::make_unique<QQmlApplicationEngine>();
@@ -131,7 +134,7 @@ class GuiTest : public QObject
     // A failed test may leave a modal dialog open, which would swallow the clicks of the next test
     void cleanup ()
     {
-        for(const char* name : {"launcherUpdateDialog", "customSourceDialog"})
+        for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog"})
         {
             auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
             if(!dialog || !dialog->property("visible").toBool()) continue;
@@ -139,6 +142,18 @@ class GuiTest : public QObject
             QTRY_VERIFY(!dialog->property("visible").toBool());
         }
         qunsetenv("APPIMAGE");
+    }
+
+    void showsWhatsNewOnceAtStart ()
+    {
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("whatsNewDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_VERIFY(findText("What's new in version 0.6.0"));
+        QVERIFY(clickButton("OK"));
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        QTRY_COMPARE(QString::fromStdString(readSettingsFile().value("lastSeenVersion", "")), QString("0.6.0"));
+        QVERIFY(bridge->state()["whatsNew"].toMap()["version"].toString().isEmpty());
     }
 
     void toggleShowsBackendState ()

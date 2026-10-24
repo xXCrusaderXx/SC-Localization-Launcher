@@ -38,6 +38,14 @@ ApplicationWindow {
     readonly property int pendingUpdates: channels.filter(c => ["notInstalled", "updateAvailable", "damaged", "failed"].indexOf(c.status) >= 0).length
     readonly property bool launchAfterUpdate: appState.options.launchGameAfterUpdate === true
     readonly property bool searchBusy: appState.searching === true
+    // Release notes of an update that was not shown yet
+    readonly property bool hasWhatsNew: ((appState.whatsNew || {}).notes || "") !== ""
+
+    onHasWhatsNewChanged: {
+        if (hasWhatsNew)
+            whatsNewDialog.open();
+    }
+    Component.onCompleted: backend.loadWhatsNew()
 
     // target is a channel name or "RSI" for the RSI Launcher folder
     function choosePath(target) {
@@ -537,6 +545,13 @@ ApplicationWindow {
         onCheckRequested: backend.checkForUpdate()
         onInstallRequested: backend.installUpdate()
         onRestartRequested: backend.restartLauncher()
+    }
+
+    WhatsNewDialog {
+        id: whatsNewDialog
+
+        whatsNew: window.appState.whatsNew || ({})
+        onClosed: backend.dismissWhatsNew()
     }
 
     Shortcut {

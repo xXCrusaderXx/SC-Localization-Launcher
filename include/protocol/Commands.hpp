@@ -95,6 +95,19 @@ struct InstallUpdate
     static constexpr const char* name = "installUpdate";
 };
 
+// Asks for the release notes if the launcher was updated since the last start. Only the GUI sends it, so a run on
+// the command line neither downloads them nor marks them as seen.
+struct LoadWhatsNew
+{
+    static constexpr const char* name = "loadWhatsNew";
+};
+
+// The user has read the release notes; they are not shown again for this version
+struct DismissWhatsNew
+{
+    static constexpr const char* name = "dismissWhatsNew";
+};
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetLanguage, channel, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInstallPath, channel, path)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetRsiLauncherPath, path)
@@ -107,9 +120,11 @@ inline void to_json (nlohmann::json& j, const AutoSearch&) { j = nlohmann::json:
 inline void to_json (nlohmann::json& j, const StartBackgroundChecks&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const CheckForUpdate&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const InstallUpdate&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const LoadWhatsNew&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const DismissWhatsNew&) { j = nlohmann::json::object(); }
 
 using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
-                             InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks>;
+                             InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)
