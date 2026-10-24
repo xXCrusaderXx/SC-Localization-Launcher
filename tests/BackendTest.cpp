@@ -1437,6 +1437,93 @@ class BackendTest : public QObject
         QCOMPARE(readFile(path / "user.cfg"), std::string("changed\n"));
     }
 
+    void userCfgEditKeepsOtherLinesByteForByte ()
+    {
+        UserCfg cfg("-- my settings\r\nr_DisplayInfo = 2\r\n\r\nG_LANGUAGE = french_(france)\r\nsys_maxFps=30\r\n; old\r\nfoo   =  bar");
+        cfg.set("g_language", "german_(germany)");
+        cfg.set("sys_maxFps", "144");
+        cfg.set("r_VSync", "0");
+        cfg.remove("foo");
+        QCOMPARE(cfg.str(), std::string("-- my settings\r\nr_DisplayInfo = 2\r\n\r\ng_language = german_(germany)\r\nsys_maxFps = 144\r\n; old\r\n"
+                                        "r_VSync = 0\r\n"));
+        QCOMPARE(cfg.value("SYS_MAXFPS").value_or(""), std::string("144"));
+        UserCfg twice("a = 1\nb = 2\na = 3\n");
+        twice.set("a", "4");
+        QCOMPARE(twice.str(), std::string("a = 4\nb = 2\n"));
+    }
+
+    void translationKeepsTheRestOfUserCfg ()
+    {
+        QTemporaryDir game;
+        auto userCfg = std::filesystem::path(game.path().toStdString()) / "user.cfg";
+        std::string before = "-- tuned\r\nr_DisplayInfo = 3\r\ng_language = english\r\n\tsys_maxFps = 90\r\n";
+        std::ofstream(userCfg, std::ios::binary) << before;
+        QVERIFY(installGerman(game));
+        QCOMPARE(readFile(userCfg), std::string("-- tuned\r\nr_DisplayInfo = 3\r\ng_language = german_(germany)\r\n\tsys_maxFps = 90\r\n"
+                                                "g_languageAudio = english\r\n"));
+    }
+
+    Protocol::Channel setGameSettings (const Protocol::GameSettings& settings)
+    {
+        size_t from = published();
+        backEnd->execute(Protocol::SetGameSettings{"LIVE", settings});
+        // Commands are answered in order; the marker shows this one is done
+        waitForPreviousCommands();
+        std::lock_guard lock(mutex);
+        return channel(states.back(), "LIVE");
+    }
+
+    void writesGameSettingsIntoUserCfg ()
+    {
+        QTemporaryDir game;
+        auto path = std::filesystem::path(game.path().toStdString());
+        std::ofstream(path / "user.cfg", std::ios::binary) << "-- mine\nr_DisplayInfo = 2\n";
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", path.string()});
+
+        auto live = setGameSettings({144, 30, "r_DisplayInfo = 0\n-- a note\n  r_VSync=0  \n"});
+        QCOMPARE(live.settingsError, std::string());
+        QCOMPARE(readFile(path / "user.cfg"), std::string("-- mine\nr_DisplayInfo = 0\nsys_maxFps = 144\nsys_maxIdleFps = 30\nr_VSync = 0\n"));
+        QCOMPARE(live.gameSettings.maxFps, 144);
+        QVERIFY(!live.settingsChecked);
+        QCOMPARE(readSettingsFile()["channels"]["LIVE"]["gameSettings"]["maxIdleFps"].get<int>(), 30);
+
+        // Settings taken back are removed; the user's other lines stay
+        setGameSettings({0, 0, "r_VSync = 1"});
+        QCOMPARE(readFile(path / "user.cfg"), std::string("-- mine\nr_VSync = 1\n"));
+
+        // Refused as a whole, user.cfg untouched
+        for(const char* custom : {"just some text", "g_language = evil", "sys_maxFps = 5"})
+        {
+            live = setGameSettings({60, 0, custom});
+            QCOMPARE(live.settingsError, std::string(custom));
+            QCOMPARE(readFile(path / "user.cfg"), std::string("-- mine\nr_VSync = 1\n"));
+        }
+    }
+
+    void reportsSettingsTheGameIgnored ()
+    {
+        QTemporaryDir game;
+        auto path = std::filesystem::path(game.path().toStdString());
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", path.string()});
+        setGameSettings({144, 30, ""});
+
+        // The game started after the settings were written and refused one of them
+        std::ofstream(path / "Game.log") << "<2026-10-24T20:00:00.000Z> [CVARS]: [CHANGED] CXConsole::LoadConfigVar(): variable [sys_maxIdleFps] is "
+                                            "marked [Not Whitelisted] with a value of [60]; config file attempting to change to [30] - IGNORING\n";
+        std::filesystem::last_write_time(path / "Game.log", std::filesystem::file_time_type::clock::now() + std::chrono::seconds(5));
+        QVERIFY(restart());
+        auto live = channel(latest(), "LIVE");
+        QVERIFY(live.settingsChecked);
+        QCOMPARE(live.ignoredSettings, std::vector<std::string>{"sys_maxidlefps"});
+
+        // Changed again: unknown until the next game start
+        live = setGameSettings({120, 30, ""});
+        QVERIFY(!live.settingsChecked);
+        QVERIFY(live.ignoredSettings.empty());
+    }
+
     void reportsWhenTheRsiLauncherQuitsAtOnce ()
     {
         qputenv("PATH", "/usr/bin:/bin");

@@ -562,6 +562,14 @@ ApplicationWindow {
             backupDialog.open();
             backend.loadBackups();
         }
+        onGameSettingsRequested: gameSettingsDialog.open()
+    }
+
+    GameSettingsDialog {
+        id: gameSettingsDialog
+
+        channels: window.visibleChannels
+        onSaveRequested: (channel, maxFps, maxIdleFps, customLines) => backend.setGameSettings(channel, maxFps, maxIdleFps, customLines)
     }
 
     BackupDialog {

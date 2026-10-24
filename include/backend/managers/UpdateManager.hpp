@@ -20,6 +20,7 @@
 
 #include "backend/database/DataBase.hpp"
 #include "backend/managers/ItemValues.hpp"
+#include "backend/utils/UserCfg.hpp"
 #include "backend/utils/utils.hpp"
 #include "logging/logging.h"
 #include "protocol/State.hpp"
@@ -191,46 +192,22 @@ class UpdateManager
         return std::nullopt;
     }
 
-    static bool isLanguageLine (const std::string& line)
-    {
-        auto start = line.find_first_not_of(" \t");
-        if(start == std::string::npos) return false;
-        std::string key = line.substr(start, line.find_first_of(" \t=", start) - start);
-        std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-        return key == "g_language" || key == "g_languageaudio";
-    }
-
-    // Only touches the language lines, all other user.cfg settings of the user are kept.
+    // Only touches the language lines; all other lines of user.cfg stay byte for byte.
     // An empty folder removes the language setting, so the game uses its original English text.
-    void patchUserCfg (const std::filesystem::path& userCfg, const std::string& folder)
+    static void patchUserCfg (const std::filesystem::path& userCfg, const std::string& folder)
     {
-        std::vector<std::string> lines;
+        auto cfg = UserCfg::load(userCfg);
+        if(folder.empty())
         {
-            std::ifstream in(userCfg);
-            std::string line;
-            while(std::getline(in, line))
-            {
-                if(!line.empty() && line.back() == '\r') line.pop_back();
-                if(!isLanguageLine(line)) lines.push_back(line);
-            }
+            cfg.remove("g_language");
+            cfg.remove("g_languageAudio");
         }
-
-        if(!folder.empty())
+        else
         {
-            lines.push_back("g_language = " + folder);
-            lines.push_back("g_languageAudio = english");
+            cfg.set("g_language", folder);
+            cfg.set("g_languageAudio", "english");
         }
-
-        bool onlyBlank = std::all_of(lines.begin(), lines.end(), [] (const std::string& l) { return l.find_first_not_of(" \t") == std::string::npos; });
-        std::error_code ec;
-        if(onlyBlank)
-        {
-            std::filesystem::remove(userCfg, ec);
-            return;
-        }
-
-        std::ofstream out(userCfg, std::ios::trunc);
-        for(const auto& l : lines) out << l << "\n";
+        cfg.save(userCfg);
     }
 
     // Removes the translations of all managed folders except `keep`

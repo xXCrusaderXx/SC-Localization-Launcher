@@ -155,6 +155,14 @@ struct RestoreBackup
     std::string backup;
 };
 
+// Writes frame limits and own lines into the channel's user.cfg; the game reads them at its next start
+struct SetGameSettings
+{
+    static constexpr const char* name = "setGameSettings";
+    std::string channel;
+    GameSettings settings;
+};
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetLanguage, channel, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInstallPath, channel, path)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetRsiLauncherPath, path)
@@ -176,10 +184,11 @@ inline void to_json (nlohmann::json& j, const SaveReport&) { j = nlohmann::json:
 inline void to_json (nlohmann::json& j, const LoadBackups&) { j = nlohmann::json::object(); }
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CreateBackup, channel)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RestoreBackup, channel, backup)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetGameSettings, channel, settings)
 
 using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
                              InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches,
-                             ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, RestoreBackup>;
+                             ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)
