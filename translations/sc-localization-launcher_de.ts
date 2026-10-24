@@ -396,4 +396,15 @@
         <translation>BALD</translation>
     </message>
 </context>
+<context>
+    <name>WhatsNewDialog</name>
+    <message>
+        <source>What&apos;s new in version %1</source>
+        <translation>Neu in Version %1</translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation>OK</translation>
+    </message>
+</context>
 </TS>

@@ -103,6 +103,7 @@ set(SC_QML_FILES
   qml/SettingsPanel.qml
   qml/Theme.qml
   qml/Toggle.qml
+  qml/WhatsNewDialog.qml
 )
 # Drop the qml/ folder from the resource path, so Main.qml is at qrc:/qt/qml/SCLauncher/Main.qml
 foreach(qml_file ${SC_QML_FILES})

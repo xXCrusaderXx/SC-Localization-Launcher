@@ -777,6 +777,83 @@ class BackendTest : public QObject
         QCOMPARE(server.requestCount("GET /download/package 200"), fullDownloads + 3);
     }
 
+    // Releases on the test server around the tested version 0.6.0, newest first like GitHub lists them
+    void publishReleaseList ()
+    {
+        nlohmann::json releases =
+            nlohmann::json::array({{{"tag_name", "v0.7.0-rc1"}, {"prerelease", true}, {"body", "- Not released yet"}},
+                                   {{"tag_name", "v0.6.0"}, {"body", "### Added\n\n- Six\n\n### Verify the download\n\nminisign -Vm SHA256SUMS\n"}},
+                                   {{"tag_name", "v0.5.1"}, {"body", "- Five one\r\n"}},
+                                   {{"tag_name", "v0.5.0"}, {"body", "- Five"}}});
+        server.setFile("/releases", QByteArray::fromStdString(releases.dump()));
+    }
+
+    // Sends LoadWhatsNew and returns the release notes it brought, empty if none came
+    Protocol::WhatsNew loadWhatsNew ()
+    {
+        size_t from = published();
+        backEnd->execute(Protocol::LoadWhatsNew{});
+        auto found = waitForState([] (const auto& s) { return !s.whatsNew.version.empty(); }, from, 5000);
+        if(!found) return {};
+        std::lock_guard lock(mutex);
+        return states[*found].whatsNew;
+    }
+
+    void showsReleaseNotesOnceAfterAnUpdate ()
+    {
+        publishReleaseList();
+        writeSettingsFile({{"lastSeenVersion", "0.5.0"}});
+        QVERIFY(start());
+
+        auto whatsNew = loadWhatsNew();
+        QCOMPARE(whatsNew.version, std::string("0.6.0"));
+        QCOMPARE(whatsNew.notes, std::string("## 0.6.0\n\n### Added\n\n- Six\n\n## 0.5.1\n\n- Five one"));
+
+        size_t from = published();
+        backEnd->execute(Protocol::DismissWhatsNew{});
+        QVERIFY(waitForState([] (const auto& s) { return s.whatsNew.version.empty(); }, from));
+        QCOMPARE(readSettingsFile().value("lastSeenVersion", ""), std::string("0.6.0"));
+
+        int requests = server.requestCount("GET /releases 200");
+        QVERIFY(restart());
+        QVERIFY(loadWhatsNew().version.empty());
+        QCOMPARE(server.requestCount("GET /releases 200"), requests);
+    }
+
+    void newInstallationShowsNoReleaseNotes ()
+    {
+        publishReleaseList();
+        int requests = server.requestCount("GET /releases 200");
+        QVERIFY(start());
+
+        QVERIFY(loadWhatsNew().version.empty());
+        QCOMPARE(server.requestCount("GET /releases 200"), requests);
+        QCOMPARE(readSettingsFile().value("lastSeenVersion", ""), std::string("0.6.0"));
+    }
+
+    void launcherSetUpBeforeReleaseNotesShowsTheCurrentOnes ()
+    {
+        publishReleaseList();
+        writeSettingsFile({{"channels", {{"LIVE", {{"installPath", "/games/LIVE"}}}}}});
+        QVERIFY(start());
+
+        auto whatsNew = loadWhatsNew();
+        QCOMPARE(whatsNew.version, std::string("0.6.0"));
+        QCOMPARE(whatsNew.notes, std::string("## 0.6.0\n\n### Added\n\n- Six"));
+    }
+
+    void releaseNotesAreAskedForAgainWhenOffline ()
+    {
+        qputenv("SC_RELEASES_URL", server.url("/offline/latest").toUtf8());
+        writeSettingsFile({{"lastSeenVersion", "0.5.0"}});
+        QVERIFY(start());
+
+        QVERIFY(loadWhatsNew().version.empty());
+        QTRY_COMPARE(server.requestCount("GET /offline 404"), 1);
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(readSettingsFile().value("lastSeenVersion", ""), std::string("0.5.0"));
+    }
+
     void projectSigningKeyIsUsable ()
     {
         // packaging/minisign.pub is embedded at build time; a broken file would silently disable self-updates
