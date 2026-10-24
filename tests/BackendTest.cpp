@@ -1196,8 +1196,7 @@ class BackendTest : public QObject
         QVERIFY(!caches.entries.empty());
 
         QProcess game;
-        game.start("/bin/bash",
-                   {"-c", "exec -a 'C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\Bin64\\StarCitizen Test.exe' sleep 30"});
+        game.start("/bin/bash", {"-c", QString::fromStdString(fakeWineProcess(testGameProgram()))});
         QVERIFY(game.waitForStarted());
         QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Playing; }));
         std::string path = caches.entries.front().path;
