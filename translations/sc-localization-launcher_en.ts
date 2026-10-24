@@ -2,6 +2,85 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="en_US">
 <context>
+    <name>CacheDialog</name>
+    <message>
+        <source>%1 GB</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 MB</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 KB</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Star Citizen shader cache</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>DXVK/VKD3D cache</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Graphics driver cache in the Wine prefix</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Graphics driver cache of all programs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Deleted</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not found</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not be deleted</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Star Citizen is running</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Clear shader caches</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close Star Citizen first; the game uses these caches while it runs.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Looking for caches …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No caches found for the chosen game folders.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Helps against stutter or graphics errors after a game or driver update. The caches are rebuilt on the next start, which then takes longer. Graphics settings are kept.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>ChannelRow</name>
     <message>
         <source>Own source</source>
@@ -406,6 +485,18 @@
     </message>
     <message>
         <source>License: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>TOOLS</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Shader caches of the game and the graphics driver; clearing them helps against stutter after updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Clear caches …</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

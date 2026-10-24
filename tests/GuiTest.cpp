@@ -134,7 +134,7 @@ class GuiTest : public QObject
     // A failed test may leave a modal dialog open, which would swallow the clicks of the next test
     void cleanup ()
     {
-        for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog"})
+        for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog"})
         {
             auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
             if(!dialog || !dialog->property("visible").toBool()) continue;
@@ -410,6 +410,31 @@ class GuiTest : public QObject
         };
         QTRY_COMPARE(root->property("overallStatus").toString(), expected());
         QVERIFY(QFile::exists(":/tray/" + root->property("overallStatus").toString() + ".png"));
+    }
+
+    void clearsCachesFromTheSettings ()
+    {
+        // LIVE points to liveDir; a DXVK cache there is the only cache this test has
+        QString cache = liveDir.filePath("StarCitizen.dxvk-cache");
+        QVERIFY(QFile(cache).open(QIODevice::WriteOnly));
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        // The button sits below the visible part of the panel; its signal is what it would send
+        QMetaObject::invokeMethod(panel, "cacheCleanerRequested");
+
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("cacheDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_VERIFY(findText("DXVK/VKD3D cache"));
+        QTRY_VERIFY(findButton("Delete 1 KB"));
+        QVERIFY(clickButton("Delete 1 KB"));
+        QTRY_VERIFY(!QFile::exists(cache));
+        QTRY_VERIFY(findText("Deleted"));
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        // Its backdrop would catch the next test's clicks until it has slid out
+        QTRY_VERIFY(!panel->property("visible").toBool());
     }
 
     void ownSourceThroughTheDialog ()
