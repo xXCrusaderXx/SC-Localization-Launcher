@@ -36,6 +36,16 @@ class TestServer : public QThread
     // "GET /de.ini 200" -> number of requests
     QHash<QByteArray, int> requestCounts;
     bool rangeRequests = true;
+    // Path -> Last-Modified date; a request with that If-Modified-Since gets 304
+    QHash<QByteArray, QByteArray> lastModified;
+    struct Failure
+    {
+        int remaining = 0;
+        QByteArray status;
+        QByteArray retryAfter;
+    };
+    // Path -> answers given instead of the file for the next requests
+    QHash<QByteArray, Failure> failures;
     std::promise<quint16> portPromise;
     std::shared_future<quint16> portFuture = portPromise.get_future().share();
 
@@ -46,19 +56,40 @@ class TestServer : public QThread
         const QByteArray method = requestLine.value(0);
         const QByteArray path = requestLine.value(1);
         QByteArray ifNoneMatch;
+        QByteArray ifModifiedSince;
         QByteArray range;
         for(const auto& line : lines)
         {
             if(line.toLower().startsWith("if-none-match:")) ifNoneMatch = line.mid(14).trimmed();
+            if(line.toLower().startsWith("if-modified-since:")) ifModifiedSince = line.mid(18).trimmed();
             if(line.toLower().startsWith("range: bytes=")) range = line.mid(13).trimmed();
         }
 
         std::optional<QByteArray> file;
         bool ranges = false;
+        QByteArray modified;
+        std::optional<Failure> failure;
         {
             QMutexLocker lock(&mutex);
             if(files.contains(path)) file = files.value(path);
             ranges = rangeRequests;
+            modified = lastModified.value(path);
+            if(failures.contains(path) && failures[path].remaining > 0)
+            {
+                --failures[path].remaining;
+                failure = failures[path];
+            }
+        }
+        if(failure)
+        {
+            {
+                QMutexLocker lock(&mutex);
+                ++requestCounts[method + " " + path + " " + failure->status.left(3)];
+            }
+            QByteArray retry = failure->retryAfter.isEmpty() ? QByteArray() : "Retry-After: " + failure->retryAfter + "\r\n";
+            socket->write("HTTP/1.1 " + failure->status + "\r\n" + retry + "Content-Length: 0\r\nConnection: close\r\n\r\n");
+            socket->disconnectFromHost();
+            return;
         }
 
         QByteArray status = "404 Not Found";
@@ -69,8 +100,9 @@ class TestServer : public QThread
             body = QByteArray(*file).replace("{base}", url("").toUtf8());
             QByteArray etag = "\"" + QCryptographicHash::hash(body, QCryptographicHash::Sha1).toHex() + "\"";
             headers = "ETag: " + etag + "\r\n";
+            if(!modified.isEmpty()) headers += "Last-Modified: " + modified + "\r\n";
             status = "200 OK";
-            if(ifNoneMatch == etag)
+            if(ifNoneMatch == etag || (!modified.isEmpty() && ifModifiedSince == modified))
             {
                 status = "304 Not Modified";
                 body.clear();
@@ -151,6 +183,20 @@ class TestServer : public QThread
     {
         QMutexLocker lock(&mutex);
         rangeRequests = enabled;
+    }
+
+    // Served with this Last-Modified date, and answered with 304 when a request asks If-Modified-Since that date
+    void setLastModified (const QByteArray& path, const QByteArray& date)
+    {
+        QMutexLocker lock(&mutex);
+        lastModified[path] = date;
+    }
+
+    // The next `count` requests for this path get `status` (e.g. "429 Too Many Requests") instead of the file
+    void failNext (const QByteArray& path, int count, const QByteArray& status, const QByteArray& retryAfter = {})
+    {
+        QMutexLocker lock(&mutex);
+        failures[path] = {count, status, retryAfter};
     }
 
     // e.g. requestCount("GET /de.ini 200")
