@@ -39,7 +39,11 @@ class CommandLineTest : public QObject
     }
 
    private slots:
-    void initTestCase () { LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>(false)); }
+    void initTestCase ()
+    {
+        LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>(false));
+        watchOwnTestPrograms();
+    }
 
     void init ()
     {
@@ -147,8 +151,8 @@ class CommandLineTest : public QObject
         configure(game, "de");
         qputenv("PATH", "/usr/bin:/bin");
         QProcess starCitizen;
-        // Named like the game under Wine (SC_GAME_PROGRAM in tests/CMakeLists.txt)
-        starCitizen.start("/bin/bash", {"-c", "exec -a 'C:\\Games\\StarCitizen\\LIVE\\Bin64\\StarCitizen Test.exe' sleep 30"});
+        // Named like the game under Wine
+        starCitizen.start("/bin/bash", {"-c", QString::fromStdString(fakeWineProcess(testGameProgram()))});
         QVERIFY(starCitizen.waitForStarted());
         QTest::qWait(200);
 

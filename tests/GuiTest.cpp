@@ -103,6 +103,7 @@ class GuiTest : public QObject
     void initTestCase ()
     {
         LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>());
+        watchOwnTestPrograms();
         qputenv("SC_LANGUAGES_URL", server.url("/languages.json").toUtf8());
         qputenv("SC_RELEASES_URL", server.url("/releases/latest").toUtf8());
         qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
