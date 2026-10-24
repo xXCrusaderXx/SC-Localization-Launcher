@@ -242,6 +242,43 @@ struct Caches
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Caches, busy, scanned, entries)
 
+enum class CheckStatus
+{
+    Info,
+    Ok,
+    Warning,
+    Error
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(CheckStatus,
+                             {{CheckStatus::Info, "info"}, {CheckStatus::Ok, "ok"}, {CheckStatus::Warning, "warning"}, {CheckStatus::Error, "error"}})
+
+// One result of RunDiagnostics, see Diagnostics. The UI words it by id; detail holds paths (home shown as ~) or values.
+struct DiagnosticCheck
+{
+    // system, launcher, catalogue, rsiLauncher, winePrefix, starter; per channel: folder, writable, translation,
+    // userCfg, diskSpace
+    std::string id;
+    // Empty unless the check belongs to a game channel
+    std::string channel;
+    CheckStatus status = CheckStatus::Info;
+    std::string detail;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DiagnosticCheck, id, channel, status, detail)
+
+struct Diagnostics
+{
+    bool busy = false;
+    std::vector<DiagnosticCheck> checks;
+    // Written by SaveReport; empty until then
+    std::string reportPath;
+    // Why the report could not be written
+    std::string error;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Diagnostics, busy, checks, reportPath, error)
+
 struct State
 {
     // All known languages in display order, ENGLISH first
@@ -259,9 +296,10 @@ struct State
     std::uint64_t handledCommands = 0;
     WhatsNew whatsNew;
     Caches caches;
+    Diagnostics diagnostics;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
-                                                handledCommands, whatsNew, caches)
+                                                handledCommands, whatsNew, caches, diagnostics)
 
 }  // namespace Protocol
