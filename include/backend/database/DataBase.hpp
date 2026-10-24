@@ -97,6 +97,8 @@ struct ReleaseAssets
     std::string packageUrl;
     std::string checksumsUrl;
     std::string signatureUrl;
+    // AppImage only: block checksums for a delta update, empty if the release has none
+    std::string zsyncUrl;
 };
 
 // How this launcher was installed, found by SelfUpdateManager::detectInstallation()

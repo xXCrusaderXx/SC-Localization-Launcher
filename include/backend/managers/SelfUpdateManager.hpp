@@ -20,6 +20,7 @@
 #include "backend/database/DataBase.hpp"
 #include "backend/managers/UpdateManager.hpp"
 #include "backend/utils/Minisign.hpp"
+#include "backend/utils/Zsync.hpp"
 #include "backend/utils/paths.hpp"
 #include "logging/logging.h"
 #include "protocol/State.hpp"
@@ -53,6 +54,8 @@ class SelfUpdateManager
     inline static const std::string FLATPAK_REPO_URL = "https://xxcrusaderxx.github.io/SC-Localization-Launcher/repo/";
     inline static const std::string FLATPAKREF_URL =
         "https://xxcrusaderxx.github.io/SC-Localization-Launcher/io.github.xXCrusaderXx.SCLocalizationLauncher.flatpakref";
+    // A delta update downloads its changed blocks with at most this many requests
+    static constexpr size_t MAX_DELTA_REQUESTS = 64;
 
     static std::string latestReleaseUrl ()
     {
@@ -196,6 +199,101 @@ class SelfUpdateManager
         if(!process.waitForStarted(5000)) return {};
         if(!process.waitForFinished(timeoutMs) || process.exitStatus() != QProcess::NormalExit) return {};
         return {process.exitCode(), process.readAllStandardOutput().toStdString()};
+    }
+
+    struct RangeTarget
+    {
+        CURL* curl;
+        std::fstream* file;
+        uint64_t remaining;
+    };
+
+    // Accepts only a partial answer of at most the requested size; a server that ignores the range would overwrite
+    // the reused blocks
+    static size_t writeRange (void* contents, size_t size, size_t nmemb, void* userp)
+    {
+        auto* target = static_cast<RangeTarget*>(userp);
+        long httpCode = 0;
+        curl_easy_getinfo(target->curl, CURLINFO_RESPONSE_CODE, &httpCode);
+        size_t bytes = size * nmemb;
+        if(httpCode != 206 || bytes > target->remaining) return 0;
+        target->file->write(static_cast<char*>(contents), static_cast<std::streamsize>(bytes));
+        target->remaining -= bytes;
+        return bytes;
+    }
+
+    // Builds the new AppImage in `package` from the blocks of the installed one and downloads only the blocks that
+    // changed. False if that is not possible or not worth it; the caller then downloads the whole package.
+    bool downloadDelta (const ReleaseAssets& release, const std::filesystem::path& appImage, const std::filesystem::path& package,
+                        const std::string& userAgent, const ProgressCallback& progress)
+    {
+        std::string body;
+        if(download(release.zsyncUrl, &body, nullptr, userAgent) != 200) return false;
+        auto control = Zsync::parse(body);
+        if(!control)
+        {
+            LOG_ERROR(lg) << "downloadDelta() - cannot read " << release.zsyncUrl;
+            return false;
+        }
+        auto missing = Zsync::reuse(*control, appImage, package);
+        if(!missing)
+        {
+            LOG_ERROR(lg) << "downloadDelta() - cannot reuse " << appImage;
+            return false;
+        }
+        auto ranges = Zsync::merge(*missing, MAX_DELTA_REQUESTS);
+        uint64_t total = 0;
+        for(const auto& range : ranges) total += range.end - range.begin;
+        LOG_DEBUG(lg) << "downloadDelta() - " << total << " of " << control->length << " bytes to download in " << ranges.size() << " requests";
+        if(total > control->length / 2) return false;
+
+        std::fstream file(package, std::ios::binary | std::ios::in | std::ios::out);
+        CURL* curl = curl_easy_init();
+        if(!file.is_open() || !curl)
+        {
+            if(curl) curl_easy_cleanup(curl);
+            return false;
+        }
+        // One handle for all requests, so the connection is reused
+        curl_easy_setopt(curl, CURLOPT_URL, release.packageUrl.c_str());
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, userAgent.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeRange);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 120L);
+        curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+        curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, onProgress);
+
+        bool complete = true;
+        uint64_t done = 0;
+        for(const auto& range : ranges)
+        {
+            uint64_t size = range.end - range.begin;
+            RangeTarget target{curl, &file, size};
+            ProgressCallback rangeProgress = [&] (double fraction)
+            {
+                if(progress) progress((static_cast<double>(done) + fraction * static_cast<double>(size)) / static_cast<double>(total));
+            };
+            Transfer transfer{&shuttingDown, &rangeProgress};
+            std::string bytes = std::to_string(range.begin) + "-" + std::to_string(range.end - 1);
+            file.seekp(static_cast<std::streamoff>(range.begin));
+            curl_easy_setopt(curl, CURLOPT_RANGE, bytes.c_str());
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &target);
+            curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &transfer);
+            CURLcode res = curl_easy_perform(curl);
+            if(res != CURLE_OK || target.remaining != 0 || !file)
+            {
+                long httpCode = 0;
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+                LOG_ERROR(lg) << "downloadDelta() - bytes " << bytes << " :: " << curl_easy_strerror(res) << " (HTTP " << httpCode << ")";
+                complete = false;
+                break;
+            }
+            done += size;
+        }
+        curl_easy_cleanup(curl);
+        file.close();
+        return complete && file;
     }
 
     // sha256sum format: "<64 hex digits>  <file name>", a '*' before the name marks binary mode
@@ -520,6 +618,9 @@ class SelfUpdateManager
             if(isAllowedDownloadUrl(release.packageUrl) && isAllowedDownloadUrl(release.checksumsUrl) && isAllowedDownloadUrl(release.signatureUrl))
             {
                 result.canInstall = result.status == Protocol::SelfUpdateStatus::Available;
+                std::string zsync = release.packageName + ".zsync";
+                if(installation.type == "appimage" && assets.contains(zsync) && isAllowedDownloadUrl(assets.at(zsync)))
+                    release.zsyncUrl = assets.at(zsync);
                 check.assets = release;
             }
             else
@@ -564,16 +665,27 @@ class SelfUpdateManager
         std::filesystem::remove_all(folder, ec);
         std::filesystem::create_directories(folder, ec);
         std::filesystem::path package = folder / release.packageName;
+        // A new AppImage shares most of its blocks with the installed one
+        bool downloaded = false;
+        if(installation.type == "appimage" && !release.zsyncUrl.empty() &&
+           downloadDelta(release, installation.appImage, package, userAgent, progress))
         {
-            std::ofstream file(package, std::ios::binary);
-            if(!file.is_open()) return "cannot write the download";
-            if(download(release.packageUrl, nullptr, &file, userAgent, false, &progress) != 200) return "download failed";
+            downloaded = sha256Hex(package) == expected;
+            if(!downloaded) LOG_ERROR(lg) << "install() - delta update does not match the checksum, downloading the whole package";
         }
-        if(sha256Hex(package) != expected)
+        if(!downloaded)
         {
-            LOG_ERROR(lg) << "install() - checksum mismatch for " << release.packageName;
-            std::filesystem::remove_all(folder, ec);
-            return "checksum mismatch";
+            {
+                std::ofstream file(package, std::ios::binary | std::ios::trunc);
+                if(!file.is_open()) return "cannot write the download";
+                if(download(release.packageUrl, nullptr, &file, userAgent, false, &progress) != 200) return "download failed";
+            }
+            if(sha256Hex(package) != expected)
+            {
+                LOG_ERROR(lg) << "install() - checksum mismatch for " << release.packageName;
+                std::filesystem::remove_all(folder, ec);
+                return "checksum mismatch";
+            }
         }
 
         auto error = installation.type == "appimage" ? installAppImage(installation.appImage, package) : installPackage(installation.type, package);
