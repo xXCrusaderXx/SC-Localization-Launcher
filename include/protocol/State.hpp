@@ -101,10 +101,12 @@ struct Options
     bool checkLauncherUpdatesAtStart = false;
     // Closing the window keeps the launcher in the system tray, so the background checks go on; only with a tray
     bool closeToTray = false;
+    // Adds size, class and grade from the Star Citizen Wiki API to item names in global.ini
+    bool itemNameDetails = false;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Options, launchGameAfterUpdate, updateAtStart, installNewTranslations, minimizeAfterUpdate,
-                                                startWithSystem, showUpdateProgress, checkLauncherUpdatesAtStart, closeToTray)
+                                                startWithSystem, showUpdateProgress, checkLauncherUpdatesAtStart, closeToTray, itemNameDetails)
 
 enum class ChannelStatus
 {

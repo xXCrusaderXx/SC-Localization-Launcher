@@ -279,6 +279,19 @@ class GuiTest : public QObject
         QTRY_VERIFY(findText("PTU"));
     }
 
+    void settingsOfferItemValuesAndCreditTheWiki ()
+    {
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        QVERIFY(click("⚙"));
+        QTRY_VERIFY(panel->property("open").toBool());
+        QTRY_VERIFY(findText("Add size, class and grade to item names"));
+        // Credited next to the translations, with its licence
+        QVERIFY(findText("Item values"));
+        QVERIFY(findText("License: <a href=\"https://creativecommons.org/licenses/by-nc-sa/4.0/\">CC BY-NC-SA 4.0</a>"));
+        panel->setProperty("open", false);
+        QTRY_VERIFY_WITH_TIMEOUT(!panel->property("visible").toBool(), 10000);
+    }
+
     void runUpdate ()
     {
         QVERIFY(!launchGameOption());

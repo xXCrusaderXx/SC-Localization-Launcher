@@ -69,9 +69,11 @@ struct InstalledTranslation
     std::string fileHash;
     // Localization folder it went into; needed to remove an own source after its folder changed
     std::string folder;
+    // Signature of the Wiki item values added to it (ItemValues::Plan), empty for none
+    std::string itemValues;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(InstalledTranslation, language, etag, fileHash, folder)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(InstalledTranslation, language, etag, fileHash, folder, itemValues)
 
 struct ChannelData
 {
