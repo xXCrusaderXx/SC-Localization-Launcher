@@ -200,6 +200,48 @@ struct WhatsNew
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(WhatsNew, version, notes)
 
+enum class CacheResult
+{
+    None,
+    Deleted,
+    // Gone already, e.g. deleted by hand since the scan
+    NotFound,
+    // Not deleted, e.g. no permission
+    Failed,
+    // Not deleted because Star Citizen runs
+    GameRunning
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(CacheResult, {{CacheResult::None, "none"},
+                                           {CacheResult::Deleted, "deleted"},
+                                           {CacheResult::NotFound, "notFound"},
+                                           {CacheResult::Failed, "failed"},
+                                           {CacheResult::GameRunning, "gameRunning"}})
+
+// A shader cache found by ScanCaches, see CacheCleaner
+struct CacheEntry
+{
+    // game, dxvk, prefix (Mesa/NVIDIA cache in the Wine prefix) or user (Mesa/NVIDIA cache shared by all programs)
+    std::string kind;
+    std::string path;
+    std::uint64_t bytes = 0;
+    // Of the last ClearCaches
+    CacheResult result = CacheResult::None;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CacheEntry, kind, path, bytes, result)
+
+struct Caches
+{
+    // Scanning or deleting
+    bool busy = false;
+    // A scan finished, so entries is the current list
+    bool scanned = false;
+    std::vector<CacheEntry> entries;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Caches, busy, scanned, entries)
+
 struct State
 {
     // All known languages in display order, ENGLISH first
@@ -216,9 +258,10 @@ struct State
     // Commands handled so far; a client that counts what it sent knows when its last command was answered
     std::uint64_t handledCommands = 0;
     WhatsNew whatsNew;
+    Caches caches;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
-                                                handledCommands, whatsNew)
+                                                handledCommands, whatsNew, caches)
 
 }  // namespace Protocol

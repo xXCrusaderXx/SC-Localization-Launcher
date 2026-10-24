@@ -2,6 +2,85 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="de">
 <context>
+    <name>CacheDialog</name>
+    <message>
+        <source>%1 GB</source>
+        <translation>%1 GB</translation>
+    </message>
+    <message>
+        <source>%1 MB</source>
+        <translation>%1 MB</translation>
+    </message>
+    <message>
+        <source>%1 KB</source>
+        <translation>%1 KB</translation>
+    </message>
+    <message>
+        <source>Star Citizen shader cache</source>
+        <translation>Shader-Cache von Star Citizen</translation>
+    </message>
+    <message>
+        <source>DXVK/VKD3D cache</source>
+        <translation>DXVK/VKD3D-Cache</translation>
+    </message>
+    <message>
+        <source>Graphics driver cache in the Wine prefix</source>
+        <translation>Grafiktreiber-Cache im Wine-Prefix</translation>
+    </message>
+    <message>
+        <source>Graphics driver cache of all programs</source>
+        <translation>Grafiktreiber-Cache aller Programme</translation>
+    </message>
+    <message>
+        <source>Deleted</source>
+        <translation>Gelöscht</translation>
+    </message>
+    <message>
+        <source>Not found</source>
+        <translation>Nicht gefunden</translation>
+    </message>
+    <message>
+        <source>Could not be deleted</source>
+        <translation>Konnte nicht gelöscht werden</translation>
+    </message>
+    <message>
+        <source>Star Citizen is running</source>
+        <translation>Star Citizen läuft</translation>
+    </message>
+    <message>
+        <source>Clear shader caches</source>
+        <translation>Shader-Caches leeren</translation>
+    </message>
+    <message>
+        <source>Close Star Citizen first; the game uses these caches while it runs.</source>
+        <translation>Beende zuerst Star Citizen; das Spiel nutzt diese Caches, solange es läuft.</translation>
+    </message>
+    <message>
+        <source>Looking for caches …</source>
+        <translation>Suche Caches …</translation>
+    </message>
+    <message>
+        <source>No caches found for the chosen game folders.</source>
+        <translation>Für die gewählten Spielordner wurden keine Caches gefunden.</translation>
+    </message>
+    <message>
+        <source>Helps against stutter or graphics errors after a game or driver update. The caches are rebuilt on the next start, which then takes longer. Graphics settings are kept.</source>
+        <translation>Hilft gegen Ruckler oder Grafikfehler nach einem Spiel- oder Treiber-Update. Die Caches werden beim nächsten Start neu aufgebaut, der dann länger dauert. Die Grafikeinstellungen bleiben erhalten.</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Schließen</translation>
+    </message>
+    <message>
+        <source>Delete %1</source>
+        <translation>%1 löschen</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>Löschen</translation>
+    </message>
+</context>
+<context>
     <name>ChannelRow</name>
     <message>
         <source>Own source</source>
@@ -383,6 +462,18 @@
     <message>
         <source>Closing the window keeps the launcher in the tray, so it goes on checking</source>
         <translation>Beim Schließen des Fensters bleibt der Launcher im Infobereich und prüft weiter</translation>
+    </message>
+    <message>
+        <source>TOOLS</source>
+        <translation>WERKZEUGE</translation>
+    </message>
+    <message>
+        <source>Shader caches of the game and the graphics driver; clearing them helps against stutter after updates</source>
+        <translation>Shader-Caches des Spiels und des Grafiktreibers; leeren hilft gegen Ruckler nach Updates</translation>
+    </message>
+    <message>
+        <source>Clear caches …</source>
+        <translation>Caches leeren …</translation>
     </message>
     <message>
         <source>HELP</source>

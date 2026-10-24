@@ -99,6 +99,13 @@ class BackendBridge : public QObject
     Q_INVOKABLE void installUpdate () { backEnd.execute(Protocol::InstallUpdate{}); }
     Q_INVOKABLE void loadWhatsNew () { backEnd.execute(Protocol::LoadWhatsNew{}); }
     Q_INVOKABLE void dismissWhatsNew () { backEnd.execute(Protocol::DismissWhatsNew{}); }
+    Q_INVOKABLE void scanCaches () { backEnd.execute(Protocol::ScanCaches{}); }
+    Q_INVOKABLE void clearCaches (const QStringList& paths)
+    {
+        Protocol::ClearCaches command;
+        for(const auto& path : paths) command.paths.push_back(path.toStdString());
+        backEnd.execute(command);
+    }
 
     // Starts the updated launcher and quits this one; the new one waits until this one released its lock
     Q_INVOKABLE void restartLauncher ()

@@ -150,6 +150,7 @@ struct BackendData
     Installation installation;
     std::string lastSeenVersion;
     Protocol::WhatsNew whatsNew;
+    Protocol::Caches caches;
 
     // Set when the app closes; background jobs read it to stop early
     std::atomic<bool> shuttingDown{false};

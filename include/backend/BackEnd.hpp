@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <set>
 #include <thread>
 
 #include "UpdateSigningKey.hpp"
@@ -12,6 +13,7 @@
 #include "jsonParser/LanguageCatalogParser.hpp"
 #include "jsonParser/SettingsJsonParser.hpp"
 #include "logging/logging.h"
+#include "managers/CacheCleaner.hpp"
 #include "managers/SelfUpdateManager.hpp"
 #include "managers/UpdateManager.hpp"
 #include "protocol/Commands.hpp"
@@ -35,6 +37,7 @@ class BackEnd
     UpdateManager updateManager;
     SelfUpdateManager selfUpdateManager;
     DirectoryFinder directoryFinder;
+    CacheCleaner cacheCleaner;
     StateCallback stateCallback;
 
     std::thread languagesJob;
@@ -46,6 +49,7 @@ class BackEnd
     std::thread gameWatchJob;
     std::thread checkTimerJob;
     std::thread whatsNewJob;
+    std::thread cacheJob;
 
     // Declared last: its thread uses all members above
     TaskQueue queue;
@@ -406,6 +410,7 @@ class BackEnd
         state.handledCommands = data.handledCommands;
         state.selfUpdate = data.selfUpdate;
         state.whatsNew = data.whatsNew;
+        state.caches = data.caches;
         return state;
     }
 
@@ -750,6 +755,67 @@ class BackEnd
                  });
     }
 
+    void handle (const Protocol::ScanCaches&)
+    {
+        if(data.caches.busy) return;
+        // Every configured channel folder and the Wine prefixes around them and the RSI Launcher
+        std::vector<std::filesystem::path> folders;
+        std::vector<std::filesystem::path> prefixes;
+        auto addPrefix = [&prefixes] (const std::filesystem::path& path)
+        {
+            if(path.empty()) return;
+            auto prefix = UpdateManager::findWinePrefix(path);
+            if(prefix && std::find(prefixes.begin(), prefixes.end(), *prefix) == prefixes.end()) prefixes.push_back(*prefix);
+        };
+        for(const auto& [name, channel] : data.channels)
+            if(!channel.installPath.empty())
+            {
+                folders.push_back(channel.installPath);
+                addPrefix(channel.installPath);
+            }
+        addPrefix(data.rsiLauncherPath);
+
+        data.caches.busy = true;
+        startJob(cacheJob,
+                 [this, folders, prefixes]
+                 {
+                     auto entries = cacheCleaner.find(prefixes, folders, data.shuttingDown);
+                     queue.post(
+                         [this, entries = std::move(entries)]
+                         {
+                             data.caches = {false, true, entries};
+                             publish();
+                         });
+                 });
+    }
+
+    void handle (const Protocol::ClearCaches& command)
+    {
+        if(data.caches.busy || !data.caches.scanned) return;
+        std::set<std::string> paths(command.paths.begin(), command.paths.end());
+        // The game reads its shader cache while it runs
+        if(gamePlaying())
+        {
+            for(auto& entry : data.caches.entries)
+                if(paths.contains(entry.path)) entry.result = Protocol::CacheResult::GameRunning;
+            return;
+        }
+
+        data.caches.busy = true;
+        startJob(cacheJob,
+                 [this, entries = data.caches.entries, paths] () mutable
+                 {
+                     cacheCleaner.clear(entries, paths, data.shuttingDown);
+                     queue.post(
+                         [this, entries = std::move(entries)]
+                         {
+                             data.caches.entries = entries;
+                             data.caches.busy = false;
+                             publish();
+                         });
+                 });
+    }
+
     void handle (const Protocol::DismissWhatsNew&)
     {
         if(data.whatsNew.version.empty()) return;
@@ -786,8 +852,8 @@ class BackEnd
         data.shuttingDown = true;
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
-        for(auto* job :
-            {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob, &checkTimerJob, &whatsNewJob})
+        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob, &checkTimerJob,
+                         &whatsNewJob, &cacheJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }
