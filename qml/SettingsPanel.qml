@@ -23,6 +23,17 @@ Item {
     readonly property bool searchBusy: appState.searching === true
     // Languages with a credit, i.e. every translation (English is the original game text)
     readonly property var translations: (appState.languages || []).filter(l => l.credit && l.credit.project)
+    // The Wiki data added to item names; credited like a translation
+    readonly property var itemDataCredit: ({
+            "name": qsTr("Item values"),
+            "credit": {
+                "project": "Star Citizen Wiki API",
+                "url": "https://api.star-citizen.wiki",
+                "authors": qsTr("the Star Citizen Wiki community"),
+                "license": "CC BY-NC-SA 4.0",
+                "licenseUrl": "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+            }
+        })
 
     // Credits come from languages.json on the internet; inside StyledText they must not be read as markup
     function escapeHtml(text) {
@@ -155,6 +166,15 @@ Item {
                     Toggle {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
+                        text: qsTr("Add size, class and grade to item names")
+                        description: qsTr("e.g. \"Holdstrong (S4 Military A)\", from the Star Citizen Wiki; applies with the next update")
+                        checked: panel.options.itemNameDetails === true
+                        onSwitched: on => backend.setOption("itemNameDetails", on)
+                    }
+
+                    Toggle {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
                         text: qsTr("Check for launcher updates on start")
                         description: qsTr("Asks GitHub for a newer version of this launcher")
                         checked: panel.options.checkLauncherUpdatesAtStart === true
@@ -245,7 +265,7 @@ Item {
                     spacing: 8
 
                     Repeater {
-                        model: panel.translations
+                        model: panel.translations.concat([panel.itemDataCredit])
 
                         delegate: Rectangle {
                             required property var modelData
