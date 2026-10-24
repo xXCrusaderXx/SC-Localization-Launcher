@@ -91,7 +91,13 @@ In the Flatpak, call it as `flatpak run io.github.xXCrusaderXx.SCLocalizationLau
 
 ### Updating daily with a systemd timer
 
-[`packaging/systemd`](packaging/systemd) has a user service and timer that run `--update` once a day and catch up after the computer was off. Copy them to `~/.config/systemd/user/` and enable the timer:
+A user service and timer run `--update` once a day and catch up after the computer was off. The `.deb`, `.rpm` and Arch packages install them, switched off; enable the timer for your user:
+
+```sh
+systemctl --user enable --now sc-localization-launcher-update.timer
+```
+
+For other installations, copy them from [`packaging/systemd`](packaging/systemd) to `~/.config/systemd/user/` first:
 
 ```sh
 cp packaging/systemd/sc-localization-launcher-update.* ~/.config/systemd/user/

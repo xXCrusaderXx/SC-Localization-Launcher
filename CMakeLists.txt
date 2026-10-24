@@ -32,6 +32,7 @@ option(SC_BUILD_APPIMAGE "Add the 'appimage' target to the default build" OFF)
 # ON:  FHS layout for distro packages and Flatpak (bin/, share/applications, share/icons, share/metainfo)
 # OFF: portable layout in release/ (bin/ with local/settings.json next to the binary)
 option(SC_SYSTEM_INSTALL "Install with the FHS layout used by distro packages and Flatpak" OFF)
+option(SC_INSTALL_SYSTEMD_UNITS "With SC_SYSTEM_INSTALL: install the daily update timer as a systemd user unit (disabled)" ON)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND NOT SC_SYSTEM_INSTALL)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/release" CACHE PATH "Install path prefix." FORCE)
@@ -180,6 +181,15 @@ if(SC_SYSTEM_INSTALL)
   if(EXISTS "${CMAKE_SOURCE_DIR}/LICENSE")
     install(FILES "${CMAKE_SOURCE_DIR}/LICENSE" DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/${SC_LAUNCHER_BINARY})
   endif()
+  # Users enable the timer themselves; no package enables it. The service runs the binary installed here.
+  if(SC_INSTALL_SYSTEMD_UNITS)
+    file(READ "${CMAKE_SOURCE_DIR}/packaging/systemd/sc-localization-launcher-update.service" SC_UPDATE_SERVICE)
+    string(REPLACE "/usr/bin/sc-localization-launcher" "${CMAKE_INSTALL_FULL_BINDIR}/${SC_LAUNCHER_BINARY}" SC_UPDATE_SERVICE "${SC_UPDATE_SERVICE}")
+    file(WRITE "${CMAKE_BINARY_DIR}/sc-localization-launcher-update.service" "${SC_UPDATE_SERVICE}")
+    install(FILES "${CMAKE_BINARY_DIR}/sc-localization-launcher-update.service"
+                  "${CMAKE_SOURCE_DIR}/packaging/systemd/sc-localization-launcher-update.timer"
+            DESTINATION lib/systemd/user)
+  endif()
 else()
   install(TARGETS ${SC_LAUNCHER_BINARY} DESTINATION bin)
   install(FILES "${CMAKE_SOURCE_DIR}/misc/settings.json" DESTINATION bin/local)
@@ -322,5 +332,7 @@ set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-or-later")
 set(CPACK_RPM_PACKAGE_GROUP "Amusements/Games")
 set(CPACK_RPM_PACKAGE_AUTOREQ ON)
 set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtdeclarative, qt6-qtwayland")
+# Owned by systemd, not by this package
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION /usr/lib/systemd /usr/lib/systemd/user)
 
 include(CPack)

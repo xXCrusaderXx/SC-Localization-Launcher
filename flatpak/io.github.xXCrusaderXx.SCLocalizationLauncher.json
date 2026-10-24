@@ -57,7 +57,8 @@
             "buildsystem": "cmake-ninja",
             "config-opts": [
                 "-DCMAKE_BUILD_TYPE=Release",
-                "-DSC_SYSTEM_INSTALL=ON"
+                "-DSC_SYSTEM_INSTALL=ON",
+                "-DSC_INSTALL_SYSTEMD_UNITS=OFF"
             ],
             "sources": [
                 {
