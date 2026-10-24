@@ -1196,8 +1196,7 @@ class BackendTest : public QObject
         QVERIFY(!caches.entries.empty());
 
         QProcess game;
-        game.start("/bin/bash",
-                   {"-c", "exec -a 'C:\\Program Files\\Roberts Space Industries\\StarCitizen\\LIVE\\Bin64\\StarCitizen Test.exe' sleep 30"});
+        game.start("/bin/bash", {"-c", QString::fromStdString(fakeWineProcess(testGameProgram()))});
         QVERIFY(game.waitForStarted());
         QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Playing; }));
         std::string path = caches.entries.front().path;
@@ -1208,6 +1207,78 @@ class BackendTest : public QObject
         game.waitForFinished();
         QVERIFY(refused);
         QVERIFY(std::filesystem::exists(path));
+    }
+
+    void zipChecksumMatchesTheReference () { QCOMPARE(ZipWriter::crc32("123456789"), uint32_t(0xcbf43926)); }
+
+    void anonymizesHomeAndUserName ()
+    {
+        Diagnostics diagnostics;
+        std::string home = PATHS::getUserRootPath().string();
+        std::string user = PATHS::getUserRootPath().filename().string();
+        std::string text = home + "/Games/sc\nC:\\users\\" + user + "\\AppData\n/mnt/x/drive_c/users/" + user + "/AppData\n" + user + "X stays\n";
+        QCOMPARE(diagnostics.anonymize(text),
+                 std::string("~/Games/sc\nC:\\users\\<user>\\AppData\n/mnt/x/drive_c/users/<user>/AppData\n") + user + "X stays\n");
+    }
+
+    Protocol::Diagnostics runDiagnostics (bool saveReport)
+    {
+        size_t from = published();
+        if(saveReport)
+            backEnd->execute(Protocol::SaveReport{});
+        else
+            backEnd->execute(Protocol::RunDiagnostics{});
+        auto done = waitForState([] (const auto& s) { return !s.diagnostics.busy && !s.diagnostics.checks.empty(); }, from);
+        if(!done) return {};
+        std::lock_guard lock(mutex);
+        return states[*done].diagnostics;
+    }
+
+    static std::string statusOf (const Protocol::Diagnostics& diagnostics, const std::string& id, const std::string& channel = "")
+    {
+        for(const auto& check : diagnostics.checks)
+            if(check.id == id && check.channel == channel) return nlohmann::json(check.status).get<std::string>();
+        return "missing";
+    }
+
+    void diagnosticsFindAChangedUserCfg ()
+    {
+        QTemporaryDir game;
+        QVERIFY(installGerman(game));
+        auto result = runDiagnostics(false);
+        QCOMPARE(statusOf(result, "launcher"), std::string("info"));
+        QCOMPARE(statusOf(result, "folder", "LIVE"), std::string("ok"));
+        QCOMPARE(statusOf(result, "writable", "LIVE"), std::string("ok"));
+        QCOMPARE(statusOf(result, "translation", "LIVE"), std::string("ok"));
+        QCOMPARE(statusOf(result, "userCfg", "LIVE"), std::string("ok"));
+        // A temporary folder has no drive_c above it
+        QCOMPARE(statusOf(result, "winePrefix"), std::string("error"));
+        QCOMPARE(statusOf(result, "folder", "PTU"), std::string("missing"));
+
+        auto gamePath = std::filesystem::path(game.path().toStdString());
+        std::ofstream(gamePath / "user.cfg") << "r_DisplayInfo = 2\n";
+        QCOMPARE(statusOf(runDiagnostics(false), "userCfg", "LIVE"), std::string("error"));
+        // Read only: the check repaired nothing
+        QCOMPARE(readFile(gamePath / "user.cfg"), std::string("r_DisplayInfo = 2\n"));
+    }
+
+    void savesAnAnonymizedReport ()
+    {
+        QTemporaryDir game;
+        QVERIFY(installGerman(game));
+        auto result = runDiagnostics(true);
+        QVERIFY2(!result.reportPath.empty(), result.error.c_str());
+        std::string zip = readFile(result.reportPath);
+        QVERIFY(zip.starts_with("PK\x03\x04"));
+        for(const char* name : {"report.txt", "checks.json", "settings.json", "logs/"}) QVERIFY2(zip.find(name) != std::string::npos, name);
+        // The test home holds the game folder and the logs; none of it may show its real path
+        QVERIFY(zip.find(PATHS::getUserRootPath().string()) == std::string::npos);
+        // Same check as unzip -t, where Python is there to do it
+        if(QFile::exists("/usr/bin/python3"))
+            QCOMPARE(QProcess::execute("/usr/bin/python3", {"-c", "import sys, zipfile; sys.exit(zipfile.ZipFile(sys.argv[1]).testzip() is not None)",
+                                                            QString::fromStdString(result.reportPath)}),
+                     0);
+        std::filesystem::remove(result.reportPath);
     }
 
     void reportsWhenTheRsiLauncherQuitsAtOnce ()

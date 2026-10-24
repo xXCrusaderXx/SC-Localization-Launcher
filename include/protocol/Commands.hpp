@@ -121,6 +121,18 @@ struct ClearCaches
     std::vector<std::string> paths;
 };
 
+// Checks the installation without changing anything, see State.diagnostics
+struct RunDiagnostics
+{
+    static constexpr const char* name = "runDiagnostics";
+};
+
+// Runs the checks again and saves them with settings and logs as a ZIP for a bug report, home paths anonymized
+struct SaveReport
+{
+    static constexpr const char* name = "saveReport";
+};
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetLanguage, channel, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInstallPath, channel, path)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetRsiLauncherPath, path)
@@ -137,10 +149,12 @@ inline void to_json (nlohmann::json& j, const LoadWhatsNew&) { j = nlohmann::jso
 inline void to_json (nlohmann::json& j, const DismissWhatsNew&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const ScanCaches&) { j = nlohmann::json::object(); }
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClearCaches, paths)
+inline void to_json (nlohmann::json& j, const RunDiagnostics&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const SaveReport&) { j = nlohmann::json::object(); }
 
-using Command =
-    std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate, InstallUpdate,
-                 RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches, ClearCaches>;
+using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
+                             InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches,
+                             ClearCaches, RunDiagnostics, SaveReport>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

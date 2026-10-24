@@ -15,6 +15,7 @@ Item {
 
     signal pathChangeRequested(string target)
     signal cacheCleanerRequested
+    signal diagnosticsRequested
 
     readonly property var options: appState.options || {}
     readonly property var channels: appState.channels || []
@@ -329,6 +330,26 @@ Item {
                 SectionTitle {
                     Layout.topMargin: 12
                     text: qsTr("HELP")
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Checks folders, rights and translation files and saves a report for a bug report")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("Check installation …")
+                        onClicked: panel.diagnosticsRequested()
+                    }
                 }
 
                 // Log files are what a bug report needs; the path is shown so it can be mentioned

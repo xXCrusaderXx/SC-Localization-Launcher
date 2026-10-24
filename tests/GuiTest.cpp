@@ -135,7 +135,7 @@ class GuiTest : public QObject
     // A failed test may leave a modal dialog open, which would swallow the clicks of the next test
     void cleanup ()
     {
-        for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog"})
+        for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog"})
         {
             auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
             if(!dialog || !dialog->property("visible").toBool()) continue;
@@ -435,6 +435,31 @@ class GuiTest : public QObject
         QTRY_VERIFY(!dialog->property("visible").toBool());
         panel->setProperty("open", false);
         // Its backdrop would catch the next test's clicks until it has slid out
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    void savesAReportFromTheSettings ()
+    {
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        // Like the cache cleaner, the button sits below the visible part of the panel
+        QMetaObject::invokeMethod(panel, "diagnosticsRequested");
+
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("diagnosticsDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_VERIFY(findText("LIVE · Game folder"));
+        QTRY_VERIFY(findButton("Save report (ZIP)"));
+        QVERIFY(clickButton("Save report (ZIP)"));
+        QTRY_VERIFY(!bridge->state()["diagnostics"].toMap()["reportPath"].toString().isEmpty());
+        QString report = bridge->state()["diagnostics"].toMap()["reportPath"].toString();
+        QVERIFY(QFile::exists(report));
+        // Not clicked: it would open the file manager
+        QTRY_VERIFY(findButton("Show in folder"));
+        QFile::remove(report);
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
         QTRY_VERIFY(!panel->property("visible").toBool());
     }
 
