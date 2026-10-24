@@ -14,6 +14,7 @@
 #include "jsonParser/SettingsJsonParser.hpp"
 #include "logging/logging.h"
 #include "managers/CacheCleaner.hpp"
+#include "managers/Diagnostics.hpp"
 #include "managers/SelfUpdateManager.hpp"
 #include "managers/UpdateManager.hpp"
 #include "protocol/Commands.hpp"
@@ -38,6 +39,7 @@ class BackEnd
     SelfUpdateManager selfUpdateManager;
     DirectoryFinder directoryFinder;
     CacheCleaner cacheCleaner;
+    Diagnostics diagnostics;
     StateCallback stateCallback;
 
     std::thread languagesJob;
@@ -50,6 +52,7 @@ class BackEnd
     std::thread checkTimerJob;
     std::thread whatsNewJob;
     std::thread cacheJob;
+    std::thread diagnosticsJob;
 
     // Declared last: its thread uses all members above
     TaskQueue queue;
@@ -411,6 +414,7 @@ class BackEnd
         state.selfUpdate = data.selfUpdate;
         state.whatsNew = data.whatsNew;
         state.caches = data.caches;
+        state.diagnostics = data.diagnostics;
         return state;
     }
 
@@ -816,6 +820,63 @@ class BackEnd
                  });
     }
 
+    // Copies what the checks need, so they can run on their own thread
+    Diagnostics::Input diagnosticsInput () const
+    {
+        Diagnostics::Input input;
+        input.version = data.selfUpdate.currentVersion;
+        input.catalogueLoaded = !data.languages.empty();
+        input.rsiLauncherPath = data.rsiLauncherPath;
+        for(const auto& [name, channel] : data.channels)
+        {
+            if(channel.installPath.empty()) continue;
+            std::string folder;
+            if(channel.language != Protocol::ENGLISH)
+            {
+                auto language = languageFor(name, channel.language);
+                folder = language ? language->folder : channel.installed.folder;
+            }
+            input.channels.push_back({name, channel.installPath, folder, nlohmann::json(channelStatus(name, channel)).get<std::string>()});
+        }
+        SettingsFile file;
+        for(const auto& [name, channel] : data.channels)
+            file.channels[name] = {channel.installPath.string(), channel.language, channel.installed, channel.custom};
+        file.rsiLauncherPath = data.rsiLauncherPath.string();
+        file.options = data.options;
+        file.lastSeenVersion = data.lastSeenVersion;
+        input.settings = nlohmann::json(file).dump(2) + "\n";
+        return input;
+    }
+
+    // saveReport: also writes the ZIP
+    void runDiagnostics (bool saveReport)
+    {
+        if(data.diagnostics.busy) return;
+        data.diagnostics.busy = true;
+        data.diagnostics.reportPath.clear();
+        data.diagnostics.error.clear();
+        startJob(diagnosticsJob,
+                 [this, input = diagnosticsInput(), saveReport] () mutable
+                 {
+                     input.installType = SelfUpdateManager::detectInstallation().type;
+                     auto checks = diagnostics.run(input);
+                     std::optional<std::filesystem::path> report;
+                     if(saveReport) report = diagnostics.writeReport(input, checks, Diagnostics::reportFolder());
+                     queue.post(
+                         [this, checks = std::move(checks), report, saveReport]
+                         {
+                             data.diagnostics.checks = checks;
+                             data.diagnostics.busy = false;
+                             if(report) data.diagnostics.reportPath = report->string();
+                             if(saveReport && !report) data.diagnostics.error = "cannot write the report";
+                             publish();
+                         });
+                 });
+    }
+
+    void handle (const Protocol::RunDiagnostics&) { runDiagnostics(false); }
+    void handle (const Protocol::SaveReport&) { runDiagnostics(true); }
+
     void handle (const Protocol::DismissWhatsNew&)
     {
         if(data.whatsNew.version.empty()) return;
@@ -853,7 +914,7 @@ class BackEnd
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
         for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob, &checkTimerJob,
-                         &whatsNewJob, &cacheJob})
+                         &whatsNewJob, &cacheJob, &diagnosticsJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }

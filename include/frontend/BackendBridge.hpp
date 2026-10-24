@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QFile>
+#include <QFileInfo>
 #include <QGuiApplication>
 #include <QJsonDocument>
 #include <QObject>
@@ -100,6 +101,13 @@ class BackendBridge : public QObject
     Q_INVOKABLE void loadWhatsNew () { backEnd.execute(Protocol::LoadWhatsNew{}); }
     Q_INVOKABLE void dismissWhatsNew () { backEnd.execute(Protocol::DismissWhatsNew{}); }
     Q_INVOKABLE void scanCaches () { backEnd.execute(Protocol::ScanCaches{}); }
+    Q_INVOKABLE void runDiagnostics () { backEnd.execute(Protocol::RunDiagnostics{}); }
+    Q_INVOKABLE void saveReport () { backEnd.execute(Protocol::SaveReport{}); }
+    // Shows the saved report in the file manager
+    Q_INVOKABLE void openReportFolder (const QString& report) const
+    {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(report).absolutePath()));
+    }
     Q_INVOKABLE void clearCaches (const QStringList& paths)
     {
         Protocol::ClearCaches command;

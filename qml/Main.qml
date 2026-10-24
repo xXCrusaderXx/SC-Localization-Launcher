@@ -554,6 +554,18 @@ ApplicationWindow {
             cacheDialog.open();
             backend.scanCaches();
         }
+        onDiagnosticsRequested: {
+            diagnosticsDialog.open();
+            backend.runDiagnostics();
+        }
+    }
+
+    DiagnosticsDialog {
+        id: diagnosticsDialog
+
+        diagnostics: window.appState.diagnostics || ({})
+        onSaveRequested: backend.saveReport()
+        onShowReportRequested: path => backend.openReportFolder(path)
     }
 
     CacheDialog {

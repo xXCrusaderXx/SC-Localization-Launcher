@@ -163,6 +163,133 @@
     </message>
 </context>
 <context>
+    <name>DiagnosticsDialog</name>
+    <message>
+        <source>System</source>
+        <translation>System</translation>
+    </message>
+    <message>
+        <source>Launcher version</source>
+        <translation>Launcher-Version</translation>
+    </message>
+    <message>
+        <source>Language list loaded</source>
+        <translation>Sprachliste geladen</translation>
+    </message>
+    <message>
+        <source>Language list not loaded – offline?</source>
+        <translation>Sprachliste nicht geladen – offline?</translation>
+    </message>
+    <message>
+        <source>No RSI Launcher folder set</source>
+        <translation>Kein RSI-Launcher-Ordner gesetzt</translation>
+    </message>
+    <message>
+        <source>RSI Launcher folder</source>
+        <translation>RSI-Launcher-Ordner</translation>
+    </message>
+    <message>
+        <source>RSI Launcher folder is missing</source>
+        <translation>RSI-Launcher-Ordner fehlt</translation>
+    </message>
+    <message>
+        <source>Wine prefix</source>
+        <translation>Wine-Prefix</translation>
+    </message>
+    <message>
+        <source>No Wine prefix found above the game folders</source>
+        <translation>Kein Wine-Prefix oberhalb der Spielordner gefunden</translation>
+    </message>
+    <message>
+        <source>Game start: looked up outside the Flatpak when starting</source>
+        <translation>Spielstart: wird beim Start außerhalb des Flatpaks gesucht</translation>
+    </message>
+    <message>
+        <source>Game start</source>
+        <translation>Spielstart</translation>
+    </message>
+    <message>
+        <source>Neither the LUG Helper&apos;s sc-launch.sh nor Lutris found</source>
+        <translation>Weder sc-launch.sh des LUG Helpers noch Lutris gefunden</translation>
+    </message>
+    <message>
+        <source>Game folder</source>
+        <translation>Spielordner</translation>
+    </message>
+    <message>
+        <source>Game folder is missing</source>
+        <translation>Spielordner fehlt</translation>
+    </message>
+    <message>
+        <source>Game folder is writable</source>
+        <translation>Spielordner ist beschreibbar</translation>
+    </message>
+    <message>
+        <source>No write permission for the game folder</source>
+        <translation>Keine Schreibrechte für den Spielordner</translation>
+    </message>
+    <message>
+        <source>No translation chosen (English)</source>
+        <translation>Keine Übersetzung gewählt (Englisch)</translation>
+    </message>
+    <message>
+        <source>Translation installed, but not current</source>
+        <translation>Übersetzung installiert, aber nicht aktuell</translation>
+    </message>
+    <message>
+        <source>Translation installed</source>
+        <translation>Übersetzung installiert</translation>
+    </message>
+    <message>
+        <source>Translation file is missing or empty</source>
+        <translation>Übersetzungsdatei fehlt oder ist leer</translation>
+    </message>
+    <message>
+        <source>user.cfg selects the translation</source>
+        <translation>user.cfg wählt die Übersetzung</translation>
+    </message>
+    <message>
+        <source>user.cfg does not select the translation</source>
+        <translation>user.cfg wählt die Übersetzung nicht</translation>
+    </message>
+    <message>
+        <source>Free disk space</source>
+        <translation>Freier Speicherplatz</translation>
+    </message>
+    <message>
+        <source>Little free disk space</source>
+        <translation>Wenig freier Speicherplatz</translation>
+    </message>
+    <message>
+        <source>Check the installation</source>
+        <translation>Installation prüfen</translation>
+    </message>
+    <message>
+        <source>Checking …</source>
+        <translation>Prüfe …</translation>
+    </message>
+    <message>
+        <source>Only reads, changes nothing. The report contains these results, your settings and the launcher&apos;s logs, with your home folder and user name replaced. Game.log is not included.</source>
+        <translation>Liest nur, ändert nichts. Der Bericht enthält diese Ergebnisse, deine Einstellungen und die Logs des Launchers; dein Home-Ordner und dein Benutzername werden ersetzt. Game.log ist nicht enthalten.</translation>
+    </message>
+    <message>
+        <source>The report could not be saved.</source>
+        <translation>Der Bericht konnte nicht gespeichert werden.</translation>
+    </message>
+    <message>
+        <source>Saved: %1</source>
+        <translation>Gespeichert: %1</translation>
+    </message>
+    <message>
+        <source>Show in folder</source>
+        <translation>Im Ordner zeigen</translation>
+    </message>
+    <message>
+        <source>Save report (ZIP)</source>
+        <translation>Bericht speichern (ZIP)</translation>
+    </message>
+</context>
+<context>
     <name>LanguagePicker</name>
     <message>
         <source>%1 (not available)</source>
@@ -478,6 +605,14 @@
     <message>
         <source>HELP</source>
         <translation>HILFE</translation>
+    </message>
+    <message>
+        <source>Checks folders, rights and translation files and saves a report for a bug report</source>
+        <translation>Prüft Ordner, Rechte und Übersetzungsdateien und speichert einen Bericht für eine Fehlermeldung</translation>
+    </message>
+    <message>
+        <source>Check installation …</source>
+        <translation>Installation prüfen …</translation>
     </message>
     <message>
         <source>Log files</source>
