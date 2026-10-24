@@ -19,6 +19,7 @@ What comes next — item values, blueprints, tray and background updates, backup
 - Downloads the translation safely: a failed download never replaces a working one, and only the language lines in your `user.cfg` are changed.
 - Optionally starts Star Citizen after the update, through the LUG Helper's `sc-launch.sh` or Lutris.
 - Keeps working offline with the last known channel list.
+- Checks and updates from the command line, e.g. from a `systemd --user` timer, without opening a window.
 - The interface follows your system language (English and German).
 
 Planned, not available yet: updating automatically at start or in the background, minimising to the tray, starting with the system, and a progress view. They appear as **BALD** (soon) in the settings.
@@ -64,6 +65,49 @@ The launcher updates its AppImage itself and downloads only the blocks that chan
 | Logs | `~/.local/state/sc-localization-launcher/logs/` |
 
 The `XDG_*_HOME` variables are respected. The Flatpak keeps its data under `~/.var/app/io.github.xXCrusaderXx.SCLocalizationLauncher/`. Settings from the old `~/SC-Deutsch-Launcher` folder are taken over on the first start.
+
+## Command line
+
+Without options the launcher opens its window. With one of these options it works without a window and needs no display:
+
+```sh
+sc-localization-launcher --check               # which channels need an update; changes nothing
+sc-localization-launcher --update              # update every channel that has a game folder
+sc-localization-launcher --update --channel LIVE --channel PTU
+sc-localization-launcher --version
+```
+
+It uses the channels, languages and game folders set in the window. It never starts the game, even with "Start Star Citizen afterwards" switched on.
+
+| Exit code | Meaning |
+| --------- | ------- |
+| 0 | Every channel is up to date, or the update succeeded |
+| 1 | `--check` only: at least one channel needs an update |
+| 2 | Error: no game folder set, unknown channel, update failed, the launcher window is open, or Star Citizen is running |
+
+While the window is open or Star Citizen runs, the command line changes nothing and exits with 2.
+
+In the Flatpak, call it as `flatpak run io.github.xXCrusaderXx.SCLocalizationLauncher --update`, and for the AppImage as `./SC-Localization-Launcher-*.AppImage --update`.
+
+### Updating daily with a systemd timer
+
+[`packaging/systemd`](packaging/systemd) has a user service and timer that run `--update` once a day and catch up after the computer was off. Copy them to `~/.config/systemd/user/` and enable the timer:
+
+```sh
+cp packaging/systemd/sc-localization-launcher-update.* ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now sc-localization-launcher-update.timer
+```
+
+The service runs `/usr/bin/sc-localization-launcher`, as installed by the `.deb`, `.rpm` and Arch packages. For the Flatpak or the AppImage, replace the command with `systemctl --user edit sc-localization-launcher-update.service`:
+
+```ini
+[Service]
+ExecStart=
+ExecStart=/usr/bin/flatpak run io.github.xXCrusaderXx.SCLocalizationLauncher --update
+```
+
+`systemctl --user status sc-localization-launcher-update.service` shows the last result; the log is in the folder named under [Where your data is stored](#where-your-data-is-stored).
 
 ## Building from source
 

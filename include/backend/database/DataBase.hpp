@@ -139,6 +139,9 @@ struct BackendData
     // Last seen by the game watcher
     GameProcess gameProcess = GameProcess::None;
     bool searching = false;
+    // Set from the start until the first check of the sources is done
+    bool checking = true;
+    std::uint64_t handledCommands = 0;
     Protocol::SelfUpdate selfUpdate;
     // Set by the last check; what an installation of the launcher update needs
     std::optional<ReleaseAssets> releaseAssets;

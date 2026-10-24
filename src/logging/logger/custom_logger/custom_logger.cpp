@@ -11,7 +11,8 @@
 namespace LoggerFramework
 {
 
-CustomLogger::CustomLogger ()
+CustomLogger::CustomLogger (bool console)
+    : m_Console(console)
 {
     if(!std::filesystem::exists(logPath))
     {
@@ -84,7 +85,7 @@ void CustomLogger::write (const std::string& m_Channel, const std::string& messa
     std::string severityStr = oss.str();
 
     std::string logEntry = "[" + getFormattedTimestamp() + "]" + "<" + severityStr + ">\t[" + m_Channel + "]\t: " + message;
-    std::cout << logEntry << std::endl;
+    if(m_Console) std::cout << logEntry << std::endl;
     // std::cout << "[" << getFormattedTimestamp() << "]" << "<" << m_Severity << ">\t" << "[" << m_Channel << "]" << "\t: " << message <<
     // std::endl;
 
