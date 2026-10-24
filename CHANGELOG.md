@@ -5,6 +5,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-24
+
+The launcher now works in the background.
+
+### Added
+
+- Tray icon with a status light for all channels and an Update/Open menu. "Close to tray" is offered only when the desktop has a tray.
+- Translations are checked every hour; if wanted, they are updated automatically after the game exits.
+- Command line mode: `--check` and `--update` run without a window, for scripts and systemd timers. The packages install a daily update timer that is switched off by default.
+- "What's new" window: after an update, the launcher shows the release notes of the new version once.
+- AppImage updates download only the changed blocks (zsync), typically a few hundred kilobytes instead of the whole AppImage.
+- Shader cache cleaner in the settings: removes the game's shader cache and the DXVK, vkd3d, Mesa and NVIDIA caches, never while the game is running.
+- Problem analysis: a read-only check of the game folders, Wine prefix, permissions, `global.ini` and `user.cfg`, with a ZIP report for bug reports (home paths anonymized).
+
+### Changed
+
+- The launcher needs Qt Widgets (for the tray icon on KDE Plasma).
+- Releases can update the AUR package automatically.
+
+### Fixed
+
+- GUI tests no longer fail when other test runs start fake game processes at the same time.
+
 ## [0.7.0] - 2026-10-24
 
 ### Added
@@ -81,7 +104,8 @@ First release as *SC Localization Launcher*.
 - When switching languages, the previous language's folder is removed only after the new download succeeded.
 - Only one launcher runs at a time; starting it again brings the open window to the front instead of running two launchers that write the same settings and game folders.
 
-[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/releases/tag/v0.6.0
