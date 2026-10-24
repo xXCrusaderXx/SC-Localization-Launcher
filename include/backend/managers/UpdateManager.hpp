@@ -13,11 +13,13 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <memory>
 #include <optional>
 #include <thread>
 #include <vector>
 
 #include "backend/database/DataBase.hpp"
+#include "backend/managers/ItemValues.hpp"
 #include "backend/utils/utils.hpp"
 #include "logging/logging.h"
 #include "protocol/State.hpp"
@@ -386,6 +388,10 @@ class UpdateManager
         std::vector<std::string> managedFolders;
         // ETag of the installed file of this language; a source that still has it is not downloaded again
         std::string etag;
+        // Item values to add to a freshly downloaded file; none: the file stays as downloaded
+        std::shared_ptr<const ItemValues::Plan> itemValues;
+        // Signature of the values in the installed file, which a "not modified" answer keeps
+        std::string installedItemValues;
     };
 
     struct Result
@@ -397,6 +403,8 @@ class UpdateManager
         // SHA-256 of the installed global.ini, empty for English
         std::string fileHash;
         std::string folder;
+        // Signature of the item values now in the file
+        std::string itemValues;
     };
 
     static std::filesystem::path translationFile (const std::filesystem::path& installPath, const std::string& folder)
@@ -473,7 +481,15 @@ class UpdateManager
                     continue;
                 }
                 result.etag = download.etag;
-                result.fileHash = fileSha256(translationFile(job.installPath, job.folder));
+                auto file = translationFile(job.installPath, job.folder);
+                // Before the hash: the integrity check compares against the file as the launcher left it
+                if(download.notModified)
+                    result.itemValues = job.installedItemValues;
+                else if(job.itemValues && ItemValues::apply(file, *job.itemValues))
+                    result.itemValues = job.itemValues->signature;
+                else if(job.itemValues)
+                    LOG_ERROR(lg) << "update() - cannot add item values to " << file;
+                result.fileHash = fileSha256(file);
             }
             removeTranslations(job.installPath, job.managedFolders, job.folder);
             patchUserCfg(job.installPath / "user.cfg", job.folder);

@@ -197,6 +197,28 @@ class BackendTest : public QObject
     // Watched instead of "RSI Launcher.exe", see watchOwnTestPrograms()
     static std::string fakeRsiLauncher () { return fakeWineProcess(testRsiLauncherProgram()); }
 
+    // A global.ini as the game ships it (byte order mark, CRLF) with a shield and a gun, and the Wiki data for them
+    static constexpr const char* ITEM_TRANSLATION =
+        "\xEF\xBB\xBFitem_NameSHLD_Test=Holdstrong\r\nitem_DescSHLD_Test=Ein Schild\r\nitem_NameGun_Test=Kanone\r\nother=Text\r\n";
+
+    void serveItemData ()
+    {
+        server.setFile("/de.ini", ITEM_TRANSLATION);
+        nlohmann::json mapping{{"version", 1},
+                               {"keys", {{"item_NameSHLD_Test", "u-shield"}, {"item_DescSHLD_Test", "u-shield"}, {"item_NameGun_Test", "u-gun"}}}};
+        server.setFile("/item-mapping.json", QByteArray::fromStdString(mapping.dump()));
+        auto page = [] (const QByteArray& type) { return "/api/v2/items?filter%5Btype%5D=" + type + "&page%5Bnumber%5D=1&page%5Bsize%5D=200"; };
+        auto items = [] (const nlohmann::json& item)
+        { return QByteArray::fromStdString(nlohmann::json{{"data", {item}}, {"meta", {{"last_page", 1}}}}.dump()); };
+        server.setFile(page("Shield"), items({{"uuid", "u-shield"}, {"type", "Shield"}, {"size", 4}, {"grade", "A"}, {"class", "Military"}}));
+        server.setFile(page("WeaponGun"), items({{"uuid", "u-gun"}, {"type", "WeaponGun"}, {"size", 3}, {"grade", "A"}, {"class", nullptr}}));
+    }
+
+    std::string installedItemFile (const QTemporaryDir& game)
+    {
+        return readFile(std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini");
+    }
+
    private slots:
     void initTestCase ()
     {
@@ -208,6 +230,8 @@ class BackendTest : public QObject
     {
         qputenv("SC_LANGUAGES_URL", server.url("/languages.json").toUtf8());
         qputenv("SC_RELEASES_URL", server.url("/releases/latest").toUtf8());
+        qputenv("SC_ITEM_MAPPING_URL", server.url("/item-mapping.json").toUtf8());
+        qputenv("SC_WIKI_API_URL", server.url("/api/v2/").toUtf8());
         server.setFile("/de.ini", TRANSLATION);
         server.setFile("/releases/latest", fixtureFiles().value("/releases/latest"));
         // No signing key and no AppImage unless a test sets them: the launcher then never installs anything
@@ -1490,6 +1514,65 @@ class BackendTest : public QObject
         qunsetenv("SC_CHECK_INTERVAL_SECONDS");
         QVERIFY(shown);
         QCOMPARE(latest().update, UpdateStatus::Succeeded);
+    }
+
+    void addsItemValuesToNames ()
+    {
+        serveItemData();
+        QTemporaryDir game;
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetOption{"itemNameDetails", true});
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        QVERIFY(setLanguage("LIVE", "de"));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+
+        QCOMPARE(installedItemFile(game), std::string("\xEF\xBB\xBFitem_NameSHLD_Test=Holdstrong (S4 Militär A)\r\nitem_DescSHLD_Test=Ein Schild\r\n"
+                                                      "item_NameGun_Test=Kanone (S3)\r\nother=Text\r\n"));
+        // The integrity check knows the file with the values, so a restart does not call it damaged
+        QVERIFY(restart());
+        QVERIFY(waitForState([] (const auto& s) { return !s.checking; }));
+        QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::Installed);
+    }
+
+    void switchingItemValuesOnAndOffUpdatesTheFile ()
+    {
+        serveItemData();
+        QTemporaryDir game;
+        QVERIFY(installGerman(game));
+        QCOMPARE(installedItemFile(game), std::string(ITEM_TRANSLATION));
+
+        // The source still has the same version; the file is downloaded again anyway, so the values go on a clean copy
+        size_t from = published();
+        backEnd->execute(Protocol::SetOption{"itemNameDetails", true});
+        QVERIFY(waitForState([] (const auto& s) { return channel(s, "LIVE").status == ChannelStatus::UpdateAvailable; }, from));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QVERIFY(installedItemFile(game).find("Holdstrong (S4 Militär A)\r\n") != std::string::npos);
+        QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::Installed);
+
+        // Another update keeps the file: nothing is added twice
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QVERIFY(installedItemFile(game).find("Holdstrong (S4 Militär A)\r\n") != std::string::npos);
+
+        from = published();
+        backEnd->execute(Protocol::SetOption{"itemNameDetails", false});
+        QVERIFY(waitForState([] (const auto& s) { return channel(s, "LIVE").status == ChannelStatus::UpdateAvailable; }, from));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QCOMPARE(installedItemFile(game), std::string(ITEM_TRANSLATION));
+    }
+
+    void installsWithoutItemValuesWhenTheWikiIsUnreachable ()
+    {
+        serveItemData();
+        qputenv("SC_ITEM_MAPPING_URL", server.url("/missing-mapping.json").toUtf8());
+        QTemporaryDir game;
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetOption{"itemNameDetails", true});
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        QVERIFY(setLanguage("LIVE", "de"));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QCOMPARE(installedItemFile(game), std::string(ITEM_TRANSLATION));
+        // Still shown as outdated, so the next update tries again
+        QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::UpdateAvailable);
     }
 };
 
