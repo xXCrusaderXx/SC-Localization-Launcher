@@ -95,6 +95,8 @@ class BackendBridge : public QObject
     Q_INVOKABLE void autoSearch () { backEnd.execute(Protocol::AutoSearch{}); }
     Q_INVOKABLE void checkForUpdate () { backEnd.execute(Protocol::CheckForUpdate{}); }
     Q_INVOKABLE void installUpdate () { backEnd.execute(Protocol::InstallUpdate{}); }
+    Q_INVOKABLE void loadWhatsNew () { backEnd.execute(Protocol::LoadWhatsNew{}); }
+    Q_INVOKABLE void dismissWhatsNew () { backEnd.execute(Protocol::DismissWhatsNew{}); }
 
     // Starts the updated launcher and quits this one; the new one waits until this one released its lock
     Q_INVOKABLE void restartLauncher ()

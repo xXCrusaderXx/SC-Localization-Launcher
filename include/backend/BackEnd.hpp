@@ -45,6 +45,7 @@ class BackEnd
     std::thread gameJob;
     std::thread gameWatchJob;
     std::thread checkTimerJob;
+    std::thread whatsNewJob;
 
     // Declared last: its thread uses all members above
     TaskQueue queue;
@@ -404,6 +405,7 @@ class BackEnd
         state.checking = data.checking;
         state.handledCommands = data.handledCommands;
         state.selfUpdate = data.selfUpdate;
+        state.whatsNew = data.whatsNew;
         return state;
     }
 
@@ -428,6 +430,7 @@ class BackEnd
         }
         data.rsiLauncherPath = file.rsiLauncherPath;
         data.options = file.options;
+        data.lastSeenVersion = file.lastSeenVersion;
         // Moves settings of the former SC Deutsch Launcher to the new location right away
         saveSettings();
     }
@@ -439,6 +442,7 @@ class BackEnd
             file.channels[name] = {channel.installPath.string(), channel.language, channel.installed, channel.custom};
         file.rsiLauncherPath = data.rsiLauncherPath.string();
         file.options = data.options;
+        file.lastSeenVersion = data.lastSeenVersion;
         settingsJsonParser.save(file);
     }
 
@@ -703,6 +707,56 @@ class BackEnd
                  });
     }
 
+    void handle (const Protocol::LoadWhatsNew&)
+    {
+        const std::string current = data.selfUpdate.currentVersion;
+        const std::string since = data.lastSeenVersion;
+        if(!data.whatsNew.version.empty()) return;
+        if(since.empty())
+        {
+            // A new installation has nothing to catch up on; a launcher that is already set up came from a version
+            // before release notes were shown and gets the notes of this one
+            bool setUp = !data.rsiLauncherPath.empty() ||
+                         std::any_of(data.channels.begin(), data.channels.end(), [] (const auto& c) { return !c.second.installPath.empty(); });
+            if(!setUp)
+            {
+                data.lastSeenVersion = current;
+                return;
+            }
+        }
+        // Also after a downgrade or with a build from source, which is not a release
+        else if(!SelfUpdateManager::isNewer(current, since))
+            return;
+
+        startJob(whatsNewJob,
+                 [this, since, current]
+                 {
+                     auto notes = selfUpdateManager.notesSince(since, current);
+                     queue.post(
+                         [this, notes, current]
+                         {
+                             // Offline: asked again at the next start
+                             if(!notes) return;
+                             if(notes->empty())
+                             {
+                                 // No release with notes for this version, e.g. a test build
+                                 data.lastSeenVersion = current;
+                                 saveSettings();
+                             }
+                             else
+                                 data.whatsNew = {current, *notes};
+                             publish();
+                         });
+                 });
+    }
+
+    void handle (const Protocol::DismissWhatsNew&)
+    {
+        if(data.whatsNew.version.empty()) return;
+        data.lastSeenVersion = data.whatsNew.version;
+        data.whatsNew = {};
+    }
+
    public:
     // The callback is called on the backend thread
     // version: of this launcher, compared with the published releases
@@ -732,7 +786,8 @@ class BackEnd
         data.shuttingDown = true;
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
-        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob, &checkTimerJob})
+        for(auto* job :
+            {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob, &checkTimerJob, &whatsNewJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }

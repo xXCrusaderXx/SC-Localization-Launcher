@@ -4,6 +4,7 @@
 #include <sodium.h>
 #include <QProcess>
 #include <QStandardPaths>
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cctype>
@@ -519,6 +520,48 @@ class SelfUpdateManager
             installation.type = "arch";
         installation.variant = packageVariant(installation.type, osRelease(), imageBased);
         return installation;
+    }
+
+    // Release notes as Markdown: one "## <version>" section per published release after `since` up to `current`, newest
+    // first. Without `since` only the notes of `current`. nullopt if GitHub cannot be asked; the section on verifying
+    // the download is left out, it is meant for the release page.
+    std::optional<std::string> notesSince (const std::string& since, const std::string& current)
+    {
+        std::string url = latestReleaseUrl();
+        if(url.ends_with("/latest")) url.erase(url.size() - 7);
+        std::string body;
+        long httpCode = download(url, &body, nullptr, "sc-localization-launcher/" + current, true);
+        if(httpCode != 200)
+        {
+            LOG_ERROR(lg) << "notesSince() - " << url << " :: HTTP " << httpCode;
+            return std::nullopt;
+        }
+        auto json = nlohmann::json::parse(body, nullptr, false);
+        if(json.is_discarded() || !json.is_array())
+        {
+            LOG_ERROR(lg) << "notesSince() - unexpected answer from GitHub";
+            return std::nullopt;
+        }
+
+        std::vector<std::pair<std::array<int, 3>, std::string>> sections;
+        for(const auto& release : json)
+        {
+            if(!release.is_object() || release.value("draft", false) || release.value("prerelease", false)) continue;
+            std::string tag = release.value("tag_name", "");
+            auto version = parseVersion(tag);
+            if(!version || isNewer(tag, current)) continue;
+            if(since.empty() ? isNewer(current, tag) : !isNewer(tag, since)) continue;
+
+            std::string notes = release.value("body", "");
+            if(size_t verify = notes.find("### Verify the download"); verify != std::string::npos) notes.erase(verify);
+            while(!notes.empty() && std::isspace(static_cast<unsigned char>(notes.back()))) notes.pop_back();
+            std::string name = (!tag.empty() && (tag[0] == 'v' || tag[0] == 'V')) ? tag.substr(1) : tag;
+            sections.emplace_back(*version, "## " + name + "\n\n" + notes);
+        }
+        std::sort(sections.begin(), sections.end(), [] (const auto& a, const auto& b) { return a.first > b.first; });
+        std::string markdown;
+        for(const auto& [version, section] : sections) markdown += (markdown.empty() ? "" : "\n\n") + section;
+        return markdown;
     }
 
     // Release asset with the package for this installation; empty if the launcher cannot update itself

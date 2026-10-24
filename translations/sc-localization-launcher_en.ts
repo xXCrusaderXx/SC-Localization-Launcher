@@ -396,4 +396,15 @@
         <translation type="unfinished"></translation>
     </message>
 </context>
+<context>
+    <name>WhatsNewDialog</name>
+    <message>
+        <source>What&apos;s new in version %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
 </TS>
