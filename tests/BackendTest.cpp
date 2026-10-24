@@ -639,6 +639,144 @@ class BackendTest : public QObject
         QVERIFY(!update.canInstall);
     }
 
+    void md4MatchesTheReference ()
+    {
+        auto md4 = [] (const std::string& text)
+        {
+            auto digest = Zsync::detail::Md4::digest(reinterpret_cast<const unsigned char*>(text.data()), text.size());
+            return QByteArray(reinterpret_cast<const char*>(digest.data()), 16).toHex().toStdString();
+        };
+        // RFC 1320, appendix A.5
+        QCOMPARE(md4(""), std::string("31d6cfe0d16ae931b73c59d7e0c089c0"));
+        QCOMPARE(md4("abc"), std::string("a448017aaf21d8525fc10ae87aa6729d"));
+        QCOMPARE(md4("12345678901234567890123456789012345678901234567890123456789012345678901234567890"),
+                 std::string("e33b4ddc9c38f2199c3e7b164fcc0536"));
+    }
+
+    void rollingChecksumMatchesBlockChecksum ()
+    {
+        std::string data = randomBytes(4096, 1);
+        const auto* bytes = reinterpret_cast<const unsigned char*>(data.data());
+        auto rolling = Zsync::detail::Rsum::of(bytes, 1024);
+        for(size_t x = 0; x + 1024 < data.size(); ++x)
+        {
+            rolling.roll(bytes[x], bytes[x + 1024], 10);
+            auto direct = Zsync::detail::Rsum::of(bytes + x + 1, 1024);
+            QCOMPARE(rolling.a, direct.a);
+            QCOMPARE(rolling.b, direct.b);
+        }
+    }
+
+    void zsyncReusesUnchangedBlocks ()
+    {
+        // The new version has bytes inserted, changed and appended, so blocks move to other offsets
+        std::string oldVersion = randomBytes(64 * 1024, 2);
+        std::string newVersion = oldVersion;
+        newVersion.insert(10000, randomBytes(100, 3));
+        newVersion.replace(40000, 50, randomBytes(50, 4));
+        newVersion += randomBytes(700, 5);
+
+        auto control = Zsync::parse(makeZsync(newVersion));
+        QVERIFY(control);
+        QCOMPARE(control->length, uint64_t(newVersion.size()));
+        QTemporaryDir dir;
+        auto seed = std::filesystem::path(dir.path().toStdString()) / "old";
+        auto target = std::filesystem::path(dir.path().toStdString()) / "new";
+        std::ofstream(seed, std::ios::binary) << oldVersion;
+        auto missing = Zsync::reuse(*control, seed, target);
+        QVERIFY(missing);
+
+        uint64_t missingBytes = 0;
+        for(const auto& range : *missing) missingBytes += range.end - range.begin;
+        // One block around each change, two for the tail
+        QVERIFY2(missingBytes <= 5 * 1024, std::to_string(missingBytes).c_str());
+
+        std::string assembled = readFile(target);
+        QCOMPARE(assembled.size(), newVersion.size());
+        for(const auto& range : *missing)
+            assembled.replace(range.begin, range.end - range.begin, newVersion.substr(range.begin, range.end - range.begin));
+        QVERIFY(assembled == newVersion);
+    }
+
+    void zsyncMergesRangesWithSmallGaps ()
+    {
+        std::vector<Zsync::Range> ranges{{0, 10}, {20, 30}, {1000, 1010}, {1015, 1020}, {5000, 5010}};
+        auto merged = Zsync::merge(ranges, 3);
+        QCOMPARE(merged.size(), size_t(3));
+        QCOMPARE(merged[0].end, uint64_t(30));
+        QCOMPARE(merged[1].begin, uint64_t(1000));
+        QCOMPARE(merged[1].end, uint64_t(1020));
+        QCOMPARE(merged[2].begin, uint64_t(5000));
+        QCOMPARE(Zsync::merge(ranges, 10).size(), ranges.size());
+    }
+
+    void rejectsBrokenZsyncFiles ()
+    {
+        std::string control = makeZsync(randomBytes(5000, 6));
+        QVERIFY(Zsync::parse(control));
+        QVERIFY(!Zsync::parse(control.substr(0, control.size() - 1)));
+        QVERIFY(!Zsync::parse("Recompress: gzip --best\n" + control));
+        std::string badBlockSize = control;
+        badBlockSize.replace(badBlockSize.find("Blocksize: 1024"), 15, "Blocksize: 1000");
+        QVERIFY(!Zsync::parse(badBlockSize));
+    }
+
+    // An installed AppImage and the release that replaces part of it
+    static std::pair<std::string, std::string> appImageVersions ()
+    {
+        std::string oldVersion = randomBytes(256 * 1024, 7);
+        std::string newVersion = oldVersion;
+        newVersion.replace(100000, 3000, randomBytes(3000, 8));
+        return {oldVersion, newVersion};
+    }
+
+    void installsAppImageUpdateAsDelta ()
+    {
+        QTemporaryDir dir;
+        auto appImage = fakeAppImage(dir);
+        auto [oldVersion, newVersion] = appImageVersions();
+        std::ofstream(appImage, std::ios::binary) << oldVersion;
+        qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
+        publishAppImageRelease(server, releaseKey, newVersion, {}, {}, makeZsync(newVersion));
+        int fullDownloads = server.requestCount("GET /download/package 200");
+        int partialDownloads = server.requestCount("GET /download/package 206");
+        QVERIFY(start());
+
+        auto update = checkAndInstall();
+        QCOMPARE(jsonText(update.status), jsonText(Protocol::SelfUpdateStatus::Installed));
+        QVERIFY(readFile(appImage) == newVersion);
+        QCOMPARE(server.requestCount("GET /download/package 200"), fullDownloads);
+        QCOMPARE(server.requestCount("GET /download/package 206"), partialDownloads + 1);
+    }
+
+    void deltaUpdateFallsBackToTheWholePackage ()
+    {
+        QTemporaryDir dir;
+        auto appImage = fakeAppImage(dir);
+        auto [oldVersion, newVersion] = appImageVersions();
+        qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
+        QVERIFY(start());
+
+        // Block checksums of another file: the assembled file fails the signed checksum
+        std::ofstream(appImage, std::ios::binary) << oldVersion;
+        publishAppImageRelease(server, releaseKey, newVersion, {}, {}, makeZsync(oldVersion));
+        int fullDownloads = server.requestCount("GET /download/package 200");
+        auto update = checkAndInstall();
+        QCOMPARE(jsonText(update.status), jsonText(Protocol::SelfUpdateStatus::Installed));
+        QVERIFY(readFile(appImage) == newVersion);
+        QCOMPARE(server.requestCount("GET /download/package 200"), fullDownloads + 1);
+
+        // A server that ignores the range sends the whole file, which must not overwrite the reused blocks
+        std::ofstream(appImage, std::ios::binary) << oldVersion;
+        publishAppImageRelease(server, releaseKey, newVersion, {}, {}, makeZsync(newVersion));
+        server.setRangeRequests(false);
+        update = checkAndInstall();
+        server.setRangeRequests(true);
+        QCOMPARE(jsonText(update.status), jsonText(Protocol::SelfUpdateStatus::Installed));
+        QVERIFY(readFile(appImage) == newVersion);
+        QCOMPARE(server.requestCount("GET /download/package 200"), fullDownloads + 3);
+    }
+
     void projectSigningKeyIsUsable ()
     {
         // packaging/minisign.pub is embedded at build time; a broken file would silently disable self-updates

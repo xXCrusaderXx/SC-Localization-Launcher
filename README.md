@@ -53,7 +53,7 @@ minisign -Vm SHA256SUMS -p minisign.pub
 sha256sum --check --ignore-missing SHA256SUMS
 ```
 
-The AppImage carries update information, so [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate) can update it in place.
+The launcher updates its AppImage itself and downloads only the blocks that changed (usually about 1 % of the file), using the release's `.zsync` file. The same update information also works with [AppImageUpdate](https://github.com/AppImageCommunity/AppImageUpdate).
 
 ### Where your data is stored
 
