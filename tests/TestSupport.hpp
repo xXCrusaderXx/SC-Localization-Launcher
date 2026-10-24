@@ -270,6 +270,21 @@ inline nlohmann::json legacySettings (const std::string& livePath, const std::st
 // Comparing the JSON text works everywhere and prints readable values on failure.
 inline std::string jsonText (const nlohmann::json& json) { return json.dump(); }
 
+// The game watcher sees every process of the machine. With names unique to this test process, a fake game of
+// another test running at the same time (ctest -j, a second checkout) does not count here.
+inline std::string testRsiLauncherProgram () { return "RSI Test Launcher " + std::to_string(QCoreApplication::applicationPid()) + ".exe"; }
+inline std::string testGameProgram () { return "StarCitizen Test " + std::to_string(QCoreApplication::applicationPid()) + ".exe"; }
+
+// Call in initTestCase() of every test that runs a BackEnd
+inline void watchOwnTestPrograms ()
+{
+    qputenv("SC_RSI_LAUNCHER_PROGRAM", QByteArray::fromStdString(testRsiLauncherProgram()));
+    qputenv("SC_GAME_PROGRAM", QByteArray::fromStdString(testGameProgram()));
+}
+
+// Shell command for a process named like `program` under Wine (first argument "C:\...\<program>") that only sleeps
+inline std::string fakeWineProcess (const std::string& program) { return "exec -a 'C:\\Games\\" + program + "' sleep 30\n"; }
+
 inline std::string readFile (const std::filesystem::path& path)
 {
     std::ifstream stream(path);

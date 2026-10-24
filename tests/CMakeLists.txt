@@ -48,7 +48,8 @@ qt_add_qml_module(GuiTest
 foreach(test BackendTest DirectoryFinderTest SingleInstanceTest CommandLineTest GuiTest)
   add_test(NAME ${test} COMMAND ${test})
   # Own HOME and XDG dirs, so the user's settings are never touched. Empty PATH, so the game can never be started,
-  # and watched program names of their own, so an RSI Launcher or game running on this machine does not count.
+  # and watched program names of their own, so an RSI Launcher or game running on this machine does not count
+  # (each test then makes them unique to its process, see watchOwnTestPrograms() in TestSupport.hpp).
   set(test_home ${CMAKE_CURRENT_BINARY_DIR}/home-${test})
   set_tests_properties(${test} PROPERTIES
     TIMEOUT 120
