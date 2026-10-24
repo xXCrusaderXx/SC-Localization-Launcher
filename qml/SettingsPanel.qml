@@ -16,6 +16,7 @@ Item {
     signal pathChangeRequested(string target)
     signal cacheCleanerRequested
     signal diagnosticsRequested
+    signal backupsRequested
 
     readonly property var options: appState.options || {}
     readonly property var channels: appState.channels || []
@@ -324,6 +325,27 @@ Item {
                         text: qsTr("Clear caches …")
                         enabled: !panel.locked
                         onClicked: panel.cacheCleanerRequested()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Keybindings, profile settings, characters and user.cfg per channel")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("Backups …")
+                        enabled: !panel.locked
+                        onClicked: panel.backupsRequested()
                     }
                 }
 

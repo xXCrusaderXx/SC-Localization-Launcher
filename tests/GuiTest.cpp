@@ -1,3 +1,4 @@
+#include <QDir>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickItem>
@@ -31,10 +32,21 @@ class GuiTest : public QObject
     {
         // Popup contents hang below the window's root object, the rest below its content item.
         // Disabled buttons don't count: a click on one is lost, e.g. "Check again" while a check is running
+        auto matches = [&text] (QQuickItem* item)
+        { return item->inherits("QQuickAbstractButton") && item->isVisible() && item->isEnabled() && item->property("text") == text; };
         for(QObject* root : {static_cast<QObject*>(window->contentItem()), engine->rootObjects().first()})
             for(auto* item : root->findChildren<QQuickItem*>())
-                if(item->inherits("QQuickAbstractButton") && item->isVisible() && item->isEnabled() && item->property("text") == text) return item;
-        return nullptr;
+                if(matches(item)) return item;
+        // Items made by a Repeater are no QObject children; walk the visual tree as well
+        std::function<QQuickItem*(QQuickItem*)> walk = [&] (QQuickItem* item) -> QQuickItem*
+        {
+            if(!item->isVisible()) return nullptr;
+            if(matches(item)) return item;
+            for(auto* child : item->childItems())
+                if(auto* found = walk(child)) return found;
+            return nullptr;
+        };
+        return walk(window->contentItem());
     }
 
     // Not inside QTRY_*: those evaluate their expression once more after it succeeded, which would click twice
@@ -135,7 +147,7 @@ class GuiTest : public QObject
     // A failed test may leave a modal dialog open, which would swallow the clicks of the next test
     void cleanup ()
     {
-        for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog"})
+        for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog", "backupDialog"})
         {
             auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
             if(!dialog || !dialog->property("visible").toBool()) continue;
@@ -457,6 +469,55 @@ class GuiTest : public QObject
         // Not clicked: it would open the file manager
         QTRY_VERIFY(findButton("Show in folder"));
         QFile::remove(report);
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    void backsUpAndRestoresFromTheSettings ()
+    {
+        QDir(liveDir.path()).mkpath("user/client/0/Profiles/default");
+        QString actionmaps = liveDir.filePath("user/client/0/Profiles/default/actionmaps.xml");
+        auto write = [] (const QString& file, const QByteArray& content)
+        {
+            QFile out(file);
+            QVERIFY(out.open(QIODevice::WriteOnly | QIODevice::Truncate));
+            out.write(content);
+        };
+        write(actionmaps, "<ActionMaps version=\"1\"/>");
+
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        // The button sits below the visible part of the panel
+        QMetaObject::invokeMethod(panel, "backupsRequested");
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("backupDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_VERIFY(findButton("Back up LIVE"));
+        // Rows made by a Repeater are laid out on the next polish; a grab runs it, so the click hits their final place
+        window->grabWindow();
+        QVERIFY(clickButton("Back up LIVE"));
+        QTRY_VERIFY(findText("Backup saved."));
+
+        write(actionmaps, "<ActionMaps version=\"2\"/>");
+        QTRY_VERIFY(findButton("Restore"));
+        window->grabWindow();
+        QVERIFY(clickButton("Restore"));
+        // Nothing happens before the confirmation
+        QTRY_VERIFY(findButton("Restore now"));
+        {
+            QFile unchanged(actionmaps);
+            QVERIFY(unchanged.open(QIODevice::ReadOnly));
+            QCOMPARE(unchanged.readAll(), QByteArray("<ActionMaps version=\"2\"/>"));
+        }
+        window->grabWindow();
+        QVERIFY(clickButton("Restore now"));
+        QTRY_VERIFY(findText("Backup restored. The files it replaced were backed up first."));
+        QFile restored(actionmaps);
+        QVERIFY(restored.open(QIODevice::ReadOnly));
+        QCOMPARE(restored.readAll(), QByteArray("<ActionMaps version=\"1\"/>"));
+
         QTest::keyClick(window, Qt::Key_Escape);
         QTRY_VERIFY(!dialog->property("visible").toBool());
         panel->setProperty("open", false);
