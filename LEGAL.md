@@ -39,6 +39,8 @@ The translation texts are **not part of this repository** and are not covered by
 
 Item values, blueprint and mission data come from the [Star Citizen Wiki API](https://api.star-citizen.wiki). Wiki content is licensed under CC BY-SA; the launcher credits the source wherever it shows or uses this data. Data about the player's own progress (earned blueprints, statistics) is read from the local `Game.log` and never leaves the computer.
 
+To know which entry of `global.ini` belongs to which Wiki item, a build step matches the Wiki data against the English `global.ini` that the community translation project publishes. That file is only read during the build; it is never committed, cached or redistributed. The published mapping contains only `global.ini` keys and Wiki item IDs, no game texts.
+
 ## Forbidden content
 
 Don't add any of the following to this repository, and don't base a contribution on it:
