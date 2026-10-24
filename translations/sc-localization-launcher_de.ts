@@ -2,6 +2,69 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="de">
 <context>
+    <name>BackupDialog</name>
+    <message>
+        <source>Backup saved.</source>
+        <translation>Sicherung gespeichert.</translation>
+    </message>
+    <message>
+        <source>Backup restored. The files it replaced were backed up first.</source>
+        <translation>Sicherung wiederhergestellt. Die ersetzten Dateien wurden vorher gesichert.</translation>
+    </message>
+    <message>
+        <source>This channel has no keybindings, characters or user.cfg yet.</source>
+        <translation>Dieser Kanal hat noch keine Tastenbelegung, Charaktere oder user.cfg.</translation>
+    </message>
+    <message>
+        <source>Close Star Citizen first; the game rewrites these files.</source>
+        <translation>Beende zuerst Star Citizen; das Spiel schreibt diese Dateien neu.</translation>
+    </message>
+    <message>
+        <source>Failed: %1</source>
+        <translation>Fehlgeschlagen: %1</translation>
+    </message>
+    <message>
+        <source>Profile backups</source>
+        <translation>Profil-Sicherungen</translation>
+    </message>
+    <message>
+        <source>Choose a game folder first.</source>
+        <translation>Wähle zuerst einen Spielordner.</translation>
+    </message>
+    <message>
+        <source>Keybindings, profile settings, saved characters and user.cfg of a channel. The newest 10 backups per channel are kept.</source>
+        <translation>Tastenbelegung, Profileinstellungen, gespeicherte Charaktere und user.cfg eines Kanals. Pro Kanal bleiben die neuesten 10 Sicherungen erhalten.</translation>
+    </message>
+    <message>
+        <source>Back up %1</source>
+        <translation>%1 sichern</translation>
+    </message>
+    <message>
+        <source>No backups yet</source>
+        <translation>Noch keine Sicherungen</translation>
+    </message>
+    <message>
+        <source>%1 KB</source>
+        <translation>%1 KB</translation>
+    </message>
+    <message>
+        <source>Restore</source>
+        <translation>Wiederherstellen</translation>
+    </message>
+    <message>
+        <source>Restore %1 from %2? The current files are backed up first.</source>
+        <translation>%1 vom %2 wiederherstellen? Die aktuellen Dateien werden vorher gesichert.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <source>Restore now</source>
+        <translation>Jetzt wiederherstellen</translation>
+    </message>
+</context>
+<context>
     <name>CacheDialog</name>
     <message>
         <source>%1 GB</source>
@@ -601,6 +664,14 @@
     <message>
         <source>Clear caches …</source>
         <translation>Caches leeren …</translation>
+    </message>
+    <message>
+        <source>Keybindings, profile settings, characters and user.cfg per channel</source>
+        <translation>Tastenbelegung, Profileinstellungen, Charaktere und user.cfg pro Kanal</translation>
+    </message>
+    <message>
+        <source>Backups …</source>
+        <translation>Sicherungen …</translation>
     </message>
     <message>
         <source>HELP</source>

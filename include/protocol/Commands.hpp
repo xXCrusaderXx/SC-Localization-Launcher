@@ -133,6 +133,28 @@ struct SaveReport
     static constexpr const char* name = "saveReport";
 };
 
+// Lists the profile backups, see State.backups
+struct LoadBackups
+{
+    static constexpr const char* name = "loadBackups";
+};
+
+// Backs up keybindings, profile settings, characters and user.cfg of a channel
+struct CreateBackup
+{
+    static constexpr const char* name = "createBackup";
+    std::string channel;
+};
+
+// Writes a backup back into its channel after backing up the current files. Refused while Star Citizen runs.
+struct RestoreBackup
+{
+    static constexpr const char* name = "restoreBackup";
+    std::string channel;
+    // BackupEntry.name
+    std::string backup;
+};
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetLanguage, channel, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInstallPath, channel, path)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetRsiLauncherPath, path)
@@ -151,10 +173,13 @@ inline void to_json (nlohmann::json& j, const ScanCaches&) { j = nlohmann::json:
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClearCaches, paths)
 inline void to_json (nlohmann::json& j, const RunDiagnostics&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const SaveReport&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const LoadBackups&) { j = nlohmann::json::object(); }
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CreateBackup, channel)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RestoreBackup, channel, backup)
 
 using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
                              InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches,
-                             ClearCaches, RunDiagnostics, SaveReport>;
+                             ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, RestoreBackup>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

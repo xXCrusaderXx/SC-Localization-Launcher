@@ -278,7 +278,7 @@ inline void requireTestHome (const std::filesystem::path& path)
 
 inline void resetUserDir ()
 {
-    for(const auto& dir : {PATHS::CONFIG_USER, PATHS::CACHE_USER, PATHS::LEGACY_ROOT_USER})
+    for(const auto& dir : {PATHS::CONFIG_USER, PATHS::CACHE_USER, PATHS::DATA_USER, PATHS::LEGACY_ROOT_USER})
     {
         requireTestHome(dir);
         std::filesystem::remove_all(dir);

@@ -558,6 +558,20 @@ ApplicationWindow {
             diagnosticsDialog.open();
             backend.runDiagnostics();
         }
+        onBackupsRequested: {
+            backupDialog.open();
+            backend.loadBackups();
+        }
+    }
+
+    BackupDialog {
+        id: backupDialog
+
+        backups: window.appState.backups || ({})
+        channels: window.visibleChannels.map(c => c.name)
+        gamePlaying: window.gamePlaying
+        onBackupRequested: channel => backend.createBackup(channel)
+        onRestoreRequested: (channel, backup) => backend.restoreBackup(channel, backup)
     }
 
     DiagnosticsDialog {
