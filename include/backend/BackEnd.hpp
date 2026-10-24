@@ -175,7 +175,11 @@ class BackEnd
             if(isAvailable(name, channel.language)) urls[name] = language->urls.at(name);
             if(channel.installed.language == channel.language) installed[name] = {channel.installPath, language->folder, channel.installed.fileHash};
         }
-        if(checkedLanguage.empty()) return;
+        if(checkedLanguage.empty())
+        {
+            data.checking = false;
+            return;
+        }
 
         startJob(versionCheckJob,
                  [this, urls, installed, checkedLanguage]
@@ -195,6 +199,7 @@ class BackEnd
                                  if(etags.contains(name)) channel.remoteEtag = etags.at(name);
                                  if(damaged.contains(name)) channel.damaged = damaged.at(name);
                              }
+                             data.checking = false;
                              publish();
                          });
                  });
@@ -242,10 +247,12 @@ class BackEnd
     // Notices when the RSI Launcher or the game starts and quits, also when it was started without this launcher
     void watchGame ()
     {
+        // Known right away, so a command line update never starts while the game runs
+        data.gameProcess = UpdateManager::runningGameProcess();
+        data.game = gameStatus();
         startJob(gameWatchJob,
-                 [this]
+                 [this, seen = data.gameProcess] () mutable
                  {
-                     auto seen = Database::GameProcess::None;
                      while(!data.shuttingDown)
                      {
                          if(auto now = UpdateManager::runningGameProcess(); now != seen)
@@ -354,6 +361,8 @@ class BackEnd
         state.update = data.update;
         state.game = data.game;
         state.searching = data.searching;
+        state.checking = data.checking;
+        state.handledCommands = data.handledCommands;
         state.selfUpdate = data.selfUpdate;
         return state;
     }
@@ -406,8 +415,9 @@ class BackEnd
                              // Channels only a source knows about (e.g. a new test channel) get a row too
                              for(const auto& language : data.languages)
                                  for(const auto& [channel, urls] : language.urls) data.channels[channel];
-                             publish();
+                             // Before publishing: without channels to ask, the check is done right here
                              checkChannels();
+                             publish();
                          });
                  });
     }
@@ -459,7 +469,7 @@ class BackEnd
         data.options = options.get<Protocol::Options>();
     }
 
-    void handle (const Protocol::StartUpdate&)
+    void handle (const Protocol::StartUpdate& command)
     {
         if(data.update == Protocol::UpdateStatus::Running || data.game == Protocol::GameStart::Starting)
         {
@@ -476,14 +486,18 @@ class BackEnd
         // The jobs work on copies, the user may change settings while they run
         std::vector<UpdateManager::Job> jobs;
         for(const auto& [name, channel] : data.channels)
+        {
+            bool chosen = command.channels.empty() || std::find(command.channels.begin(), command.channels.end(), name) != command.channels.end();
+            if(!chosen) continue;
             if(auto job = makeUpdateJob(name, channel, false)) jobs.push_back(std::move(*job));
+        }
 
         if(jobs.empty())
         {
             LOG_DEBUG(lg) << "startUpdate - nothing to update";
             return;
         }
-        runUpdate(std::move(jobs), data.options.launchGameAfterUpdate);
+        runUpdate(std::move(jobs), command.allowGameStart && data.options.launchGameAfterUpdate);
     }
 
     void handle (const Protocol::StartGame&)
@@ -643,9 +657,9 @@ class BackEnd
             [this]
             {
                 loadSettings();
+                watchGame();
                 publish();
                 loadLanguages();
-                watchGame();
                 if(data.options.checkLauncherUpdatesAtStart) handle(Protocol::CheckForUpdate{});
             });
         LOG_DEBUG(lg) << "instanziated";
@@ -669,6 +683,7 @@ class BackEnd
             {
                 LOG_DEBUG(lg) << "execute() - " << Protocol::toString(command);
                 std::visit([this] (const auto& c) { handle(c); }, command);
+                ++data.handledCommands;
                 saveSettings();
                 publish();
             });

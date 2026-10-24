@@ -20,6 +20,9 @@ target_link_libraries(DirectoryFinderTest PRIVATE sc_test_support)
 add_executable(SingleInstanceTest SingleInstanceTest.cpp ${CMAKE_SOURCE_DIR}/include/frontend/SingleInstance.hpp)
 target_link_libraries(SingleInstanceTest PRIVATE sc_test_support)
 
+add_executable(CommandLineTest CommandLineTest.cpp ${CMAKE_SOURCE_DIR}/include/frontend/SingleInstance.hpp)
+target_link_libraries(CommandLineTest PRIVATE sc_test_support)
+
 add_executable(GuiTest
   GuiTest.cpp
   ${CMAKE_SOURCE_DIR}/include/frontend/BackendBridge.hpp
@@ -41,7 +44,7 @@ qt_add_qml_module(GuiTest
   QML_FILES ${SC_TEST_QML_FILES}
 )
 
-foreach(test BackendTest DirectoryFinderTest SingleInstanceTest GuiTest)
+foreach(test BackendTest DirectoryFinderTest SingleInstanceTest CommandLineTest GuiTest)
   add_test(NAME ${test} COMMAND ${test})
   # Own HOME and XDG dirs, so the user's settings are never touched. Empty PATH, so the game can never be started,
   # and watched program names of their own, so an RSI Launcher or game running on this machine does not count.

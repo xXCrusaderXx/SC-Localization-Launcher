@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <map>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -195,9 +196,14 @@ struct State
     UpdateStatus update = UpdateStatus::Idle;
     GameStart game = GameStart::Idle;
     bool searching = false;
+    // The sources are asked at start whether the translations changed; channel statuses are final once this is false
+    bool checking = false;
     SelfUpdate selfUpdate;
+    // Commands handled so far; a client that counts what it sent knows when its last command was answered
+    std::uint64_t handledCommands = 0;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, selfUpdate)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
+                                                handledCommands)
 
 }  // namespace Protocol

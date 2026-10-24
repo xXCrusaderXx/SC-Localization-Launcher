@@ -25,6 +25,8 @@ class CustomLogger : public LoggerBase
 
     std::filesystem::path logPath = PATHS::LOGPATH_USER / "logs";
     int maxFiles = 10;
+    // Off on the command line, where stdout carries the result for scripts
+    bool m_Console = true;
 
     void cleanOffOldLogs ();
     bool init () override;
@@ -34,7 +36,7 @@ class CustomLogger : public LoggerBase
     std::once_flag m_FileOpened;
 
    public:
-    CustomLogger ();
+    explicit CustomLogger (bool console = true);
     ~CustomLogger () override;
 
     void write (const std::string& m_Channel, const std::string& message, const SeverityLevel& m_Severity) override;

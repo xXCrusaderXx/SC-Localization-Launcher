@@ -1,0 +1,13 @@
+# Updates the Star Citizen translations without opening the launcher window.
+# Started by sc-localization-launcher-update.timer; see the README, "Command line".
+# For the Flatpak or the AppImage, change ExecStart with: systemctl --user edit sc-localization-launcher-update.service
+[Unit]
+Description=Update Star Citizen community translations
+Documentation=https://github.com/xXCrusaderXx/SC-Localization-Launcher#command-line
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# Exits with 2 while the launcher window is open or Star Citizen runs; the next run catches up
+ExecStart=/usr/bin/sc-localization-launcher --update

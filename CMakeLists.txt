@@ -83,6 +83,7 @@ configure_file(${CMAKE_SOURCE_DIR}/include/backend/UpdateSigningKey.hpp.in ${CMA
 
 add_executable(${SC_LAUNCHER_BINARY}
   ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/BackendBridge.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/CommandLine.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/SingleInstance.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/logging/logger/custom_logger/custom_logger.cpp
