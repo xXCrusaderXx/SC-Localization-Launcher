@@ -1,0 +1,77 @@
+name: Item mapping
+
+# Weekly: rebuilds item-mapping.json (global.ini key -> Star Citizen Wiki API item) and, when it changed, opens a PR
+# against dev. The PR comes from a throwaway branch and is opened with AUTOMERGE_TOKEN, so CI runs and it merges by
+# itself once green. The launcher reads the file from main, so it reaches users at the next release point.
+#
+# The English reference global.ini is only read inside this job (LEGAL.md): it lives in the runner's temp directory,
+# is deleted after the build, and is never cached, uploaded or committed.
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  mapping:
+    name: rebuild item mapping
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      REFERENCE_URL: https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/.github/en/live/global.ini
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: dev
+          persist-credentials: false
+
+      # Fails when far fewer keys map than before, so a broken API answer never replaces a good mapping
+      - name: Build the mapping
+        run: |
+          set -euo pipefail
+          reference="$RUNNER_TEMP/reference-global.ini"
+          trap 'rm -f "$reference"' EXIT
+          curl -fsSL --retry 3 --proto '=https' -o "$reference" "$REFERENCE_URL"
+          python3 tools/build-item-mapping.py --reference "$reference" --output item-mapping.json
+
+      - name: Open or update the mapping PR
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- item-mapping.json; then
+            echo "item-mapping.json is unchanged."
+            exit 0
+          fi
+          git diff --stat -- item-mapping.json
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::Secret AUTOMERGE_TOKEN is missing, no mapping PR is opened."
+            exit 0
+          fi
+
+          # One open mapping PR at a time: a newer build replaces the content of an open one
+          branch="$(gh pr list --base dev --state open --json headRefName --jq '[.[] | select(.headRefName | startswith("item-mapping/")) | .headRefName][0] // empty')"
+          existing="$branch"
+          [ -n "$branch" ] || branch="item-mapping/$(date -u +%Y-%m-%d)"
+
+          git config user.name "SC Localization Launcher"
+          git config user.email "55139200+xXCrusaderXx@users.noreply.github.com"
+          git switch -c "$branch"
+          git add item-mapping.json
+          git commit -q -m "Item mapping update from the Star Citizen Wiki API"
+          git push -q --force "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" "HEAD:refs/heads/$branch"
+
+          if [ -n "$existing" ]; then
+            echo "Updated the open mapping PR on $branch."
+          else
+            gh pr create --base dev --head "$branch" \
+              --title "Item mapping update from the Star Citizen Wiki API" \
+              --body "Automatic weekly rebuild of \`item-mapping.json\` (\`global.ini\` key → Star Citizen Wiki API item ID; keys and IDs only, see LEGAL.md). Merges by itself once CI is green."
+          fi

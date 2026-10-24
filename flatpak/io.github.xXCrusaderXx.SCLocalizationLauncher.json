@@ -11,7 +11,8 @@
         "--socket=fallback-x11",
         "--device=dri",
         "--filesystem=host",
-        "--talk-name=org.freedesktop.Flatpak"
+        "--talk-name=org.freedesktop.Flatpak",
+        "--talk-name=org.kde.StatusNotifierWatcher"
     ],
     "cleanup": [
         "/include",
@@ -57,7 +58,8 @@
             "buildsystem": "cmake-ninja",
             "config-opts": [
                 "-DCMAKE_BUILD_TYPE=Release",
-                "-DSC_SYSTEM_INSTALL=ON"
+                "-DSC_SYSTEM_INSTALL=ON",
+                "-DSC_INSTALL_SYSTEMD_UNITS=OFF"
             ],
             "sources": [
                 {

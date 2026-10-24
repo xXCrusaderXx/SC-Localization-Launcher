@@ -97,6 +97,8 @@ struct ReleaseAssets
     std::string packageUrl;
     std::string checksumsUrl;
     std::string signatureUrl;
+    // AppImage only: block checksums for a delta update, empty if the release has none
+    std::string zsyncUrl;
 };
 
 // How this launcher was installed, found by SelfUpdateManager::detectInstallation()
@@ -137,10 +139,20 @@ struct BackendData
     // Last seen by the game watcher
     GameProcess gameProcess = GameProcess::None;
     bool searching = false;
+    // Set from the start until the first check of the sources is done
+    bool checking = true;
+    // The window asked for hourly checks and automatic updates (StartBackgroundChecks)
+    bool backgroundChecks = false;
+    std::uint64_t handledCommands = 0;
     Protocol::SelfUpdate selfUpdate;
     // Set by the last check; what an installation of the launcher update needs
     std::optional<ReleaseAssets> releaseAssets;
     Installation installation;
+    std::string lastSeenVersion;
+    Protocol::WhatsNew whatsNew;
+    Protocol::Caches caches;
+    Protocol::Diagnostics diagnostics;
+    Protocol::Backups backups;
 
     // Set when the app closes; background jobs read it to stop early
     std::atomic<bool> shuttingDown{false};

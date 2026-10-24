@@ -20,12 +20,19 @@ target_link_libraries(DirectoryFinderTest PRIVATE sc_test_support)
 add_executable(SingleInstanceTest SingleInstanceTest.cpp ${CMAKE_SOURCE_DIR}/include/frontend/SingleInstance.hpp)
 target_link_libraries(SingleInstanceTest PRIVATE sc_test_support)
 
+add_executable(WikiApiClientTest WikiApiClientTest.cpp)
+target_link_libraries(WikiApiClientTest PRIVATE sc_test_support)
+
+add_executable(CommandLineTest CommandLineTest.cpp ${CMAKE_SOURCE_DIR}/include/frontend/SingleInstance.hpp)
+target_link_libraries(CommandLineTest PRIVATE sc_test_support)
+
 add_executable(GuiTest
   GuiTest.cpp
   ${CMAKE_SOURCE_DIR}/include/frontend/BackendBridge.hpp
   ${CMAKE_SOURCE_DIR}/resources/resources.qrc
 )
-target_link_libraries(GuiTest PRIVATE sc_test_support Qt6::Quick)
+# Widgets as in the app: QTEST_MAIN then creates a QApplication, which the tray icon needs
+target_link_libraries(GuiTest PRIVATE sc_test_support Qt6::Quick Qt6::Widgets)
 
 # The same QML module as the app. Source file properties are per directory, so they are set again here.
 list(TRANSFORM SC_QML_FILES PREPEND ${CMAKE_SOURCE_DIR}/ OUTPUT_VARIABLE SC_TEST_QML_FILES)
@@ -41,10 +48,11 @@ qt_add_qml_module(GuiTest
   QML_FILES ${SC_TEST_QML_FILES}
 )
 
-foreach(test BackendTest DirectoryFinderTest SingleInstanceTest GuiTest)
+foreach(test BackendTest DirectoryFinderTest SingleInstanceTest CommandLineTest WikiApiClientTest GuiTest)
   add_test(NAME ${test} COMMAND ${test})
   # Own HOME and XDG dirs, so the user's settings are never touched. Empty PATH, so the game can never be started,
-  # and watched program names of their own, so an RSI Launcher or game running on this machine does not count.
+  # and watched program names of their own, so an RSI Launcher or game running on this machine does not count
+  # (each test then makes them unique to its process, see watchOwnTestPrograms() in TestSupport.hpp).
   set(test_home ${CMAKE_CURRENT_BINARY_DIR}/home-${test})
   set_tests_properties(${test} PROPERTIES
     TIMEOUT 120

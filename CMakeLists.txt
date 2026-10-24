@@ -32,6 +32,7 @@ option(SC_BUILD_APPIMAGE "Add the 'appimage' target to the default build" OFF)
 # ON:  FHS layout for distro packages and Flatpak (bin/, share/applications, share/icons, share/metainfo)
 # OFF: portable layout in release/ (bin/ with local/settings.json next to the binary)
 option(SC_SYSTEM_INSTALL "Install with the FHS layout used by distro packages and Flatpak" OFF)
+option(SC_INSTALL_SYSTEMD_UNITS "With SC_SYSTEM_INSTALL: install the daily update timer as a systemd user unit (disabled)" ON)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND NOT SC_SYSTEM_INSTALL)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/release" CACHE PATH "Install path prefix." FORCE)
@@ -39,7 +40,8 @@ endif()
 include(GNUInstallDirs)
 
 # 6.4 is the oldest Qt shipped by current LTS distributions (Ubuntu 24.04, Debian 12)
-find_package(Qt6 6.4 REQUIRED COMPONENTS Quick Network)
+# Widgets: the system tray of the KDE platform theme builds on QApplication
+find_package(Qt6 6.4 REQUIRED COMPONENTS Quick Network Widgets)
 message(STATUS "Using Qt ${Qt6_VERSION}")
 if(QT_KNOWN_POLICY_QTP0004)
   qt_policy(SET QTP0004 NEW)
@@ -83,6 +85,7 @@ configure_file(${CMAKE_SOURCE_DIR}/include/backend/UpdateSigningKey.hpp.in ${CMA
 
 add_executable(${SC_LAUNCHER_BINARY}
   ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/BackendBridge.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/CommandLine.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/SingleInstance.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/logging/logger/custom_logger/custom_logger.cpp
@@ -101,6 +104,10 @@ set(SC_QML_FILES
   qml/SettingsPanel.qml
   qml/Theme.qml
   qml/Toggle.qml
+  qml/WhatsNewDialog.qml
+  qml/CacheDialog.qml
+  qml/DiagnosticsDialog.qml
+  qml/BackupDialog.qml
 )
 # Drop the qml/ folder from the resource path, so Main.qml is at qrc:/qt/qml/SCLauncher/Main.qml
 foreach(qml_file ${SC_QML_FILES})
@@ -133,6 +140,7 @@ endif()
 target_link_libraries(${SC_LAUNCHER_BINARY} PRIVATE
   Qt6::Quick
   Qt6::Network
+  Qt6::Widgets
   PkgConfig::SODIUM
   nlohmann_json::nlohmann_json
   CURL::libcurl
@@ -178,6 +186,15 @@ if(SC_SYSTEM_INSTALL)
   install(FILES ${SC_METAINFO_FILE} DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
   if(EXISTS "${CMAKE_SOURCE_DIR}/LICENSE")
     install(FILES "${CMAKE_SOURCE_DIR}/LICENSE" DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/${SC_LAUNCHER_BINARY})
+  endif()
+  # Users enable the timer themselves; no package enables it. The service runs the binary installed here.
+  if(SC_INSTALL_SYSTEMD_UNITS)
+    file(READ "${CMAKE_SOURCE_DIR}/packaging/systemd/sc-localization-launcher-update.service" SC_UPDATE_SERVICE)
+    string(REPLACE "/usr/bin/sc-localization-launcher" "${CMAKE_INSTALL_FULL_BINDIR}/${SC_LAUNCHER_BINARY}" SC_UPDATE_SERVICE "${SC_UPDATE_SERVICE}")
+    file(WRITE "${CMAKE_BINARY_DIR}/sc-localization-launcher-update.service" "${SC_UPDATE_SERVICE}")
+    install(FILES "${CMAKE_BINARY_DIR}/sc-localization-launcher-update.service"
+                  "${CMAKE_SOURCE_DIR}/packaging/systemd/sc-localization-launcher-update.timer"
+            DESTINATION lib/systemd/user)
   endif()
 else()
   install(TARGETS ${SC_LAUNCHER_BINARY} DESTINATION bin)
@@ -314,12 +331,14 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "games")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 # QML modules are loaded at runtime, shlibdeps cannot see them
 set(CPACK_DEBIAN_PACKAGE_DEPENDS
-  "qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-dialogs, qml6-module-qtquick-layouts, qml6-module-qtquick-templates, qml6-module-qtquick-window, qml6-module-qtqml-workerscript, qml6-module-qt-labs-folderlistmodel, qt6-wayland")
+  "qml6-module-qtquick, qml6-module-qtquick-controls, qml6-module-qtquick-dialogs, qml6-module-qtquick-layouts, qml6-module-qtquick-templates, qml6-module-qtquick-window, qml6-module-qtqml-workerscript, qml6-module-qt-labs-folderlistmodel, qml6-module-qt-labs-platform, qt6-wayland")
 
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-or-later")
 set(CPACK_RPM_PACKAGE_GROUP "Amusements/Games")
 set(CPACK_RPM_PACKAGE_AUTOREQ ON)
 set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtdeclarative, qt6-qtwayland")
+# Owned by systemd, not by this package
+set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION /usr/lib/systemd /usr/lib/systemd/user)
 
 include(CPack)

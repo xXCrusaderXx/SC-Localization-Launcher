@@ -42,12 +42,23 @@ struct SetOption
 struct StartUpdate
 {
     static constexpr const char* name = "startUpdate";
+    // Only these channels; empty = all
+    std::vector<std::string> channels;
+    // False for the command line: a script never starts the game, whatever the option says
+    bool allowGameStart = true;
 };
 
 // Starts the RSI Launcher without updating anything
 struct StartGame
 {
     static constexpr const char* name = "startGame";
+};
+
+// Sent by the window, never by the command line: checks the sources every hour and, with the option
+// installNewTranslations, installs what changed (after Star Citizen has been closed, if it runs)
+struct StartBackgroundChecks
+{
+    static constexpr const char* name = "startBackgroundChecks";
 };
 
 struct AutoSearch
@@ -84,20 +95,91 @@ struct InstallUpdate
     static constexpr const char* name = "installUpdate";
 };
 
+// Asks for the release notes if the launcher was updated since the last start. Only the GUI sends it, so a run on
+// the command line neither downloads them nor marks them as seen.
+struct LoadWhatsNew
+{
+    static constexpr const char* name = "loadWhatsNew";
+};
+
+// The user has read the release notes; they are not shown again for this version
+struct DismissWhatsNew
+{
+    static constexpr const char* name = "dismissWhatsNew";
+};
+
+// Looks for shader caches of the configured game folders and their Wine prefixes, see State.caches
+struct ScanCaches
+{
+    static constexpr const char* name = "scanCaches";
+};
+
+// Deletes these caches; only paths of the last scan are accepted. Refused while Star Citizen runs.
+struct ClearCaches
+{
+    static constexpr const char* name = "clearCaches";
+    std::vector<std::string> paths;
+};
+
+// Checks the installation without changing anything, see State.diagnostics
+struct RunDiagnostics
+{
+    static constexpr const char* name = "runDiagnostics";
+};
+
+// Runs the checks again and saves them with settings and logs as a ZIP for a bug report, home paths anonymized
+struct SaveReport
+{
+    static constexpr const char* name = "saveReport";
+};
+
+// Lists the profile backups, see State.backups
+struct LoadBackups
+{
+    static constexpr const char* name = "loadBackups";
+};
+
+// Backs up keybindings, profile settings, characters and user.cfg of a channel
+struct CreateBackup
+{
+    static constexpr const char* name = "createBackup";
+    std::string channel;
+};
+
+// Writes a backup back into its channel after backing up the current files. Refused while Star Citizen runs.
+struct RestoreBackup
+{
+    static constexpr const char* name = "restoreBackup";
+    std::string channel;
+    // BackupEntry.name
+    std::string backup;
+};
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetLanguage, channel, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInstallPath, channel, path)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetRsiLauncherPath, path)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetOption, option, value)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(StartUpdate, channels, allowGameStart)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RepairChannel, channel)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetCustomSource, channel, url, folder)
-inline void to_json (nlohmann::json& j, const StartUpdate&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const StartGame&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const AutoSearch&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const StartBackgroundChecks&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const CheckForUpdate&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const InstallUpdate&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const LoadWhatsNew&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const DismissWhatsNew&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const ScanCaches&) { j = nlohmann::json::object(); }
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClearCaches, paths)
+inline void to_json (nlohmann::json& j, const RunDiagnostics&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const SaveReport&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const LoadBackups&) { j = nlohmann::json::object(); }
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CreateBackup, channel)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RestoreBackup, channel, backup)
 
 using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
-                             InstallUpdate, RepairChannel, SetCustomSource>;
+                             InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches,
+                             ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, RestoreBackup>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

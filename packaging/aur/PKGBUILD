@@ -9,7 +9,7 @@ license=('GPL-3.0-or-later')
 depends=('qt6-declarative' 'qt6-wayland' 'curl' 'libsodium' 'hicolor-icon-theme')
 makedepends=('cmake' 'ninja' 'nlohmann-json' 'qt6-tools')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-# Replace with the real checksum when publishing a tag: updpkgsums
+# pkgver and the checksum are filled in by packaging/aur/publish.sh for each release
 sha256sums=('SKIP')
 
 build() {

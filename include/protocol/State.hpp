@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <map>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -91,16 +92,19 @@ struct Options
 {
     bool launchGameAfterUpdate = false;
     bool updateAtStart = false;
+    // Installs new translation versions found by the background check, see StartBackgroundChecks
     bool installNewTranslations = false;
     bool minimizeAfterUpdate = false;
     bool startWithSystem = false;
     bool showUpdateProgress = false;
     // Asks GitHub for a newer launcher version at start
     bool checkLauncherUpdatesAtStart = false;
+    // Closing the window keeps the launcher in the system tray, so the background checks go on; only with a tray
+    bool closeToTray = false;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Options, launchGameAfterUpdate, updateAtStart, installNewTranslations, minimizeAfterUpdate,
-                                                startWithSystem, showUpdateProgress, checkLauncherUpdatesAtStart)
+                                                startWithSystem, showUpdateProgress, checkLauncherUpdatesAtStart, closeToTray)
 
 enum class ChannelStatus
 {
@@ -185,6 +189,119 @@ struct SelfUpdate
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SelfUpdate, status, currentVersion, latestVersion, notes, url, error, installType, canInstall,
                                                 progress)
 
+// Release notes shown once after the launcher was updated, by whatever means
+struct WhatsNew
+{
+    // The running version; empty while there is nothing to show
+    std::string version;
+    // Markdown, one "## <version>" section per release since the last version seen, newest first
+    std::string notes;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(WhatsNew, version, notes)
+
+enum class CacheResult
+{
+    None,
+    Deleted,
+    // Gone already, e.g. deleted by hand since the scan
+    NotFound,
+    // Not deleted, e.g. no permission
+    Failed,
+    // Not deleted because Star Citizen runs
+    GameRunning
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(CacheResult, {{CacheResult::None, "none"},
+                                           {CacheResult::Deleted, "deleted"},
+                                           {CacheResult::NotFound, "notFound"},
+                                           {CacheResult::Failed, "failed"},
+                                           {CacheResult::GameRunning, "gameRunning"}})
+
+// A shader cache found by ScanCaches, see CacheCleaner
+struct CacheEntry
+{
+    // game, dxvk, prefix (Mesa/NVIDIA cache in the Wine prefix) or user (Mesa/NVIDIA cache shared by all programs)
+    std::string kind;
+    std::string path;
+    std::uint64_t bytes = 0;
+    // Of the last ClearCaches
+    CacheResult result = CacheResult::None;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CacheEntry, kind, path, bytes, result)
+
+struct Caches
+{
+    // Scanning or deleting
+    bool busy = false;
+    // A scan finished, so entries is the current list
+    bool scanned = false;
+    std::vector<CacheEntry> entries;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Caches, busy, scanned, entries)
+
+enum class CheckStatus
+{
+    Info,
+    Ok,
+    Warning,
+    Error
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(CheckStatus,
+                             {{CheckStatus::Info, "info"}, {CheckStatus::Ok, "ok"}, {CheckStatus::Warning, "warning"}, {CheckStatus::Error, "error"}})
+
+// One result of RunDiagnostics, see Diagnostics. The UI words it by id; detail holds paths (home shown as ~) or values.
+struct DiagnosticCheck
+{
+    // system, launcher, catalogue, rsiLauncher, winePrefix, starter; per channel: folder, writable, translation,
+    // userCfg, diskSpace
+    std::string id;
+    // Empty unless the check belongs to a game channel
+    std::string channel;
+    CheckStatus status = CheckStatus::Info;
+    std::string detail;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DiagnosticCheck, id, channel, status, detail)
+
+struct Diagnostics
+{
+    bool busy = false;
+    std::vector<DiagnosticCheck> checks;
+    // Written by SaveReport; empty until then
+    std::string reportPath;
+    // Why the report could not be written
+    std::string error;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Diagnostics, busy, checks, reportPath, error)
+
+// A profile backup of a game channel, see ProfileBackup
+struct BackupEntry
+{
+    std::string channel;
+    // File name, e.g. LIVE-20261024-203000.zip; also tells the time
+    std::string name;
+    std::uint64_t bytes = 0;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(BackupEntry, channel, name, bytes)
+
+struct Backups
+{
+    bool busy = false;
+    // Newest first, all channels
+    std::vector<BackupEntry> entries;
+    // Of the last CreateBackup or RestoreBackup: "created" or "restored", or an error such as "Star Citizen is running"
+    std::string result;
+    std::string resultChannel;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Backups, busy, entries, result, resultChannel)
+
 struct State
 {
     // All known languages in display order, ENGLISH first
@@ -195,9 +312,18 @@ struct State
     UpdateStatus update = UpdateStatus::Idle;
     GameStart game = GameStart::Idle;
     bool searching = false;
+    // The sources are asked at start whether the translations changed; channel statuses are final once this is false
+    bool checking = false;
     SelfUpdate selfUpdate;
+    // Commands handled so far; a client that counts what it sent knows when its last command was answered
+    std::uint64_t handledCommands = 0;
+    WhatsNew whatsNew;
+    Caches caches;
+    Diagnostics diagnostics;
+    Backups backups;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, selfUpdate)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
+                                                handledCommands, whatsNew, caches, diagnostics, backups)
 
 }  // namespace Protocol

@@ -27,6 +27,17 @@ class UpdateManager
    public:
     using GameProcess = Database::GameProcess;
 
+    // The wine prefix is the folder that contains drive_c
+    static std::optional<std::filesystem::path> findWinePrefix (std::filesystem::path path)
+    {
+        while(!path.empty() && path != path.root_path())
+        {
+            if(std::filesystem::is_directory(path / "drive_c")) return path;
+            path = path.parent_path();
+        }
+        return std::nullopt;
+    }
+
    private:
     LoggerFramework::LogEx lg;
     const std::atomic<bool>& shuttingDown;
@@ -250,17 +261,6 @@ class UpdateManager
         Download download = downloadWithFallback(urls, targetDir / "global.ini", etag);
         if(!download.ok && std::filesystem::is_empty(targetDir, ec)) std::filesystem::remove(targetDir, ec);
         return download;
-    }
-
-    // The wine prefix is the folder that contains drive_c
-    static std::optional<std::filesystem::path> findWinePrefix (std::filesystem::path path)
-    {
-        while(!path.empty() && path != path.root_path())
-        {
-            if(std::filesystem::is_directory(path / "drive_c")) return path;
-            path = path.parent_path();
-        }
-        return std::nullopt;
     }
 
     static bool inFlatpak () { return std::filesystem::exists("/.flatpak-info"); }

@@ -13,10 +13,7 @@ inline std::filesystem::path getUserRootPath ()
 {
     const char* homeDir = std::getenv("HOME");
     if(homeDir && *homeDir != '\0')
-    {
-        std::cout << "Home directory: " << homeDir << "\n";
         return std::filesystem::path(homeDir);
-    }
     else
     {
         std::cerr << "HOME environment variable is not gesetzt oder leer!\n";
@@ -53,6 +50,7 @@ inline const std::string APP_DIR_NAME = "sc-localization-launcher";
 inline const std::filesystem::path ROOT = getExecutablePath();
 inline const std::filesystem::path CONFIG_USER = xdgDir("XDG_CONFIG_HOME", ".config") / APP_DIR_NAME;
 inline const std::filesystem::path CACHE_USER = xdgDir("XDG_CACHE_HOME", ".cache") / APP_DIR_NAME;
+inline const std::filesystem::path DATA_USER = xdgDir("XDG_DATA_HOME", ".local/share") / APP_DIR_NAME;
 inline const std::filesystem::path LOGPATH = std::filesystem::current_path();
 inline const std::filesystem::path LOGPATH_USER = xdgDir("XDG_STATE_HOME", ".local/state") / APP_DIR_NAME;
 // Used up to the rename to SC Localization Launcher, only read to migrate the settings

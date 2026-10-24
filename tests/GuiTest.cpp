@@ -1,3 +1,4 @@
+#include <QDir>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickItem>
@@ -31,10 +32,21 @@ class GuiTest : public QObject
     {
         // Popup contents hang below the window's root object, the rest below its content item.
         // Disabled buttons don't count: a click on one is lost, e.g. "Check again" while a check is running
+        auto matches = [&text] (QQuickItem* item)
+        { return item->inherits("QQuickAbstractButton") && item->isVisible() && item->isEnabled() && item->property("text") == text; };
         for(QObject* root : {static_cast<QObject*>(window->contentItem()), engine->rootObjects().first()})
             for(auto* item : root->findChildren<QQuickItem*>())
-                if(item->inherits("QQuickAbstractButton") && item->isVisible() && item->isEnabled() && item->property("text") == text) return item;
-        return nullptr;
+                if(matches(item)) return item;
+        // Items made by a Repeater are no QObject children; walk the visual tree as well
+        std::function<QQuickItem*(QQuickItem*)> walk = [&] (QQuickItem* item) -> QQuickItem*
+        {
+            if(!item->isVisible()) return nullptr;
+            if(matches(item)) return item;
+            for(auto* child : item->childItems())
+                if(auto* found = walk(child)) return found;
+            return nullptr;
+        };
+        return walk(window->contentItem());
     }
 
     // Not inside QTRY_*: those evaluate their expression once more after it succeeded, which would click twice
@@ -103,6 +115,7 @@ class GuiTest : public QObject
     void initTestCase ()
     {
         LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>());
+        watchOwnTestPrograms();
         qputenv("SC_LANGUAGES_URL", server.url("/languages.json").toUtf8());
         qputenv("SC_RELEASES_URL", server.url("/releases/latest").toUtf8());
         qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
@@ -110,6 +123,9 @@ class GuiTest : public QObject
         resetUserDir();
         // Starts with the game launch switched on, the first test turns it off before any update runs
         writeSettingsFile(legacySettings(liveDir.path().toStdString(), "eng", true), PATHS::JSON_FILES::SETTINGS_LEGACY);
+        // The settings come from a version before release notes were shown, so the window opens with those of 0.6.0
+        nlohmann::json releases = nlohmann::json::array({{{"tag_name", "v0.6.0"}, {"body", "- Notes of this version"}}});
+        server.setFile("/releases", QByteArray::fromStdString(releases.dump()));
 
         bridge = std::make_unique<BackendBridge>();
         engine = std::make_unique<QQmlApplicationEngine>();
@@ -131,7 +147,7 @@ class GuiTest : public QObject
     // A failed test may leave a modal dialog open, which would swallow the clicks of the next test
     void cleanup ()
     {
-        for(const char* name : {"launcherUpdateDialog", "customSourceDialog"})
+        for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog", "backupDialog"})
         {
             auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
             if(!dialog || !dialog->property("visible").toBool()) continue;
@@ -139,6 +155,18 @@ class GuiTest : public QObject
             QTRY_VERIFY(!dialog->property("visible").toBool());
         }
         qunsetenv("APPIMAGE");
+    }
+
+    void showsWhatsNewOnceAtStart ()
+    {
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("whatsNewDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_VERIFY(findText("What's new in version 0.6.0"));
+        QVERIFY(clickButton("OK"));
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        QTRY_COMPARE(QString::fromStdString(readSettingsFile().value("lastSeenVersion", "")), QString("0.6.0"));
+        QVERIFY(bridge->state()["whatsNew"].toMap()["version"].toString().isEmpty());
     }
 
     void toggleShowsBackendState ()
@@ -362,6 +390,138 @@ class GuiTest : public QObject
         QTRY_COMPARE_WITH_TIMEOUT(QByteArray::fromStdString(readFile(ini)), TRANSLATION, 30000);
         // The file is written before the update reports back; until then the channel rows stay locked
         QTRY_COMPARE(bridge->state()["update"].toString(), QString("succeeded"));
+    }
+
+    // The offscreen platform has no system tray, like GNOME without the AppIndicator extension
+    void closeToTrayNeedsATray ()
+    {
+        QObject* root = engine->rootObjects().first();
+        QVERIFY(!root->findChild<QObject*>("settingsPanel")->property("trayAvailable").toBool());
+        bridge->setOption("closeToTray", true);
+        QTRY_VERIFY(bridge->state()["options"].toMap()["closeToTray"].toBool());
+        // Closing must still quit, or the window would be gone with no icon to bring it back
+        QVERIFY(!root->property("closesToTray").toBool());
+        QVERIFY(!findText("Keep running in the system tray"));
+        bridge->setOption("closeToTray", false);
+        QTRY_VERIFY(!bridge->state()["options"].toMap()["closeToTray"].toBool());
+    }
+
+    void trayStatusFollowsTheChannels ()
+    {
+        QObject* root = engine->rootObjects().first();
+        auto expected = [this]
+        {
+            QString status = "ok";
+            for(const auto& c : bridge->state()["channels"].toList())
+            {
+                QString s = c.toMap()["status"].toString();
+                if(c.toMap()["installPath"].toString().isEmpty()) continue;
+                if(s == "damaged" || s == "failed") return QString("error");
+                if(s == "notInstalled" || s == "updateAvailable") status = "pending";
+            }
+            return status;
+        };
+        QTRY_COMPARE(root->property("overallStatus").toString(), expected());
+        QVERIFY(QFile::exists(":/tray/" + root->property("overallStatus").toString() + ".png"));
+    }
+
+    void clearsCachesFromTheSettings ()
+    {
+        // LIVE points to liveDir; a DXVK cache there is the only cache this test has
+        QString cache = liveDir.filePath("StarCitizen.dxvk-cache");
+        QVERIFY(QFile(cache).open(QIODevice::WriteOnly));
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        // The button sits below the visible part of the panel; its signal is what it would send
+        QMetaObject::invokeMethod(panel, "cacheCleanerRequested");
+
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("cacheDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_VERIFY(findText("DXVK/VKD3D cache"));
+        QTRY_VERIFY(findButton("Delete 1 KB"));
+        QVERIFY(clickButton("Delete 1 KB"));
+        QTRY_VERIFY(!QFile::exists(cache));
+        QTRY_VERIFY(findText("Deleted"));
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        // Its backdrop would catch the next test's clicks until it has slid out
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    void savesAReportFromTheSettings ()
+    {
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        // Like the cache cleaner, the button sits below the visible part of the panel
+        QMetaObject::invokeMethod(panel, "diagnosticsRequested");
+
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("diagnosticsDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_VERIFY(findText("LIVE · Game folder"));
+        QTRY_VERIFY(findButton("Save report (ZIP)"));
+        QVERIFY(clickButton("Save report (ZIP)"));
+        QTRY_VERIFY(!bridge->state()["diagnostics"].toMap()["reportPath"].toString().isEmpty());
+        QString report = bridge->state()["diagnostics"].toMap()["reportPath"].toString();
+        QVERIFY(QFile::exists(report));
+        // Not clicked: it would open the file manager
+        QTRY_VERIFY(findButton("Show in folder"));
+        QFile::remove(report);
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    void backsUpAndRestoresFromTheSettings ()
+    {
+        QDir(liveDir.path()).mkpath("user/client/0/Profiles/default");
+        QString actionmaps = liveDir.filePath("user/client/0/Profiles/default/actionmaps.xml");
+        auto write = [] (const QString& file, const QByteArray& content)
+        {
+            QFile out(file);
+            QVERIFY(out.open(QIODevice::WriteOnly | QIODevice::Truncate));
+            out.write(content);
+        };
+        write(actionmaps, "<ActionMaps version=\"1\"/>");
+
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        // The button sits below the visible part of the panel
+        QMetaObject::invokeMethod(panel, "backupsRequested");
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("backupDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_VERIFY(findButton("Back up LIVE"));
+        // Rows made by a Repeater are laid out on the next polish; a grab runs it, so the click hits their final place
+        window->grabWindow();
+        QVERIFY(clickButton("Back up LIVE"));
+        QTRY_VERIFY(findText("Backup saved."));
+
+        write(actionmaps, "<ActionMaps version=\"2\"/>");
+        QTRY_VERIFY(findButton("Restore"));
+        window->grabWindow();
+        QVERIFY(clickButton("Restore"));
+        // Nothing happens before the confirmation
+        QTRY_VERIFY(findButton("Restore now"));
+        {
+            QFile unchanged(actionmaps);
+            QVERIFY(unchanged.open(QIODevice::ReadOnly));
+            QCOMPARE(unchanged.readAll(), QByteArray("<ActionMaps version=\"2\"/>"));
+        }
+        window->grabWindow();
+        QVERIFY(clickButton("Restore now"));
+        QTRY_VERIFY(findText("Backup restored. The files it replaced were backed up first."));
+        QFile restored(actionmaps);
+        QVERIFY(restored.open(QIODevice::ReadOnly));
+        QCOMPARE(restored.readAll(), QByteArray("<ActionMaps version=\"1\"/>"));
+
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
     }
 
     void ownSourceThroughTheDialog ()

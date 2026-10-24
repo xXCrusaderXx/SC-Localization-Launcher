@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <set>
 #include <thread>
 
 #include "UpdateSigningKey.hpp"
@@ -12,6 +13,9 @@
 #include "jsonParser/LanguageCatalogParser.hpp"
 #include "jsonParser/SettingsJsonParser.hpp"
 #include "logging/logging.h"
+#include "managers/CacheCleaner.hpp"
+#include "managers/Diagnostics.hpp"
+#include "managers/ProfileBackup.hpp"
 #include "managers/SelfUpdateManager.hpp"
 #include "managers/UpdateManager.hpp"
 #include "protocol/Commands.hpp"
@@ -35,6 +39,9 @@ class BackEnd
     UpdateManager updateManager;
     SelfUpdateManager selfUpdateManager;
     DirectoryFinder directoryFinder;
+    CacheCleaner cacheCleaner;
+    Diagnostics diagnostics;
+    ProfileBackup profileBackup;
     StateCallback stateCallback;
 
     std::thread languagesJob;
@@ -44,6 +51,11 @@ class BackEnd
     std::thread selfUpdateJob;
     std::thread gameJob;
     std::thread gameWatchJob;
+    std::thread checkTimerJob;
+    std::thread whatsNewJob;
+    std::thread cacheJob;
+    std::thread diagnosticsJob;
+    std::thread backupJob;
 
     // Declared last: its thread uses all members above
     TaskQueue queue;
@@ -175,8 +187,13 @@ class BackEnd
             if(isAvailable(name, channel.language)) urls[name] = language->urls.at(name);
             if(channel.installed.language == channel.language) installed[name] = {channel.installPath, language->folder, channel.installed.fileHash};
         }
-        if(checkedLanguage.empty()) return;
+        if(checkedLanguage.empty())
+        {
+            data.checking = false;
+            return;
+        }
 
+        data.checking = true;
         startJob(versionCheckJob,
                  [this, urls, installed, checkedLanguage]
                  {
@@ -195,9 +212,45 @@ class BackEnd
                                  if(etags.contains(name)) channel.remoteEtag = etags.at(name);
                                  if(damaged.contains(name)) channel.damaged = damaged.at(name);
                              }
+                             data.checking = false;
                              publish();
+                             updateInBackground();
                          });
                  });
+    }
+
+    static std::chrono::seconds checkInterval ()
+    {
+#ifdef SC_TESTING
+        // Test builds only: a test cannot wait an hour
+        if(const char* seconds = std::getenv("SC_CHECK_INTERVAL_SECONDS")) return std::chrono::seconds(std::atoi(seconds));
+#endif
+        return std::chrono::hours(1);
+    }
+
+    // With the option on, installs what the last check found, unless the game reads the files right now;
+    // the game watcher checks again once it has been closed
+    void updateInBackground ()
+    {
+        if(!data.backgroundChecks || !data.options.installNewTranslations) return;
+        if(data.update == Protocol::UpdateStatus::Running || data.game == Protocol::GameStart::Starting) return;
+        bool pending = std::any_of(data.channels.begin(), data.channels.end(),
+                                   [this] (const auto& entry)
+                                   {
+                                       auto status = channelStatus(entry.first, entry.second);
+                                       // A failed channel is tried again with every check
+                                       return status == Protocol::ChannelStatus::NotInstalled || status == Protocol::ChannelStatus::UpdateAvailable ||
+                                              status == Protocol::ChannelStatus::Damaged || status == Protocol::ChannelStatus::Failed;
+                                   });
+        if(!pending) return;
+        if(gamePlaying())
+        {
+            LOG_INFO(lg) << "background update - waiting until Star Citizen has been closed";
+            return;
+        }
+        LOG_INFO(lg) << "background update";
+        handle(Protocol::StartUpdate{.allowGameStart = false});
+        publish();
     }
 
     // force: download even if the source reports "not modified", e.g. to repair a changed file
@@ -242,10 +295,12 @@ class BackEnd
     // Notices when the RSI Launcher or the game starts and quits, also when it was started without this launcher
     void watchGame ()
     {
+        // Known right away, so a command line update never starts while the game runs
+        data.gameProcess = UpdateManager::runningGameProcess();
+        data.game = gameStatus();
         startJob(gameWatchJob,
-                 [this]
+                 [this, seen = data.gameProcess] () mutable
                  {
-                     auto seen = Database::GameProcess::None;
                      while(!data.shuttingDown)
                      {
                          if(auto now = UpdateManager::runningGameProcess(); now != seen)
@@ -274,7 +329,10 @@ class BackEnd
 
     void gameProcessChanged (Database::GameProcess process)
     {
+        // A game update may have replaced the translation, and an update may have waited for the game to close
+        bool gameClosed = data.gameProcess == Database::GameProcess::Game && process != Database::GameProcess::Game;
         data.gameProcess = process;
+        if(gameClosed && data.backgroundChecks) checkChannels();
         // A start in progress decides itself whether the RSI Launcher keeps running; a failed start stays visible
         bool shownRunning = data.game == Protocol::GameStart::Running || data.game == Protocol::GameStart::Playing;
         if(data.game != Protocol::GameStart::Starting && (process != Database::GameProcess::None || shownRunning)) data.game = gameStatus();
@@ -354,7 +412,13 @@ class BackEnd
         state.update = data.update;
         state.game = data.game;
         state.searching = data.searching;
+        state.checking = data.checking;
+        state.handledCommands = data.handledCommands;
         state.selfUpdate = data.selfUpdate;
+        state.whatsNew = data.whatsNew;
+        state.caches = data.caches;
+        state.diagnostics = data.diagnostics;
+        state.backups = data.backups;
         return state;
     }
 
@@ -379,6 +443,7 @@ class BackEnd
         }
         data.rsiLauncherPath = file.rsiLauncherPath;
         data.options = file.options;
+        data.lastSeenVersion = file.lastSeenVersion;
         // Moves settings of the former SC Deutsch Launcher to the new location right away
         saveSettings();
     }
@@ -390,6 +455,7 @@ class BackEnd
             file.channels[name] = {channel.installPath.string(), channel.language, channel.installed, channel.custom};
         file.rsiLauncherPath = data.rsiLauncherPath.string();
         file.options = data.options;
+        file.lastSeenVersion = data.lastSeenVersion;
         settingsJsonParser.save(file);
     }
 
@@ -406,8 +472,9 @@ class BackEnd
                              // Channels only a source knows about (e.g. a new test channel) get a row too
                              for(const auto& language : data.languages)
                                  for(const auto& [channel, urls] : language.urls) data.channels[channel];
-                             publish();
+                             // Before publishing: without channels to ask, the check is done right here
                              checkChannels();
+                             publish();
                          });
                  });
     }
@@ -457,9 +524,11 @@ class BackEnd
         }
         options[command.option] = command.value;
         data.options = options.get<Protocol::Options>();
+        // Switched on: what the last check found is installed right away
+        if(command.option == "installNewTranslations" && command.value) updateInBackground();
     }
 
-    void handle (const Protocol::StartUpdate&)
+    void handle (const Protocol::StartUpdate& command)
     {
         if(data.update == Protocol::UpdateStatus::Running || data.game == Protocol::GameStart::Starting)
         {
@@ -476,14 +545,18 @@ class BackEnd
         // The jobs work on copies, the user may change settings while they run
         std::vector<UpdateManager::Job> jobs;
         for(const auto& [name, channel] : data.channels)
+        {
+            bool chosen = command.channels.empty() || std::find(command.channels.begin(), command.channels.end(), name) != command.channels.end();
+            if(!chosen) continue;
             if(auto job = makeUpdateJob(name, channel, false)) jobs.push_back(std::move(*job));
+        }
 
         if(jobs.empty())
         {
             LOG_DEBUG(lg) << "startUpdate - nothing to update";
             return;
         }
-        runUpdate(std::move(jobs), data.options.launchGameAfterUpdate);
+        runUpdate(std::move(jobs), command.allowGameStart && data.options.launchGameAfterUpdate);
     }
 
     void handle (const Protocol::StartGame&)
@@ -495,6 +568,26 @@ class BackEnd
             return;
         }
         startGame();
+    }
+
+    void handle (const Protocol::StartBackgroundChecks&)
+    {
+        if(data.backgroundChecks) return;
+        data.backgroundChecks = true;
+        // The first check runs when the languages have loaded; an earlier one has found something to install
+        if(!data.checking) updateInBackground();
+        startJob(checkTimerJob,
+                 [this, interval = checkInterval()]
+                 {
+                     auto next = std::chrono::steady_clock::now() + interval;
+                     while(!data.shuttingDown)
+                     {
+                         std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                         if(std::chrono::steady_clock::now() < next) continue;
+                         next += interval;
+                         queue.post([this] { checkChannels(); });
+                     }
+                 });
     }
 
     void handle (const Protocol::SetCustomSource& command)
@@ -627,6 +720,227 @@ class BackEnd
                  });
     }
 
+    void handle (const Protocol::LoadWhatsNew&)
+    {
+        const std::string current = data.selfUpdate.currentVersion;
+        const std::string since = data.lastSeenVersion;
+        if(!data.whatsNew.version.empty()) return;
+        if(since.empty())
+        {
+            // A new installation has nothing to catch up on; a launcher that is already set up came from a version
+            // before release notes were shown and gets the notes of this one
+            bool setUp = !data.rsiLauncherPath.empty() ||
+                         std::any_of(data.channels.begin(), data.channels.end(), [] (const auto& c) { return !c.second.installPath.empty(); });
+            if(!setUp)
+            {
+                data.lastSeenVersion = current;
+                return;
+            }
+        }
+        // Also after a downgrade or with a build from source, which is not a release
+        else if(!SelfUpdateManager::isNewer(current, since))
+            return;
+
+        startJob(whatsNewJob,
+                 [this, since, current]
+                 {
+                     auto notes = selfUpdateManager.notesSince(since, current);
+                     queue.post(
+                         [this, notes, current]
+                         {
+                             // Offline: asked again at the next start
+                             if(!notes) return;
+                             if(notes->empty())
+                             {
+                                 // No release with notes for this version, e.g. a test build
+                                 data.lastSeenVersion = current;
+                                 saveSettings();
+                             }
+                             else
+                                 data.whatsNew = {current, *notes};
+                             publish();
+                         });
+                 });
+    }
+
+    void handle (const Protocol::ScanCaches&)
+    {
+        if(data.caches.busy) return;
+        // Every configured channel folder and the Wine prefixes around them and the RSI Launcher
+        std::vector<std::filesystem::path> folders;
+        std::vector<std::filesystem::path> prefixes;
+        auto addPrefix = [&prefixes] (const std::filesystem::path& path)
+        {
+            if(path.empty()) return;
+            auto prefix = UpdateManager::findWinePrefix(path);
+            if(prefix && std::find(prefixes.begin(), prefixes.end(), *prefix) == prefixes.end()) prefixes.push_back(*prefix);
+        };
+        for(const auto& [name, channel] : data.channels)
+            if(!channel.installPath.empty())
+            {
+                folders.push_back(channel.installPath);
+                addPrefix(channel.installPath);
+            }
+        addPrefix(data.rsiLauncherPath);
+
+        data.caches.busy = true;
+        startJob(cacheJob,
+                 [this, folders, prefixes]
+                 {
+                     auto entries = cacheCleaner.find(prefixes, folders, data.shuttingDown);
+                     queue.post(
+                         [this, entries = std::move(entries)]
+                         {
+                             data.caches = {false, true, entries};
+                             publish();
+                         });
+                 });
+    }
+
+    void handle (const Protocol::ClearCaches& command)
+    {
+        if(data.caches.busy || !data.caches.scanned) return;
+        std::set<std::string> paths(command.paths.begin(), command.paths.end());
+        // The game reads its shader cache while it runs
+        if(gamePlaying())
+        {
+            for(auto& entry : data.caches.entries)
+                if(paths.contains(entry.path)) entry.result = Protocol::CacheResult::GameRunning;
+            return;
+        }
+
+        data.caches.busy = true;
+        startJob(cacheJob,
+                 [this, entries = data.caches.entries, paths] () mutable
+                 {
+                     cacheCleaner.clear(entries, paths, data.shuttingDown);
+                     queue.post(
+                         [this, entries = std::move(entries)]
+                         {
+                             data.caches.entries = entries;
+                             data.caches.busy = false;
+                             publish();
+                         });
+                 });
+    }
+
+    // Copies what the checks need, so they can run on their own thread
+    Diagnostics::Input diagnosticsInput () const
+    {
+        Diagnostics::Input input;
+        input.version = data.selfUpdate.currentVersion;
+        input.catalogueLoaded = !data.languages.empty();
+        input.rsiLauncherPath = data.rsiLauncherPath;
+        for(const auto& [name, channel] : data.channels)
+        {
+            if(channel.installPath.empty()) continue;
+            std::string folder;
+            if(channel.language != Protocol::ENGLISH)
+            {
+                auto language = languageFor(name, channel.language);
+                folder = language ? language->folder : channel.installed.folder;
+            }
+            input.channels.push_back({name, channel.installPath, folder, nlohmann::json(channelStatus(name, channel)).get<std::string>()});
+        }
+        SettingsFile file;
+        for(const auto& [name, channel] : data.channels)
+            file.channels[name] = {channel.installPath.string(), channel.language, channel.installed, channel.custom};
+        file.rsiLauncherPath = data.rsiLauncherPath.string();
+        file.options = data.options;
+        file.lastSeenVersion = data.lastSeenVersion;
+        input.settings = nlohmann::json(file).dump(2) + "\n";
+        return input;
+    }
+
+    // saveReport: also writes the ZIP
+    void runDiagnostics (bool saveReport)
+    {
+        if(data.diagnostics.busy) return;
+        data.diagnostics.busy = true;
+        data.diagnostics.reportPath.clear();
+        data.diagnostics.error.clear();
+        startJob(diagnosticsJob,
+                 [this, input = diagnosticsInput(), saveReport] () mutable
+                 {
+                     input.installType = SelfUpdateManager::detectInstallation().type;
+                     auto checks = diagnostics.run(input);
+                     std::optional<std::filesystem::path> report;
+                     if(saveReport) report = diagnostics.writeReport(input, checks, Diagnostics::reportFolder());
+                     queue.post(
+                         [this, checks = std::move(checks), report, saveReport]
+                         {
+                             data.diagnostics.checks = checks;
+                             data.diagnostics.busy = false;
+                             if(report) data.diagnostics.reportPath = report->string();
+                             if(saveReport && !report) data.diagnostics.error = "cannot write the report";
+                             publish();
+                         });
+                 });
+    }
+
+    void handle (const Protocol::RunDiagnostics&) { runDiagnostics(false); }
+    void handle (const Protocol::SaveReport&) { runDiagnostics(true); }
+
+    // Runs a backup job; `work` returns the result text, the list is read again afterwards
+    void backupJobFor (const std::string& channel, std::function<std::string()> work)
+    {
+        data.backups.busy = true;
+        data.backups.result.clear();
+        data.backups.resultChannel = channel;
+        startJob(backupJob,
+                 [this, work = std::move(work)]
+                 {
+                     std::string result = work ? work() : "";
+                     auto entries = profileBackup.list();
+                     queue.post(
+                         [this, result, entries]
+                         {
+                             data.backups.busy = false;
+                             data.backups.result = result;
+                             data.backups.entries = entries;
+                             // A restored user.cfg may select another language than the one installed
+                             if(result == "restored") checkChannels();
+                             publish();
+                         });
+                 });
+    }
+
+    void handle (const Protocol::LoadBackups&)
+    {
+        if(!data.backups.busy) backupJobFor("", nullptr);
+    }
+
+    void handle (const Protocol::CreateBackup& command)
+    {
+        auto* channel = findChannel(command.channel);
+        if(!channel || channel->installPath.empty() || data.backups.busy) return;
+        backupJobFor(command.channel, [this, name = command.channel, path = channel->installPath, version = data.selfUpdate.currentVersion]
+                     { return profileBackup.create(name, path, version) ? std::string("created") : std::string("nothing to back up"); });
+    }
+
+    void handle (const Protocol::RestoreBackup& command)
+    {
+        auto* channel = findChannel(command.channel);
+        if(!channel || channel->installPath.empty() || data.backups.busy) return;
+        // The game rewrites these files while it runs and when it quits
+        if(gamePlaying())
+        {
+            data.backups.result = "Star Citizen is running";
+            data.backups.resultChannel = command.channel;
+            return;
+        }
+        backupJobFor(command.channel,
+                     [this, name = command.channel, backup = command.backup, path = channel->installPath, version = data.selfUpdate.currentVersion]
+                     { return profileBackup.restore(name, backup, path, version).value_or("restored"); });
+    }
+
+    void handle (const Protocol::DismissWhatsNew&)
+    {
+        if(data.whatsNew.version.empty()) return;
+        data.lastSeenVersion = data.whatsNew.version;
+        data.whatsNew = {};
+    }
+
    public:
     // The callback is called on the backend thread
     // version: of this launcher, compared with the published releases
@@ -643,9 +957,9 @@ class BackEnd
             [this]
             {
                 loadSettings();
+                watchGame();
                 publish();
                 loadLanguages();
-                watchGame();
                 if(data.options.checkLauncherUpdatesAtStart) handle(Protocol::CheckForUpdate{});
             });
         LOG_DEBUG(lg) << "instanziated";
@@ -656,7 +970,8 @@ class BackEnd
         data.shuttingDown = true;
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
-        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob})
+        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob, &checkTimerJob,
+                         &whatsNewJob, &cacheJob, &diagnosticsJob, &backupJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }
@@ -669,6 +984,7 @@ class BackEnd
             {
                 LOG_DEBUG(lg) << "execute() - " << Protocol::toString(command);
                 std::visit([this] (const auto& c) { handle(c); }, command);
+                ++data.handledCommands;
                 saveSettings();
                 publish();
             });
