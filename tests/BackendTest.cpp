@@ -1039,6 +1039,70 @@ class BackendTest : public QObject
         QTemporaryDir folder;
         QCOMPARE(updateAndStartGame(folder.path().toStdString()), std::optional(GameStart::NoStarter));
     }
+
+    // LIVE with German chosen but not installed yet, then the option for automatic updates switched on,
+    // which installs right away when the window asked for background checks
+    bool chooseGermanWithAutomaticUpdates (const QTemporaryDir& game)
+    {
+        if(!start()) return false;
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        if(!setLanguage("LIVE", "de")) return false;
+        backEnd->execute(Protocol::SetOption{"installNewTranslations", true});
+        return true;
+    }
+
+    void updatesInTheBackground ()
+    {
+        QTemporaryDir game;
+        QVERIFY(chooseGermanWithAutomaticUpdates(game));
+        // Only what the window sends; nothing is installed before
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(latest().update, UpdateStatus::Idle);
+
+        backEnd->execute(Protocol::StartBackgroundChecks{});
+        QVERIFY(waitForState([] (const auto& s) { return s.update == UpdateStatus::Succeeded; }));
+        auto ini = std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini";
+        QCOMPARE(QByteArray::fromStdString(readFile(ini)), TRANSLATION);
+    }
+
+    void backgroundUpdateWaitsUntilTheGameIsClosed ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QProcess starCitizen;
+        // Named like the game under Wine (SC_GAME_PROGRAM in tests/CMakeLists.txt)
+        starCitizen.start("/bin/bash", {"-c", "exec -a 'C:\\Games\\StarCitizen\\LIVE\\Bin64\\StarCitizen Test.exe' sleep 30"});
+        QVERIFY(starCitizen.waitForStarted());
+        QTest::qWait(200);
+
+        QTemporaryDir game;
+        auto ini = std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini";
+        QVERIFY(chooseGermanWithAutomaticUpdates(game));
+        backEnd->execute(Protocol::StartBackgroundChecks{});
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(latest().game, GameStart::Playing);
+        QCOMPARE(latest().update, UpdateStatus::Idle);
+        QVERIFY(!std::filesystem::exists(ini));
+
+        starCitizen.kill();
+        starCitizen.waitForFinished();
+        QVERIFY(waitForState([] (const auto& s) { return s.update == UpdateStatus::Succeeded; }));
+        QCOMPARE(QByteArray::fromStdString(readFile(ini)), TRANSLATION);
+    }
+
+    void checksTheSourcesRegularly ()
+    {
+        qputenv("SC_CHECK_INTERVAL_SECONDS", "1");
+        QTemporaryDir game;
+        QVERIFY(installGerman(game));
+        backEnd->execute(Protocol::StartBackgroundChecks{});
+
+        // The project publishes a new version while the launcher is open; without the option it is only shown
+        server.setFile("/de.ini", TRANSLATION + "new_key=Neu\n");
+        bool shown = waitForState([] (const auto& s) { return channel(s, "LIVE").status == ChannelStatus::UpdateAvailable; }).has_value();
+        qunsetenv("SC_CHECK_INTERVAL_SECONDS");
+        QVERIFY(shown);
+        QCOMPARE(latest().update, UpdateStatus::Succeeded);
+    }
 };
 
 QTEST_GUILESS_MAIN(BackendTest)

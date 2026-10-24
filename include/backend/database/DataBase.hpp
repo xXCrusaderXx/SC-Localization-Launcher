@@ -141,6 +141,8 @@ struct BackendData
     bool searching = false;
     // Set from the start until the first check of the sources is done
     bool checking = true;
+    // The window asked for hourly checks and automatic updates (StartBackgroundChecks)
+    bool backgroundChecks = false;
     std::uint64_t handledCommands = 0;
     Protocol::SelfUpdate selfUpdate;
     // Set by the last check; what an installation of the launcher update needs

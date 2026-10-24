@@ -44,6 +44,7 @@ class BackEnd
     std::thread selfUpdateJob;
     std::thread gameJob;
     std::thread gameWatchJob;
+    std::thread checkTimerJob;
 
     // Declared last: its thread uses all members above
     TaskQueue queue;
@@ -181,6 +182,7 @@ class BackEnd
             return;
         }
 
+        data.checking = true;
         startJob(versionCheckJob,
                  [this, urls, installed, checkedLanguage]
                  {
@@ -201,8 +203,43 @@ class BackEnd
                              }
                              data.checking = false;
                              publish();
+                             updateInBackground();
                          });
                  });
+    }
+
+    static std::chrono::seconds checkInterval ()
+    {
+#ifdef SC_TESTING
+        // Test builds only: a test cannot wait an hour
+        if(const char* seconds = std::getenv("SC_CHECK_INTERVAL_SECONDS")) return std::chrono::seconds(std::atoi(seconds));
+#endif
+        return std::chrono::hours(1);
+    }
+
+    // With the option on, installs what the last check found, unless the game reads the files right now;
+    // the game watcher checks again once it has been closed
+    void updateInBackground ()
+    {
+        if(!data.backgroundChecks || !data.options.installNewTranslations) return;
+        if(data.update == Protocol::UpdateStatus::Running || data.game == Protocol::GameStart::Starting) return;
+        bool pending = std::any_of(data.channels.begin(), data.channels.end(),
+                                   [this] (const auto& entry)
+                                   {
+                                       auto status = channelStatus(entry.first, entry.second);
+                                       // A failed channel is tried again with every check
+                                       return status == Protocol::ChannelStatus::NotInstalled || status == Protocol::ChannelStatus::UpdateAvailable ||
+                                              status == Protocol::ChannelStatus::Damaged || status == Protocol::ChannelStatus::Failed;
+                                   });
+        if(!pending) return;
+        if(gamePlaying())
+        {
+            LOG_INFO(lg) << "background update - waiting until Star Citizen has been closed";
+            return;
+        }
+        LOG_INFO(lg) << "background update";
+        handle(Protocol::StartUpdate{.allowGameStart = false});
+        publish();
     }
 
     // force: download even if the source reports "not modified", e.g. to repair a changed file
@@ -281,7 +318,10 @@ class BackEnd
 
     void gameProcessChanged (Database::GameProcess process)
     {
+        // A game update may have replaced the translation, and an update may have waited for the game to close
+        bool gameClosed = data.gameProcess == Database::GameProcess::Game && process != Database::GameProcess::Game;
         data.gameProcess = process;
+        if(gameClosed && data.backgroundChecks) checkChannels();
         // A start in progress decides itself whether the RSI Launcher keeps running; a failed start stays visible
         bool shownRunning = data.game == Protocol::GameStart::Running || data.game == Protocol::GameStart::Playing;
         if(data.game != Protocol::GameStart::Starting && (process != Database::GameProcess::None || shownRunning)) data.game = gameStatus();
@@ -467,6 +507,8 @@ class BackEnd
         }
         options[command.option] = command.value;
         data.options = options.get<Protocol::Options>();
+        // Switched on: what the last check found is installed right away
+        if(command.option == "installNewTranslations" && command.value) updateInBackground();
     }
 
     void handle (const Protocol::StartUpdate& command)
@@ -509,6 +551,26 @@ class BackEnd
             return;
         }
         startGame();
+    }
+
+    void handle (const Protocol::StartBackgroundChecks&)
+    {
+        if(data.backgroundChecks) return;
+        data.backgroundChecks = true;
+        // The first check runs when the languages have loaded; an earlier one has found something to install
+        if(!data.checking) updateInBackground();
+        startJob(checkTimerJob,
+                 [this, interval = checkInterval()]
+                 {
+                     auto next = std::chrono::steady_clock::now() + interval;
+                     while(!data.shuttingDown)
+                     {
+                         std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                         if(std::chrono::steady_clock::now() < next) continue;
+                         next += interval;
+                         queue.post([this] { checkChannels(); });
+                     }
+                 });
     }
 
     void handle (const Protocol::SetCustomSource& command)
@@ -670,7 +732,7 @@ class BackEnd
         data.shuttingDown = true;
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
-        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob})
+        for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob, &checkTimerJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }

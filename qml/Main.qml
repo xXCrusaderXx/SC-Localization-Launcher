@@ -398,7 +398,7 @@ ApplicationWindow {
                             if (window.pendingUpdates > 0)
                                 return qsTr("%n channel(s) need an update", "", window.pendingUpdates);
                             if (window.gamePlaying)
-                                return qsTr("Star Citizen is running");
+                                return window.pendingUpdates > 0 && window.appState.options.installNewTranslations === true ? qsTr("Star Citizen is running – the update follows when it closes") : qsTr("Star Citizen is running");
                             if (window.gameRunning)
                                 return qsTr("RSI Launcher is running");
                             if (window.appState.update === "succeeded")

@@ -240,6 +240,10 @@
         <translation>Spiel kann nicht gestartet werden: Installiere es mit dem LUG Helper oder Lutris</translation>
     </message>
     <message>
+        <source>Star Citizen is running – the update follows when it closes</source>
+        <translation>Star Citizen läuft – das Update folgt, sobald es geschlossen ist</translation>
+    </message>
+    <message>
         <source>Translations updated</source>
         <translation>Übersetzungen aktualisiert</translation>
     </message>
@@ -335,6 +339,14 @@
     <message>
         <source>Starts through the LUG script or Lutris</source>
         <translation>Startet über das LUG-Skript oder Lutris</translation>
+    </message>
+    <message>
+        <source>Update translations automatically</source>
+        <translation>Übersetzungen automatisch aktualisieren</translation>
+    </message>
+    <message>
+        <source>Checks every hour and installs new versions; waits while Star Citizen runs</source>
+        <translation>Prüft stündlich und installiert neue Versionen; wartet, solange Star Citizen läuft</translation>
     </message>
     <message>
         <source>Check for launcher updates on start</source>
