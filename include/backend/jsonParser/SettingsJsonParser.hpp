@@ -20,9 +20,12 @@ struct ChannelSettings
     std::string language = Protocol::ENGLISH;
     Database::InstalledTranslation installed;
     Protocol::CustomSource custom;
+    Protocol::GameSettings gameSettings;
+    std::vector<std::string> managedKeys;
+    int64_t settingsWritten = 0;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelSettings, installPath, language, installed, custom)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelSettings, installPath, language, installed, custom, gameSettings, managedKeys, settingsWritten)
 
 struct SettingsFile
 {

@@ -353,6 +353,61 @@
     </message>
 </context>
 <context>
+    <name>GameSettingsDialog</name>
+    <message>
+        <source>Frame limits go from 1 to 1000; leave the field empty for the game&apos;s default.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not saved – this line is no &quot;key = value&quot; or sets something the launcher manages itself: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Star Citizen ignored these settings at its last start (not whitelisted): %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Star Citizen accepted these settings at its last start.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Takes effect at the next game start; afterwards the launcher shows whether Star Citizen accepted it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Game settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Written into user.cfg of the channel. Other lines of the file stay as they are.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Frame limit (FPS)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>game default</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Frame limit in menus (FPS)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Own lines (&quot;key = value&quot;, one per line)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>LanguagePicker</name>
     <message>
         <source>%1 (not available)</source>
@@ -695,6 +750,14 @@
     </message>
     <message>
         <source>Backups …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Frame limits and own lines in user.cfg per channel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Game settings …</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

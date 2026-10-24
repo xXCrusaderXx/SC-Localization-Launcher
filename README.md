@@ -25,6 +25,7 @@ What comes next — item values, blueprints, tray and background updates, backup
 - Clears shader caches (Settings → Tools): the game's own cache in the Wine prefix, DXVK/VKD3D, and the Mesa and NVIDIA caches, with the size and the result per entry. Graphics settings are kept, and nothing is deleted while Star Citizen runs.
 - Checks the installation without changing anything (Settings → Help → "Check installation …"): Wine prefix, folders, write permissions, `global.ini` and `user.cfg` per channel, free disk space. "Save report (ZIP)" puts the results, the settings and the launcher's logs into your Downloads folder for a bug report, with your home folder and user name replaced; `Game.log` is not included.
 - Backs up keybindings, profile settings, saved characters and `user.cfg` per channel (Settings → Tools → "Backups …") and restores them after asking once; a restore first backs up what it replaces, and nothing is restored while Star Citizen runs. The newest 10 backups per channel are kept in `~/.local/share/sc-localization-launcher/backups`.
+- Sets the frame limit (in game and in menus) and your own `key = value` lines in a channel's `user.cfg` (Settings → Tools → "Game settings …"). Every other line of `user.cfg` stays byte for byte, the language lines included. After the next game start the launcher reads `Game.log` and shows which of these settings Star Citizen ignored because they are not whitelisted.
 - The interface follows your system language (English and German).
 
 Planned, not available yet: starting with the system, and a progress view.
