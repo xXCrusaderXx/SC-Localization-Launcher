@@ -141,6 +141,15 @@ Item {
                     Toggle {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
+                        text: qsTr("Update translations automatically")
+                        description: qsTr("Checks every hour and installs new versions; waits while Star Citizen runs")
+                        checked: panel.options.installNewTranslations === true
+                        onSwitched: on => backend.setOption("installNewTranslations", on)
+                    }
+
+                    Toggle {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
                         text: qsTr("Check for launcher updates on start")
                         description: qsTr("Asks GitHub for a newer version of this launcher")
                         checked: panel.options.checkLauncherUpdatesAtStart === true

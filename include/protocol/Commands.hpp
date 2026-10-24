@@ -54,6 +54,13 @@ struct StartGame
     static constexpr const char* name = "startGame";
 };
 
+// Sent by the window, never by the command line: checks the sources every hour and, with the option
+// installNewTranslations, installs what changed (after Star Citizen has been closed, if it runs)
+struct StartBackgroundChecks
+{
+    static constexpr const char* name = "startBackgroundChecks";
+};
+
 struct AutoSearch
 {
     static constexpr const char* name = "autoSearch";
@@ -97,11 +104,12 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RepairChannel, channel)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetCustomSource, channel, url, folder)
 inline void to_json (nlohmann::json& j, const StartGame&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const AutoSearch&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const StartBackgroundChecks&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const CheckForUpdate&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const InstallUpdate&) { j = nlohmann::json::object(); }
 
 using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
-                             InstallUpdate, RepairChannel, SetCustomSource>;
+                             InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

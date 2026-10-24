@@ -251,6 +251,10 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Star Citizen is running – the update follows when it closes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Translations updated</source>
         <translation type="unfinished"></translation>
     </message>
@@ -334,6 +338,14 @@
     </message>
     <message>
         <source>Starts through the LUG script or Lutris</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Update translations automatically</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Checks every hour and installs new versions; waits while Star Citizen runs</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
