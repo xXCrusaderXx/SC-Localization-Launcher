@@ -99,10 +99,12 @@ struct Options
     bool showUpdateProgress = false;
     // Asks GitHub for a newer launcher version at start
     bool checkLauncherUpdatesAtStart = false;
+    // Closing the window keeps the launcher in the system tray, so the background checks go on; only with a tray
+    bool closeToTray = false;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Options, launchGameAfterUpdate, updateAtStart, installNewTranslations, minimizeAfterUpdate,
-                                                startWithSystem, showUpdateProgress, checkLauncherUpdatesAtStart)
+                                                startWithSystem, showUpdateProgress, checkLauncherUpdatesAtStart, closeToTray)
 
 enum class ChannelStatus
 {

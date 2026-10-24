@@ -1,4 +1,4 @@
-#include <QGuiApplication>
+#include <QApplication>
 #include <QIcon>
 #include <QLocale>
 #include <QQmlApplicationEngine>
@@ -28,7 +28,9 @@ int main (int argc, char *argv[])
 
     LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>());
 
-    QGuiApplication app(argc, argv);
+    // QApplication, not QGuiApplication: platform themes create the tray icon (Qt.labs.platform) with widgets,
+    // the KDE theme aborts without it
+    QApplication app(argc, argv);
     app.setWindowIcon(QIcon(":/logo.png"));
     app.setApplicationVersion(SC_VERSION);
     // Lets Wayland compositors match the window to the installed .desktop file and its icon

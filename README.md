@@ -21,9 +21,10 @@ What comes next — item values, blueprints, tray and background updates, backup
 - Keeps working offline with the last known channel list.
 - Checks and updates from the command line, e.g. from a `systemd --user` timer, without opening a window.
 - Checks for new translation versions every hour while it is open. With "Update translations automatically" it installs them, and waits until Star Citizen has been closed if the game runs.
+- Shows the overall status as a coloured light in the system tray, with "Update translations" and "Open" in its menu. With "Keep running in the system tray", closing the window leaves the launcher running there. Desktops without a tray (GNOME without the AppIndicator extension) simply don't show it.
 - The interface follows your system language (English and German).
 
-Planned, not available yet: minimising to the tray, starting with the system, and a progress view.
+Planned, not available yet: starting with the system, and a progress view.
 
 The translation texts are maintained by community projects such as [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI). Report wrong or missing texts there, not here.
 

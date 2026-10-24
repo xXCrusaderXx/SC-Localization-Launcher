@@ -2,5 +2,9 @@
   <qresource prefix="/">
     <file>logo.png</file>
     <file>background2_main.png</file>
+    <file>tray/ok.png</file>
+    <file>tray/pending.png</file>
+    <file>tray/error.png</file>
+    <file>tray/idle.png</file>
   </qresource>
 </RCC>
