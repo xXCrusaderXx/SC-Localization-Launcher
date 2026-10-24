@@ -20,9 +20,10 @@ What comes next — item values, blueprints, tray and background updates, backup
 - Optionally starts Star Citizen after the update, through the LUG Helper's `sc-launch.sh` or Lutris.
 - Keeps working offline with the last known channel list.
 - Checks and updates from the command line, e.g. from a `systemd --user` timer, without opening a window.
+- Checks for new translation versions every hour while it is open. With "Update translations automatically" it installs them, and waits until Star Citizen has been closed if the game runs.
 - The interface follows your system language (English and German).
 
-Planned, not available yet: updating automatically at start or in the background, minimising to the tray, starting with the system, and a progress view. They appear as **BALD** (soon) in the settings.
+Planned, not available yet: minimising to the tray, starting with the system, and a progress view.
 
 The translation texts are maintained by community projects such as [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI). Report wrong or missing texts there, not here.
 

@@ -92,6 +92,7 @@ struct Options
 {
     bool launchGameAfterUpdate = false;
     bool updateAtStart = false;
+    // Installs new translation versions found by the background check, see StartBackgroundChecks
     bool installNewTranslations = false;
     bool minimizeAfterUpdate = false;
     bool startWithSystem = false;

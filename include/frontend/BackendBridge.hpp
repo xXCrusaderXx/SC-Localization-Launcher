@@ -55,6 +55,8 @@ class BackendBridge : public QObject
               // Set by main() from the CMake project version
               QCoreApplication::applicationVersion().toStdString())
     {
+        // Only the window checks in the background; the command line changes nothing on its own
+        backEnd.execute(Protocol::StartBackgroundChecks{});
     }
 
     QVariantMap state () const { return currentState; }
