@@ -164,7 +164,8 @@ class BackEnd
         if(channel.installed.language != channel.language) return ChannelStatus::UpdateAvailable;
         if(channel.damaged) return ChannelStatus::Damaged;
         // Switched on or off since the file was installed
-        if(data.options.itemNameDetails != !channel.installed.itemValues.empty()) return ChannelStatus::UpdateAvailable;
+        if(ItemValues::kinds(data.options.itemNameDetails, data.options.itemDescriptionStats) != ItemValues::kindsOf(channel.installed.itemValues))
+            return ChannelStatus::UpdateAvailable;
         if(!channel.remoteEtag.empty() && channel.remoteEtag != channel.installed.etag) return ChannelStatus::UpdateAvailable;
         return ChannelStatus::Installed;
     }
@@ -348,18 +349,18 @@ class BackEnd
 
     // Runs in the update job: one plan per language, and a file whose values change is downloaded again instead of
     // reused, so values are only ever added to a file as downloaded
-    void prepareItemValues (std::vector<UpdateManager::Job>& jobs, bool nameDetails)
+    void prepareItemValues (std::vector<UpdateManager::Job>& jobs, bool names, bool stats)
     {
         std::map<std::string, std::shared_ptr<const ItemValues::Plan>> plans;
         for(auto& job : jobs)
         {
             if(job.folder.empty()) continue;
             std::shared_ptr<const ItemValues::Plan> plan;
-            if(nameDetails)
+            if(names || stats)
             {
                 if(!plans.contains(job.language))
                 {
-                    auto built = itemValues.build(job.language);
+                    auto built = itemValues.build(job.language, names, stats);
                     plans[job.language] = built ? std::make_shared<const ItemValues::Plan>(std::move(*built)) : nullptr;
                 }
                 plan = plans[job.language];
@@ -377,9 +378,9 @@ class BackEnd
         // A repair may run while the RSI Launcher is still starting; that start reports its own result
         if(data.game != Protocol::GameStart::Starting) data.game = Protocol::GameStart::Idle;
         startJob(updateJob,
-                 [this, jobs, launchGame, nameDetails = data.options.itemNameDetails] () mutable
+                 [this, jobs, launchGame, names = data.options.itemNameDetails, stats = data.options.itemDescriptionStats] () mutable
                  {
-                     prepareItemValues(jobs, nameDetails);
+                     prepareItemValues(jobs, names, stats);
                      auto results = updateManager.update(jobs);
                      queue.post(
                          [this, results, launchGame, jobCount = jobs.size()]
@@ -556,7 +557,9 @@ class BackEnd
         options[command.option] = command.value;
         data.options = options.get<Protocol::Options>();
         // Switched on: what the last check found is installed right away
-        if((command.option == "installNewTranslations" && command.value) || command.option == "itemNameDetails") updateInBackground();
+        if((command.option == "installNewTranslations" && command.value) || command.option == "itemNameDetails" ||
+           command.option == "itemDescriptionStats")
+            updateInBackground();
     }
 
     void handle (const Protocol::StartUpdate& command)

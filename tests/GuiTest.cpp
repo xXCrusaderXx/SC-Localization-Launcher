@@ -285,6 +285,7 @@ class GuiTest : public QObject
         QVERIFY(click("⚙"));
         QTRY_VERIFY(panel->property("open").toBool());
         QTRY_VERIFY(findText("Add size, class and grade to item names"));
+        QVERIFY(findText("Add item values to descriptions"));
         // Credited next to the translations, with its licence
         QVERIFY(findText("Item values"));
         QVERIFY(findText("License: <a href=\"https://creativecommons.org/licenses/by-nc-sa/4.0/\">CC BY-NC-SA 4.0</a>"));

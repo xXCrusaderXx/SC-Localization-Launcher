@@ -175,6 +175,15 @@ Item {
                     Toggle {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
+                        text: qsTr("Add item values to descriptions")
+                        description: qsTr("e.g. \"HP 100,000 · Regen 19,000/s\" for shields, from the Star Citizen Wiki; applies with the next update")
+                        checked: panel.options.itemDescriptionStats === true
+                        onSwitched: on => backend.setOption("itemDescriptionStats", on)
+                    }
+
+                    Toggle {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
                         text: qsTr("Check for launcher updates on start")
                         description: qsTr("Asks GitHub for a newer version of this launcher")
                         checked: panel.options.checkLauncherUpdatesAtStart === true
