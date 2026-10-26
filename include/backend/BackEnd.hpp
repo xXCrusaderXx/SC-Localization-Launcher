@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <functional>
 #include <set>
 #include <thread>
@@ -15,6 +16,7 @@
 #include "logging/logging.h"
 #include "managers/CacheCleaner.hpp"
 #include "managers/Diagnostics.hpp"
+#include "managers/GameSettings.hpp"
 #include "managers/ProfileBackup.hpp"
 #include "managers/SelfUpdateManager.hpp"
 #include "managers/UpdateManager.hpp"
@@ -338,6 +340,7 @@ class BackEnd
         // A game update may have replaced the translation, and an update may have waited for the game to close
         bool gameClosed = data.gameProcess == Database::GameProcess::Game && process != Database::GameProcess::Game;
         data.gameProcess = process;
+        if(gameClosed) checkGameSettings();
         if(gameClosed && data.backgroundChecks) checkChannels();
         // A start in progress decides itself whether the RSI Launcher keeps running; a failed start stays visible
         bool shownRunning = data.game == Protocol::GameStart::Running || data.game == Protocol::GameStart::Playing;
@@ -436,7 +439,8 @@ class BackEnd
         {
             const auto& channel = data.channels.at(name);
             state.channels.push_back({name, channel.installPath.string(), channel.language, availableLanguages(name), channelStatus(name, channel),
-                                      notices(name), channel.custom});
+                                      notices(name), channel.custom, channel.gameSettings, channel.settingsChecked, channel.ignoredSettings,
+                                      channel.settingsError});
         }
 
         state.rsiLauncherPath = data.rsiLauncherPath.string();
@@ -472,23 +476,52 @@ class BackEnd
             data.channels[name].language = settings.language;
             data.channels[name].installed = settings.installed;
             data.channels[name].custom = settings.custom;
+            data.channels[name].gameSettings = settings.gameSettings;
+            data.channels[name].managedKeys = settings.managedKeys;
+            data.channels[name].settingsWritten = settings.settingsWritten;
         }
         data.rsiLauncherPath = file.rsiLauncherPath;
         data.options = file.options;
         data.lastSeenVersion = file.lastSeenVersion;
         // Moves settings of the former SC Deutsch Launcher to the new location right away
         saveSettings();
+        checkGameSettings();
     }
 
-    void saveSettings ()
+    SettingsFile settingsFile () const
     {
         SettingsFile file;
         for(const auto& [name, channel] : data.channels)
-            file.channels[name] = {channel.installPath.string(), channel.language, channel.installed, channel.custom};
+            file.channels[name] = {channel.installPath.string(), channel.language,    channel.installed,      channel.custom,
+                                   channel.gameSettings,         channel.managedKeys, channel.settingsWritten};
         file.rsiLauncherPath = data.rsiLauncherPath.string();
         file.options = data.options;
         file.lastSeenVersion = data.lastSeenVersion;
-        settingsJsonParser.save(file);
+        return file;
+    }
+
+    void saveSettings () { settingsJsonParser.save(settingsFile()); }
+
+    // Reads Game.log of every channel with own settings: once the game started after they were written, it tells which
+    // of them it ignored. Game.log is rewritten at every game start.
+    void checkGameSettings ()
+    {
+        for(auto& [name, channel] : data.channels)
+        {
+            if(channel.installPath.empty() || channel.managedKeys.empty()) continue;
+            std::error_code ec;
+            auto log = channel.installPath / "Game.log";
+            auto modified = std::filesystem::last_write_time(log, ec);
+            if(ec) continue;
+            // file_clock::to_sys, not clock_cast: GCC 12 (Debian 12) lacks the latter for file_clock
+            auto seconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::file_clock::to_sys(modified).time_since_epoch()).count();
+            if(seconds <= channel.settingsWritten) continue;
+            auto ignored = GameSettings::notWhitelisted(log);
+            channel.ignoredSettings.clear();
+            for(const auto& key : channel.managedKeys)
+                if(ignored.contains(key)) channel.ignoredSettings.push_back(key);
+            channel.settingsChecked = true;
+        }
     }
 
     void loadLanguages ()
@@ -878,13 +911,7 @@ class BackEnd
             }
             input.channels.push_back({name, channel.installPath, folder, nlohmann::json(channelStatus(name, channel)).get<std::string>()});
         }
-        SettingsFile file;
-        for(const auto& [name, channel] : data.channels)
-            file.channels[name] = {channel.installPath.string(), channel.language, channel.installed, channel.custom};
-        file.rsiLauncherPath = data.rsiLauncherPath.string();
-        file.options = data.options;
-        file.lastSeenVersion = data.lastSeenVersion;
-        input.settings = nlohmann::json(file).dump(2) + "\n";
+        input.settings = nlohmann::json(settingsFile()).dump(2) + "\n";
         return input;
     }
 
@@ -939,6 +966,36 @@ class BackEnd
                              publish();
                          });
                  });
+    }
+
+    void handle (const Protocol::SetGameSettings& command)
+    {
+        auto* channel = findChannel(command.channel);
+        if(!channel) return;
+        channel->settingsError.clear();
+        std::string error;
+        auto lines = GameSettings::linesOf(command.settings, error);
+        if(!lines)
+        {
+            channel->settingsError = error;
+            return;
+        }
+        if(channel->installPath.empty())
+        {
+            channel->settingsError = "no game folder";
+            return;
+        }
+        auto keys = GameSettings::apply(channel->installPath / "user.cfg", *lines, channel->managedKeys);
+        if(!keys)
+        {
+            channel->settingsError = "cannot write user.cfg";
+            return;
+        }
+        channel->gameSettings = command.settings;
+        channel->managedKeys = *keys;
+        channel->settingsWritten = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        channel->settingsChecked = false;
+        channel->ignoredSettings.clear();
     }
 
     void handle (const Protocol::LoadBackups&)

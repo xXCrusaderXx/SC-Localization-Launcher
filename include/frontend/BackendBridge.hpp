@@ -104,6 +104,11 @@ class BackendBridge : public QObject
     Q_INVOKABLE void runDiagnostics () { backEnd.execute(Protocol::RunDiagnostics{}); }
     Q_INVOKABLE void saveReport () { backEnd.execute(Protocol::SaveReport{}); }
     Q_INVOKABLE void loadBackups () { backEnd.execute(Protocol::LoadBackups{}); }
+    Q_INVOKABLE void setGameSettings (const QString& channel, int maxFps, int maxIdleFps, const QString& customLines)
+    {
+        backEnd.execute(Protocol::SetGameSettings{
+            .channel = channel.toStdString(), .settings = {.maxFps = maxFps, .maxIdleFps = maxIdleFps, .customLines = customLines.toStdString()}});
+    }
     Q_INVOKABLE void createBackup (const QString& channel) { backEnd.execute(Protocol::CreateBackup{.channel = channel.toStdString()}); }
     Q_INVOKABLE void restoreBackup (const QString& channel, const QString& backup)
     {
