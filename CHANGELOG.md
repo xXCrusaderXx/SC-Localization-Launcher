@@ -5,6 +5,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-10-26
+
+Item values in descriptions, and game settings in `user.cfg`.
+
+### Added
+
+- New setting "Add item values to descriptions" (off by default): item descriptions start with a line of values from the [Star Citizen Wiki API](https://api.star-citizen.wiki), e.g. "HP 100.000 · Regen 19.000/s" for shields or "DPS 304 · Alpha 73 · Reichweite 2.703 m" for ship weapons. It covers shields, power plants, coolers, quantum drives, ship and personal weapons, missiles and missile racks, with German labels and numbers for German translations.
+- Settings → Tools → "Game settings …" writes frame limits (`sys_maxFps`, `sys_maxIdleFps`) and your own `key = value` lines into `user.cfg` per channel. The launcher shows which of them the game ignored ("Not Whitelisted" in `Game.log`).
+
+### Changed
+
+- Installing a translation keeps the order and line endings of `user.cfg`.
+- Builds from source show their version from git (e.g. `0.10.0-dev+1a2b3c4`) instead of 0.1.0.
+
 ## [0.9.0] - 2026-10-24
 
 Item names with their values.
@@ -117,7 +131,8 @@ First release as *SC Localization Launcher*.
 - When switching languages, the previous language's folder is removed only after the new download succeeded.
 - Only one launcher runs at a time; starting it again brings the open window to the front instead of running two launchers that write the same settings and game folders.
 
-[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.6.1...v0.7.0
