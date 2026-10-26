@@ -17,6 +17,7 @@ Item {
     signal cacheCleanerRequested
     signal diagnosticsRequested
     signal backupsRequested
+    signal gameSettingsRequested
 
     readonly property var options: appState.options || {}
     readonly property var channels: appState.channels || []
@@ -170,6 +171,15 @@ Item {
                         description: qsTr("e.g. \"Holdstrong (S4 Military A)\", from the Star Citizen Wiki; applies with the next update")
                         checked: panel.options.itemNameDetails === true
                         onSwitched: on => backend.setOption("itemNameDetails", on)
+                    }
+
+                    Toggle {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        text: qsTr("Add item values to descriptions")
+                        description: qsTr("e.g. \"HP 100,000 · Regen 19,000/s\" for shields, from the Star Citizen Wiki; applies with the next update")
+                        checked: panel.options.itemDescriptionStats === true
+                        onSwitched: on => backend.setOption("itemDescriptionStats", on)
                     }
 
                     Toggle {
@@ -366,6 +376,27 @@ Item {
                         text: qsTr("Backups …")
                         enabled: !panel.locked
                         onClicked: panel.backupsRequested()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Frame limits and own lines in user.cfg per channel")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("Game settings …")
+                        enabled: !panel.locked
+                        onClicked: panel.gameSettingsRequested()
                     }
                 }
 
