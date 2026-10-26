@@ -646,6 +646,14 @@
         <translation>z. B. &quot;Holdstrong (S4 Militär A)&quot;, aus dem Star Citizen Wiki; wirkt mit dem nächsten Update</translation>
     </message>
     <message>
+        <source>Add item values to descriptions</source>
+        <translation>Werte in Gegenstandsbeschreibungen einfügen</translation>
+    </message>
+    <message>
+        <source>e.g. &quot;HP 100,000 · Regen 19,000/s&quot; for shields, from the Star Citizen Wiki; applies with the next update</source>
+        <translation>z. B. &quot;HP 100.000 · Regen 19.000/s&quot; bei Schilden, aus dem Star Citizen Wiki; wirkt mit dem nächsten Update</translation>
+    </message>
+    <message>
         <source>Check for launcher updates on start</source>
         <translation>Beim Start nach Launcher-Updates suchen</translation>
     </message>

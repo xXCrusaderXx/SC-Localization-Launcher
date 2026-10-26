@@ -210,7 +210,12 @@ class BackendTest : public QObject
         auto page = [] (const QByteArray& type) { return "/api/v2/items?filter%5Btype%5D=" + type + "&page%5Bnumber%5D=1&page%5Bsize%5D=200"; };
         auto items = [] (const nlohmann::json& item)
         { return QByteArray::fromStdString(nlohmann::json{{"data", {item}}, {"meta", {{"last_page", 1}}}}.dump()); };
-        server.setFile(page("Shield"), items({{"uuid", "u-shield"}, {"type", "Shield"}, {"size", 4}, {"grade", "A"}, {"class", "Military"}}));
+        server.setFile(page("Shield"), items({{"uuid", "u-shield"},
+                                              {"type", "Shield"},
+                                              {"size", 4},
+                                              {"grade", "A"},
+                                              {"class", "Military"},
+                                              {"shield", {{"max_health", 100000}, {"regen_rate", 19000.5}}}}));
         server.setFile(page("WeaponGun"), items({{"uuid", "u-gun"}, {"type", "WeaponGun"}, {"size", 3}, {"grade", "A"}, {"class", nullptr}}));
     }
 
@@ -1561,6 +1566,45 @@ class BackendTest : public QObject
         QVERIFY(waitForState([] (const auto& s) { return channel(s, "LIVE").status == ChannelStatus::UpdateAvailable; }, from));
         QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
         QCOMPARE(installedItemFile(game), std::string(ITEM_TRANSLATION));
+    }
+
+    void addsItemStatsToDescriptions ()
+    {
+        serveItemData();
+        QTemporaryDir game;
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetOption{"itemDescriptionStats", true});
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        QVERIFY(setLanguage("LIVE", "de"));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+
+        // German numbers for a German translation; the gun has no stats in the Wiki data, so its texts stay
+        QCOMPARE(installedItemFile(game), std::string("\xEF\xBB\xBFitem_NameSHLD_Test=Holdstrong\r\n"
+                                                      "item_DescSHLD_Test=HP 100.000 · Regen 19.001/s\\nEin Schild\r\n"
+                                                      "item_NameGun_Test=Kanone\r\nother=Text\r\n"));
+        QVERIFY(restart());
+        QVERIFY(waitForState([] (const auto& s) { return !s.checking; }));
+        QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::Installed);
+    }
+
+    void addingStatsToNamesUpdatesTheFile ()
+    {
+        serveItemData();
+        QTemporaryDir game;
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetOption{"itemNameDetails", true});
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        QVERIFY(setLanguage("LIVE", "de"));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+
+        size_t from = published();
+        backEnd->execute(Protocol::SetOption{"itemDescriptionStats", true});
+        QVERIFY(waitForState([] (const auto& s) { return channel(s, "LIVE").status == ChannelStatus::UpdateAvailable; }, from));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QCOMPARE(installedItemFile(game), std::string("\xEF\xBB\xBFitem_NameSHLD_Test=Holdstrong (S4 Militär A)\r\n"
+                                                      "item_DescSHLD_Test=HP 100.000 · Regen 19.001/s\\nEin Schild\r\n"
+                                                      "item_NameGun_Test=Kanone (S3)\r\nother=Text\r\n"));
+        QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::Installed);
     }
 
     void installsWithoutItemValuesWhenTheWikiIsUnreachable ()
