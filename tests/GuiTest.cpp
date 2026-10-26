@@ -166,7 +166,8 @@ class GuiTest : public QObject
         QVERIFY(clickButton("OK"));
         QTRY_VERIFY(!dialog->property("visible").toBool());
         QTRY_COMPARE(QString::fromStdString(readSettingsFile().value("lastSeenVersion", "")), QString("0.6.0"));
-        QVERIFY(bridge->state()["whatsNew"].toMap()["version"].toString().isEmpty());
+        // The settings file is written before the next state reaches the bridge
+        QTRY_VERIFY(bridge->state()["whatsNew"].toMap()["version"].toString().isEmpty());
     }
 
     void toggleShowsBackendState ()
