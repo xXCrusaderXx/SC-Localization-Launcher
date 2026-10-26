@@ -353,6 +353,61 @@
     </message>
 </context>
 <context>
+    <name>GameSettingsDialog</name>
+    <message>
+        <source>Frame limits go from 1 to 1000; leave the field empty for the game&apos;s default.</source>
+        <translation>Bildratenlimits gehen von 1 bis 1000; leer lassen für die Vorgabe des Spiels.</translation>
+    </message>
+    <message>
+        <source>Not saved – this line is no &quot;key = value&quot; or sets something the launcher manages itself: %1</source>
+        <translation>Nicht gespeichert – diese Zeile ist kein „Schlüssel = Wert“ oder setzt etwas, das der Launcher selbst verwaltet: %1</translation>
+    </message>
+    <message>
+        <source>Star Citizen ignored these settings at its last start (not whitelisted): %1</source>
+        <translation>Star Citizen hat diese Einstellungen beim letzten Start ignoriert (nicht freigegeben): %1</translation>
+    </message>
+    <message>
+        <source>Star Citizen accepted these settings at its last start.</source>
+        <translation>Star Citizen hat diese Einstellungen beim letzten Start übernommen.</translation>
+    </message>
+    <message>
+        <source>Takes effect at the next game start; afterwards the launcher shows whether Star Citizen accepted it.</source>
+        <translation>Wirkt beim nächsten Spielstart; danach zeigt der Launcher, ob Star Citizen sie übernommen hat.</translation>
+    </message>
+    <message>
+        <source>Game settings</source>
+        <translation>Spieleinstellungen</translation>
+    </message>
+    <message>
+        <source>Written into user.cfg of the channel. Other lines of the file stay as they are.</source>
+        <translation>Wird in die user.cfg des Kanals geschrieben. Andere Zeilen der Datei bleiben unverändert.</translation>
+    </message>
+    <message>
+        <source>Frame limit (FPS)</source>
+        <translation>Bildratenlimit (FPS)</translation>
+    </message>
+    <message>
+        <source>game default</source>
+        <translation>Vorgabe des Spiels</translation>
+    </message>
+    <message>
+        <source>Frame limit in menus (FPS)</source>
+        <translation>Bildratenlimit in Menüs (FPS)</translation>
+    </message>
+    <message>
+        <source>Own lines (&quot;key = value&quot;, one per line)</source>
+        <translation>Eigene Zeilen („Schlüssel = Wert“, eine pro Zeile)</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Schließen</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Speichern</translation>
+    </message>
+</context>
+<context>
     <name>LanguagePicker</name>
     <message>
         <source>%1 (not available)</source>
@@ -646,6 +701,14 @@
         <translation>z. B. &quot;Holdstrong (S4 Militär A)&quot;, aus dem Star Citizen Wiki; wirkt mit dem nächsten Update</translation>
     </message>
     <message>
+        <source>Add item values to descriptions</source>
+        <translation>Werte in Gegenstandsbeschreibungen einfügen</translation>
+    </message>
+    <message>
+        <source>e.g. &quot;HP 100,000 · Regen 19,000/s&quot; for shields, from the Star Citizen Wiki; applies with the next update</source>
+        <translation>z. B. &quot;HP 100.000 · Regen 19.000/s&quot; bei Schilden, aus dem Star Citizen Wiki; wirkt mit dem nächsten Update</translation>
+    </message>
+    <message>
         <source>Check for launcher updates on start</source>
         <translation>Beim Start nach Launcher-Updates suchen</translation>
     </message>
@@ -680,6 +743,14 @@
     <message>
         <source>Backups …</source>
         <translation>Sicherungen …</translation>
+    </message>
+    <message>
+        <source>Frame limits and own lines in user.cfg per channel</source>
+        <translation>Bildratenlimits und eigene Zeilen in der user.cfg pro Kanal</translation>
+    </message>
+    <message>
+        <source>Game settings …</source>
+        <translation>Spieleinstellungen …</translation>
     </message>
     <message>
         <source>HELP</source>

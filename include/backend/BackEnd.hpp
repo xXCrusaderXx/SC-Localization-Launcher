@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <chrono>
 #include <functional>
 #include <set>
 #include <thread>
@@ -15,6 +16,7 @@
 #include "logging/logging.h"
 #include "managers/CacheCleaner.hpp"
 #include "managers/Diagnostics.hpp"
+#include "managers/GameSettings.hpp"
 #include "managers/ProfileBackup.hpp"
 #include "managers/SelfUpdateManager.hpp"
 #include "managers/UpdateManager.hpp"
@@ -164,7 +166,8 @@ class BackEnd
         if(channel.installed.language != channel.language) return ChannelStatus::UpdateAvailable;
         if(channel.damaged) return ChannelStatus::Damaged;
         // Switched on or off since the file was installed
-        if(data.options.itemNameDetails != !channel.installed.itemValues.empty()) return ChannelStatus::UpdateAvailable;
+        if(ItemValues::kinds(data.options.itemNameDetails, data.options.itemDescriptionStats) != ItemValues::kindsOf(channel.installed.itemValues))
+            return ChannelStatus::UpdateAvailable;
         if(!channel.remoteEtag.empty() && channel.remoteEtag != channel.installed.etag) return ChannelStatus::UpdateAvailable;
         return ChannelStatus::Installed;
     }
@@ -337,6 +340,7 @@ class BackEnd
         // A game update may have replaced the translation, and an update may have waited for the game to close
         bool gameClosed = data.gameProcess == Database::GameProcess::Game && process != Database::GameProcess::Game;
         data.gameProcess = process;
+        if(gameClosed) checkGameSettings();
         if(gameClosed && data.backgroundChecks) checkChannels();
         // A start in progress decides itself whether the RSI Launcher keeps running; a failed start stays visible
         bool shownRunning = data.game == Protocol::GameStart::Running || data.game == Protocol::GameStart::Playing;
@@ -348,18 +352,18 @@ class BackEnd
 
     // Runs in the update job: one plan per language, and a file whose values change is downloaded again instead of
     // reused, so values are only ever added to a file as downloaded
-    void prepareItemValues (std::vector<UpdateManager::Job>& jobs, bool nameDetails)
+    void prepareItemValues (std::vector<UpdateManager::Job>& jobs, bool names, bool stats)
     {
         std::map<std::string, std::shared_ptr<const ItemValues::Plan>> plans;
         for(auto& job : jobs)
         {
             if(job.folder.empty()) continue;
             std::shared_ptr<const ItemValues::Plan> plan;
-            if(nameDetails)
+            if(names || stats)
             {
                 if(!plans.contains(job.language))
                 {
-                    auto built = itemValues.build(job.language);
+                    auto built = itemValues.build(job.language, names, stats);
                     plans[job.language] = built ? std::make_shared<const ItemValues::Plan>(std::move(*built)) : nullptr;
                 }
                 plan = plans[job.language];
@@ -377,9 +381,9 @@ class BackEnd
         // A repair may run while the RSI Launcher is still starting; that start reports its own result
         if(data.game != Protocol::GameStart::Starting) data.game = Protocol::GameStart::Idle;
         startJob(updateJob,
-                 [this, jobs, launchGame, nameDetails = data.options.itemNameDetails] () mutable
+                 [this, jobs, launchGame, names = data.options.itemNameDetails, stats = data.options.itemDescriptionStats] () mutable
                  {
-                     prepareItemValues(jobs, nameDetails);
+                     prepareItemValues(jobs, names, stats);
                      auto results = updateManager.update(jobs);
                      queue.post(
                          [this, results, launchGame, jobCount = jobs.size()]
@@ -435,7 +439,8 @@ class BackEnd
         {
             const auto& channel = data.channels.at(name);
             state.channels.push_back({name, channel.installPath.string(), channel.language, availableLanguages(name), channelStatus(name, channel),
-                                      notices(name), channel.custom});
+                                      notices(name), channel.custom, channel.gameSettings, channel.settingsChecked, channel.ignoredSettings,
+                                      channel.settingsError});
         }
 
         state.rsiLauncherPath = data.rsiLauncherPath.string();
@@ -471,23 +476,52 @@ class BackEnd
             data.channels[name].language = settings.language;
             data.channels[name].installed = settings.installed;
             data.channels[name].custom = settings.custom;
+            data.channels[name].gameSettings = settings.gameSettings;
+            data.channels[name].managedKeys = settings.managedKeys;
+            data.channels[name].settingsWritten = settings.settingsWritten;
         }
         data.rsiLauncherPath = file.rsiLauncherPath;
         data.options = file.options;
         data.lastSeenVersion = file.lastSeenVersion;
         // Moves settings of the former SC Deutsch Launcher to the new location right away
         saveSettings();
+        checkGameSettings();
     }
 
-    void saveSettings ()
+    SettingsFile settingsFile () const
     {
         SettingsFile file;
         for(const auto& [name, channel] : data.channels)
-            file.channels[name] = {channel.installPath.string(), channel.language, channel.installed, channel.custom};
+            file.channels[name] = {channel.installPath.string(), channel.language,    channel.installed,      channel.custom,
+                                   channel.gameSettings,         channel.managedKeys, channel.settingsWritten};
         file.rsiLauncherPath = data.rsiLauncherPath.string();
         file.options = data.options;
         file.lastSeenVersion = data.lastSeenVersion;
-        settingsJsonParser.save(file);
+        return file;
+    }
+
+    void saveSettings () { settingsJsonParser.save(settingsFile()); }
+
+    // Reads Game.log of every channel with own settings: once the game started after they were written, it tells which
+    // of them it ignored. Game.log is rewritten at every game start.
+    void checkGameSettings ()
+    {
+        for(auto& [name, channel] : data.channels)
+        {
+            if(channel.installPath.empty() || channel.managedKeys.empty()) continue;
+            std::error_code ec;
+            auto log = channel.installPath / "Game.log";
+            auto modified = std::filesystem::last_write_time(log, ec);
+            if(ec) continue;
+            // file_clock::to_sys, not clock_cast: GCC 12 (Debian 12) lacks the latter for file_clock
+            auto seconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::file_clock::to_sys(modified).time_since_epoch()).count();
+            if(seconds <= channel.settingsWritten) continue;
+            auto ignored = GameSettings::notWhitelisted(log);
+            channel.ignoredSettings.clear();
+            for(const auto& key : channel.managedKeys)
+                if(ignored.contains(key)) channel.ignoredSettings.push_back(key);
+            channel.settingsChecked = true;
+        }
     }
 
     void loadLanguages ()
@@ -556,7 +590,9 @@ class BackEnd
         options[command.option] = command.value;
         data.options = options.get<Protocol::Options>();
         // Switched on: what the last check found is installed right away
-        if((command.option == "installNewTranslations" && command.value) || command.option == "itemNameDetails") updateInBackground();
+        if((command.option == "installNewTranslations" && command.value) || command.option == "itemNameDetails" ||
+           command.option == "itemDescriptionStats")
+            updateInBackground();
     }
 
     void handle (const Protocol::StartUpdate& command)
@@ -756,6 +792,8 @@ class BackEnd
         const std::string current = data.selfUpdate.currentVersion;
         const std::string since = data.lastSeenVersion;
         if(!data.whatsNew.version.empty()) return;
+        // A local development build (0.9.0-dev+<commit>) is no release: it must not mark 0.9.0's notes as seen
+        if(current.find("-dev") != std::string::npos) return;
         if(since.empty())
         {
             // A new installation has nothing to catch up on; a launcher that is already set up came from a version
@@ -873,13 +911,7 @@ class BackEnd
             }
             input.channels.push_back({name, channel.installPath, folder, nlohmann::json(channelStatus(name, channel)).get<std::string>()});
         }
-        SettingsFile file;
-        for(const auto& [name, channel] : data.channels)
-            file.channels[name] = {channel.installPath.string(), channel.language, channel.installed, channel.custom};
-        file.rsiLauncherPath = data.rsiLauncherPath.string();
-        file.options = data.options;
-        file.lastSeenVersion = data.lastSeenVersion;
-        input.settings = nlohmann::json(file).dump(2) + "\n";
+        input.settings = nlohmann::json(settingsFile()).dump(2) + "\n";
         return input;
     }
 
@@ -934,6 +966,36 @@ class BackEnd
                              publish();
                          });
                  });
+    }
+
+    void handle (const Protocol::SetGameSettings& command)
+    {
+        auto* channel = findChannel(command.channel);
+        if(!channel) return;
+        channel->settingsError.clear();
+        std::string error;
+        auto lines = GameSettings::linesOf(command.settings, error);
+        if(!lines)
+        {
+            channel->settingsError = error;
+            return;
+        }
+        if(channel->installPath.empty())
+        {
+            channel->settingsError = "no game folder";
+            return;
+        }
+        auto keys = GameSettings::apply(channel->installPath / "user.cfg", *lines, channel->managedKeys);
+        if(!keys)
+        {
+            channel->settingsError = "cannot write user.cfg";
+            return;
+        }
+        channel->gameSettings = command.settings;
+        channel->managedKeys = *keys;
+        channel->settingsWritten = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        channel->settingsChecked = false;
+        channel->ignoredSettings.clear();
     }
 
     void handle (const Protocol::LoadBackups&)

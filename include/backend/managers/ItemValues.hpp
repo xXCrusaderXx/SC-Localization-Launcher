@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
@@ -21,17 +22,20 @@
 #include "backend/utils/paths.hpp"
 #include "logging/logging.h"
 
-// Adds values from the Star Citizen Wiki API (CC BY-SA) to item names in a downloaded global.ini, e.g.
-// "Holdstrong (S4 Military A)". It works by key, so it fits the global.ini of every language: which key belongs to
+// Adds values from the Star Citizen Wiki API (CC BY-NC-SA 4.0) to a downloaded global.ini: size, class and grade to
+// item names, e.g. "Holdstrong (S4 Military A)", and a line of stats in front of item descriptions, e.g.
+// "HP 100,000 · Regen 19,000/s". It works by key, so it fits the global.ini of every language: which key belongs to
 // which Wiki item comes from item-mapping.json, built weekly from the English texts (tools/build-item-mapping.py).
 // Building a plan downloads data and blocks, so it runs in a background job.
 class ItemValues
 {
    public:
-    // What an update adds: global.ini key -> text appended to that name in parentheses
+    // What an update adds: global.ini key -> text appended to that name in parentheses, or put as its own line in
+    // front of that description
     struct Plan
     {
         std::map<std::string, std::string> nameSuffixes;
+        std::map<std::string, std::string> descriptionPrefixes;
         // Changes whenever the result would change; stored with the installed file, which is downloaded again
         // instead of reused when it differs, so a file is never edited twice
         std::string signature;
@@ -45,9 +49,13 @@ class ItemValues
     {
     }
 
+    // What a plan adds, as named at the start of its signature; empty for nothing
+    static std::string kinds (bool names, bool stats) { return names && stats ? "names+stats" : names ? "names" : stats ? "stats" : ""; }
+    static std::string kindsOf (const std::string& signature) { return signature.substr(0, signature.find(':')); }
+
     // Nothing when neither the mapping nor the Wiki data can be loaded or is cached; the translation is then
-    // installed without values. language: catalogue code; German codes get German class names.
-    std::optional<Plan> build (const std::string& language)
+    // installed without values. language: catalogue code; German codes get German class names and labels.
+    std::optional<Plan> build (const std::string& language, bool names = true, bool stats = false)
     {
         auto mapping = loadMapping();
         if(!mapping) return std::nullopt;
@@ -61,16 +69,24 @@ class ItemValues
         Plan plan;
         for(const auto& [key, uuid] : mapping->items())
         {
-            if(!isNameKey(key) || !uuid.is_string()) continue;
+            if(!uuid.is_string()) continue;
             auto item = items.find(uuid.get<std::string>());
             if(item == items.end()) continue;
-            if(auto suffix = nameSuffix(item->second, german); !suffix.empty()) plan.nameSuffixes[key] = suffix;
+            if(isDescriptionKey(key))
+            {
+                if(auto line = statsLine(item->second, german); stats && !line.empty()) plan.descriptionPrefixes[key] = line;
+            }
+            else if(isNameKey(key))
+            {
+                if(auto suffix = nameSuffix(item->second, german); names && !suffix.empty()) plan.nameSuffixes[key] = suffix;
+            }
         }
 
         QCryptographicHash hash(QCryptographicHash::Sha256);
         for(const auto& [key, suffix] : plan.nameSuffixes) hash.addData(QByteArray::fromStdString(key + "=" + suffix + "\n"));
-        plan.signature = "names:" + hash.result().toHex().left(16).toStdString();
-        LOG_INFO(lg) << "build() - " << plan.nameSuffixes.size() << " names for " << language;
+        for(const auto& [key, line] : plan.descriptionPrefixes) hash.addData(QByteArray::fromStdString(key + ":" + line + "\n"));
+        plan.signature = kinds(names, stats) + ":" + hash.result().toHex().left(16).toStdString();
+        LOG_INFO(lg) << "build() - " << plan.nameSuffixes.size() << " names, " << plan.descriptionPrefixes.size() << " descriptions for " << language;
         return plan;
     }
 
@@ -91,8 +107,11 @@ class ItemValues
                 // global.ini starts with a byte order mark, which belongs to the first line, not to its key
                 std::string key = line.substr(0, equals);
                 if(key.starts_with("\xEF\xBB\xBF")) key.erase(0, 3);
-                if(auto suffix = plan.nameSuffixes.find(key); suffix != plan.nameSuffixes.end() && equals + 1 < line.size())
-                    line += " (" + suffix->second + ")";
+                bool empty = equals + 1 >= line.size();
+                if(auto suffix = plan.nameSuffixes.find(key); suffix != plan.nameSuffixes.end() && !empty) line += " (" + suffix->second + ")";
+                // The game shows "\n" in a text as a line break
+                if(auto prefix = plan.descriptionPrefixes.find(key); prefix != plan.descriptionPrefixes.end() && !empty)
+                    line.insert(equals + 1, prefix->second + "\\n");
             }
             out += line;
             // The last line keeps its ending, also when it has none
@@ -124,6 +143,37 @@ class ItemValues
     inline static const std::map<std::string, std::string> GERMAN_CLASSES{
         {"Civilian", "Zivil"}, {"Industrial", "Industrie"}, {"Military", "Militär"}, {"Stealth", "Tarnung"}, {"Competition", "Wettkampf"}};
 
+    // One value of a stats line: "{}" in the label stands for the number
+    struct Stat
+    {
+        const char* pointer;
+        const char* english;
+        const char* german;
+        double scale = 1;
+    };
+    // Radars and turrets have no single value that says much, so they keep their description as it is
+    static const std::map<std::string, std::vector<Stat>>& statsTable ()
+    {
+        static const std::map<std::string, std::vector<Stat>> stats{
+            {"Shield", {{"/shield/max_health", "HP {}", "HP {}"}, {"/shield/regen_rate", "Regen {}/s", "Regen {}/s"}}},
+            {"PowerPlant", {{"/power_plant/power_segment_generation", "Output {}", "Leistung {}"}}},
+            {"Cooler", {{"/cooler/coolant_segment_generation", "Cooling {}", "Kühlung {}"}}},
+            {"QuantumDrive",
+             {{"/quantum_drive/standard_jump/drive_speed", "Speed {} km/s", "Tempo {} km/s", 0.001},
+              {"/quantum_drive/standard_jump/spool_up_time", "Spool {} s", "Aufladen {} s"}}},
+            {"WeaponGun",
+             {{"/vehicle_weapon/damage/burst", "DPS {}", "DPS {}"},
+              {"/vehicle_weapon/damage/alpha_total", "Alpha {}", "Alpha {}"},
+              {"/vehicle_weapon/range", "Range {} m", "Reichweite {} m"}}},
+            {"WeaponPersonal",
+             {{"/personal_weapon/damage/dps_total", "DPS {}", "DPS {}"}, {"/personal_weapon/damage/alpha_total", "Alpha {}", "Alpha {}"}}},
+            {"Missile", {{"/missile/damage_total", "Damage {}", "Schaden {}"}, {"/missile/lock_range_max", "Lock {} m", "Erfassung {} m"}}},
+            {"MissileLauncher", {{"/missile_rack/missile_count", "Missiles {}", "Raketen {}"}}}};
+        return stats;
+    }
+    // Changes when the reducer keeps other fields, so caches from older versions are not used
+    inline static const std::string CACHE_FORMAT = "item-values-2";
+
     LoggerFramework::LogEx lg;
     const std::atomic<bool>& shuttingDown;
     std::filesystem::path cacheDir;
@@ -138,12 +188,14 @@ class ItemValues
         return MAPPING_URL;
     }
 
-    static bool isNameKey (const std::string& key)
+    static std::string lowered (std::string text)
     {
-        std::string lower = key;
-        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-        return lower.find("name") != std::string::npos && lower.find("desc") == std::string::npos;
+        std::transform(text.begin(), text.end(), text.begin(), ::tolower);
+        return text;
     }
+
+    static bool isNameKey (const std::string& key) { return lowered(key).find("name") != std::string::npos; }
+    static bool isDescriptionKey (const std::string& key) { return lowered(key).find("desc") != std::string::npos; }
 
     void addItems (std::map<std::string, nlohmann::json>& items, const std::string& type)
     {
@@ -152,9 +204,14 @@ class ItemValues
         {
             nlohmann::json kept;
             for(const char* field : {"uuid", "type", "size", "grade", "class"}) kept[field] = item.value(field, nlohmann::json());
+            kept["stats"] = nlohmann::json::object();
+            if(auto stats = statsTable().find(item.value("type", "")); stats != statsTable().end())
+                for(const auto& stat : stats->second)
+                    if(auto value = item.value(nlohmann::json::json_pointer(stat.pointer), nlohmann::json()); value.is_number())
+                        kept["stats"][stat.pointer] = value;
             return kept;
         };
-        auto result = wiki.fetchAll("items", {{"filter[type]", type}}, reduce);
+        auto result = wiki.fetchAll("items", {{"filter[type]", type}}, reduce, std::chrono::hours(24), CACHE_FORMAT);
         for(const auto& item : result.entries)
             if(item["uuid"].is_string()) items[item["uuid"].get<std::string>()] = item;
     }
@@ -173,6 +230,34 @@ class ItemValues
         }
         if(item["grade"].is_string()) suffix += " " + item["grade"].get<std::string>();
         return suffix;
+    }
+
+    // e.g. 19,000 or 8.5 in English, 19.000 or 8,5 in German; one decimal below 100, none above
+    static std::string formatNumber (double value, bool german)
+    {
+        bool decimal = std::abs(value) < 100 && std::round(value * 10) != std::round(value) * 10;
+        auto tenths = static_cast<long long>(std::llround(std::abs(value) * (decimal ? 10 : 1)));
+        auto whole = std::to_string(decimal ? tenths / 10 : tenths);
+        for(int at = static_cast<int>(whole.size()) - 3; at > 0; at -= 3) whole.insert(at, german ? "." : ",");
+        std::string text = (value < 0 && tenths != 0 ? "-" : "") + whole;
+        if(decimal) text += (german ? "," : ".") + std::to_string(tenths % 10);
+        return text;
+    }
+
+    static std::string statsLine (const nlohmann::json& item, bool german)
+    {
+        auto stats = statsTable().find(item.value("type", ""));
+        if(stats == statsTable().end() || !item.contains("stats")) return "";
+        std::string line;
+        for(const auto& stat : stats->second)
+        {
+            auto value = item["stats"].find(stat.pointer);
+            if(value == item["stats"].end() || !value->is_number() || value->get<double>() <= 0) continue;
+            std::string label = german ? stat.german : stat.english;
+            label.replace(label.find("{}"), 2, formatNumber(value->get<double>() * stat.scale, german));
+            line += (line.empty() ? "" : " · ") + label;
+        }
+        return line;
     }
 
     static size_t writeCallback (void* contents, size_t size, size_t nmemb, void* userp)

@@ -103,10 +103,13 @@ struct Options
     bool closeToTray = false;
     // Adds size, class and grade from the Star Citizen Wiki API to item names in global.ini
     bool itemNameDetails = false;
+    // Puts a line of stats from the Star Citizen Wiki API in front of item descriptions in global.ini
+    bool itemDescriptionStats = false;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Options, launchGameAfterUpdate, updateAtStart, installNewTranslations, minimizeAfterUpdate,
-                                                startWithSystem, showUpdateProgress, checkLauncherUpdatesAtStart, closeToTray, itemNameDetails)
+                                                startWithSystem, showUpdateProgress, checkLauncherUpdatesAtStart, closeToTray, itemNameDetails,
+                                                itemDescriptionStats)
 
 enum class ChannelStatus
 {
@@ -130,6 +133,19 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ChannelStatus, {{ChannelStatus::NoPath, "noPath"},
                                              {ChannelStatus::Damaged, "damaged"},
                                              {ChannelStatus::Failed, "failed"}})
 
+// Settings the launcher writes into a channel's user.cfg, see GameSettings.hpp
+struct GameSettings
+{
+    // sys_maxFps; 0 = not set by the launcher
+    int maxFps = 0;
+    // sys_maxIdleFps, for menus and loading screens; 0 = not set by the launcher
+    int maxIdleFps = 0;
+    // Own "key = value" lines, one per line
+    std::string customLines;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GameSettings, maxFps, maxIdleFps, customLines)
+
 struct Channel
 {
     std::string name;
@@ -143,9 +159,17 @@ struct Channel
     std::map<std::string, std::string> notices;
     // The user's own source for this channel, offered as language CUSTOM when set
     CustomSource custom;
+    GameSettings gameSettings;
+    // A Game.log newer than the last change of gameSettings was read
+    bool settingsChecked = false;
+    // Keys of gameSettings that Game.log reports as "Not Whitelisted": the game ignores them
+    std::vector<std::string> ignoredSettings;
+    // Why the last SetGameSettings was refused, e.g. a custom line that is no "key = value"
+    std::string settingsError;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status, notices, custom)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status, notices, custom, gameSettings,
+                                                settingsChecked, ignoredSettings, settingsError)
 
 // Updates of the launcher itself, from the GitHub releases of the project
 enum class SelfUpdateStatus

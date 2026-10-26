@@ -89,6 +89,14 @@ struct ChannelData
     bool lastUpdateFailed = false;
     // The user's own source, offered as language Protocol::CUSTOM
     Protocol::CustomSource custom;
+    Protocol::GameSettings gameSettings;
+    // user.cfg keys the launcher wrote for gameSettings, lowercase; removed again when no longer wanted
+    std::vector<std::string> managedKeys;
+    // When gameSettings were last written, seconds since the epoch; a Game.log older than that can't tell about them
+    int64_t settingsWritten = 0;
+    bool settingsChecked = false;
+    std::vector<std::string> ignoredSettings;
+    std::string settingsError;
 };
 
 // What SelfUpdateManager::install() needs from a release; filled by its check() when a matching signed package exists

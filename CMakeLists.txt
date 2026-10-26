@@ -15,7 +15,30 @@ if(SC_VERSION_OVERRIDE)
   set(SC_FULL_VERSION "${SC_VERSION_OVERRIDE}")
 else()
   set(SC_FULL_VERSION "${SC_DEFAULT_VERSION}")
+  # A local build from a git checkout: the minor version after the newest release tag plus the commit, e.g.
+  # 0.9.0-dev+4aec743 after v0.8.0. Newer than that release, so the launcher never offers to "update" back to it.
+  # Without git, a tag or a checkout (source archive) the default above stays.
+  find_package(Git QUIET)
+  if(GIT_FOUND)
+    execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --abbrev=0 --match "v[0-9]*" --exclude "*-*"
+                    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}" OUTPUT_VARIABLE SC_GIT_TAG OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    execute_process(COMMAND "${GIT_EXECUTABLE}" rev-parse --short=7 HEAD
+                    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}" OUTPUT_VARIABLE SC_GIT_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    execute_process(COMMAND "${GIT_EXECUTABLE}" rev-parse --absolute-git-dir
+                    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}" OUTPUT_VARIABLE SC_GIT_DIR OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    if(SC_GIT_TAG MATCHES "^v([0-9]+)\\.([0-9]+)\\.[0-9]+$" AND SC_GIT_COMMIT)
+      math(EXPR SC_NEXT_MINOR "${CMAKE_MATCH_2} + 1")
+      set(SC_FULL_VERSION "${CMAKE_MATCH_1}.${SC_NEXT_MINOR}.0-dev+${SC_GIT_COMMIT}")
+      # Configure again after a commit or checkout, so the version names the commit that is built
+      foreach(SC_GIT_FILE HEAD logs/HEAD)
+        if(EXISTS "${SC_GIT_DIR}/${SC_GIT_FILE}")
+          set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${SC_GIT_DIR}/${SC_GIT_FILE}")
+        endif()
+      endforeach()
+    endif()
+  endif()
 endif()
+message(STATUS "Version ${SC_FULL_VERSION}")
 # project() only accepts numbers; a suffix like -rc1 stays in SC_FULL_VERSION
 string(REGEX MATCH "^[0-9]+\\.[0-9]+\\.[0-9]+" SC_NUMERIC_VERSION "${SC_FULL_VERSION}")
 if(NOT SC_NUMERIC_VERSION)
@@ -108,6 +131,7 @@ set(SC_QML_FILES
   qml/CacheDialog.qml
   qml/DiagnosticsDialog.qml
   qml/BackupDialog.qml
+  qml/GameSettingsDialog.qml
 )
 # Drop the qml/ folder from the resource path, so Main.qml is at qrc:/qt/qml/SCLauncher/Main.qml
 foreach(qml_file ${SC_QML_FILES})
