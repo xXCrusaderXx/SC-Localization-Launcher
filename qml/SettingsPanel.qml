@@ -17,6 +17,7 @@ Item {
     signal cacheCleanerRequested
     signal diagnosticsRequested
     signal backupsRequested
+    signal gameSettingsRequested
 
     readonly property var options: appState.options || {}
     readonly property var channels: appState.channels || []
@@ -375,6 +376,27 @@ Item {
                         text: qsTr("Backups …")
                         enabled: !panel.locked
                         onClicked: panel.backupsRequested()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Frame limits and own lines in user.cfg per channel")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("Game settings …")
+                        enabled: !panel.locked
+                        onClicked: panel.gameSettingsRequested()
                     }
                 }
 
