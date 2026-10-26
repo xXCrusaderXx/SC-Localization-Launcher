@@ -654,6 +654,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Add item values to descriptions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>e.g. &quot;HP 100,000 · Regen 19,000/s&quot; for shields, from the Star Citizen Wiki; applies with the next update</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Check for launcher updates on start</source>
         <translation type="unfinished"></translation>
     </message>

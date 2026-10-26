@@ -87,6 +87,19 @@ class WikiApiClientTest : public QObject
         QCOMPARE(again.entries.size(), size_t(3));
     }
 
+    void ignoresACacheWrittenWithAnotherFormat ()
+    {
+        QVERIFY(client().fetchAll("items", {}, reduce).ok);
+        int pageOne = server.requestCount("GET " + page(1) + " 200");
+
+        // Fresh, but kept by an older reducer: loaded again in full instead of revalidated
+        auto again = client().fetchAll("items", {}, reduce, std::chrono::hours(24), "with-names");
+        QVERIFY(again.ok);
+        QVERIFY(!again.fromCache);
+        QCOMPARE(server.requestCount("GET " + page(1) + " 200"), pageOne + 1);
+        QVERIFY(client().fetchAll("items", {}, reduce, std::chrono::hours(24), "with-names").fromCache);
+    }
+
     void loadsAgainWhenTheServerHasNewerData ()
     {
         QVERIFY(client().fetchAll("items", {}, reduce).ok);

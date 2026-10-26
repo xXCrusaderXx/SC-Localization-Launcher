@@ -103,10 +103,13 @@ struct Options
     bool closeToTray = false;
     // Adds size, class and grade from the Star Citizen Wiki API to item names in global.ini
     bool itemNameDetails = false;
+    // Puts a line of stats from the Star Citizen Wiki API in front of item descriptions in global.ini
+    bool itemDescriptionStats = false;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Options, launchGameAfterUpdate, updateAtStart, installNewTranslations, minimizeAfterUpdate,
-                                                startWithSystem, showUpdateProgress, checkLauncherUpdatesAtStart, closeToTray, itemNameDetails)
+                                                startWithSystem, showUpdateProgress, checkLauncherUpdatesAtStart, closeToTray, itemNameDetails,
+                                                itemDescriptionStats)
 
 enum class ChannelStatus
 {

@@ -55,13 +55,14 @@ class WikiApiClient
     {
     }
 
-    // All entries of an endpoint such as "items"; maxAge: how long a cached copy is used without asking the server
+    // All entries of an endpoint such as "items"; maxAge: how long a cached copy is used without asking the server.
+    // format names what reduce keeps: a cached copy written with another format is not used, also not as fallback.
     Result fetchAll (const std::string& endpoint, const Query& query = {}, const Reducer& reduce = {},
-                     std::chrono::seconds maxAge = std::chrono::hours(24))
+                     std::chrono::seconds maxAge = std::chrono::hours(24), const std::string& format = "")
     {
         Result result;
         auto file = cacheFile(endpoint, query);
-        auto cached = readCache(file);
+        auto cached = readCache(file, format);
         auto now = std::time(nullptr);
         if(cached && now - cached->value("fetched", std::int64_t{0}) < maxAge.count())
         {
@@ -99,7 +100,7 @@ class WikiApiClient
         }
 
         LOG_INFO(lg) << "fetchAll() - " << endpoint << ": " << entries.size() << " entries";
-        writeCache(file, {{"fetched", now}, {"lastModified", lastModified}, {"entries", entries}});
+        writeCache(file, {{"fetched", now}, {"lastModified", lastModified}, {"format", format}, {"entries", entries}});
         result.entries = std::move(entries);
         result.ok = true;
         return result;
@@ -162,12 +163,13 @@ class WikiApiClient
         return cacheDir / name.str();
     }
 
-    static std::optional<nlohmann::json> readCache (const std::filesystem::path& file)
+    static std::optional<nlohmann::json> readCache (const std::filesystem::path& file, const std::string& format)
     {
         std::ifstream in(file);
         if(!in) return std::nullopt;
         auto json = nlohmann::json::parse(in, nullptr, false);
         if(json.is_discarded() || !json.contains("entries") || !json["entries"].is_array()) return std::nullopt;
+        if(json.value("format", "") != format) return std::nullopt;
         return json;
     }
 
