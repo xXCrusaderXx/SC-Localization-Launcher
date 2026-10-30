@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-31
+
+The launcher speaks more languages.
+
+### Added
+
+- Settings → Behaviour → "Language of the launcher": pick the interface language or keep "Automatic (system language)". The change applies at once, without a restart.
+- The interface is now also available in French, Spanish, Italian, Polish, Dutch and Portuguese (Brazil). These translations are first versions; corrections by native speakers are welcome (see CONTRIBUTING.md).
+
 ## [0.10.0] - 2026-10-30
 
 Tools: programs that start with the game, and the graphics API.
@@ -140,7 +149,8 @@ First release as *SC Localization Launcher*.
 - When switching languages, the previous language's folder is removed only after the new download succeeded.
 - Only one launcher runs at a time; starting it again brings the open window to the front instead of running two launchers that write the same settings and game folders.
 
-[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.8.0...v0.9.0
