@@ -740,6 +740,14 @@
         <translation>VERHALTEN</translation>
     </message>
     <message>
+        <source>Language of the launcher</source>
+        <translation>Sprache des Launchers</translation>
+    </message>
+    <message>
+        <source>Automatic (system language)</source>
+        <translation>Automatisch (Systemsprache)</translation>
+    </message>
+    <message>
         <source>Start Star Citizen after the update</source>
         <translation>Star Citizen nach dem Update starten</translation>
     </message>

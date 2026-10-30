@@ -1639,6 +1639,22 @@ class BackendTest : public QObject
         return end != std::string::npos && end + 2 < stat.size() && stat[end + 2] != 'Z' && stat[end + 2] != 'X';
     }
 
+    void storesTheInterfaceLanguage ()
+    {
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInterfaceLanguage{"fr"});
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(latest().interfaceLanguage, std::string("fr"));
+        backEnd->execute(Protocol::SetInterfaceLanguage{"../etc"});
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(latest().interfaceLanguage, std::string("fr"));
+        QVERIFY(restart());
+        QCOMPARE(latest().interfaceLanguage, std::string("fr"));
+        backEnd->execute(Protocol::SetInterfaceLanguage{""});
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(readSettingsFile()["interfaceLanguage"].get<std::string>(), std::string());
+    }
+
     void splitsProgramCommandsLikeAShell ()
     {
         using Words = std::optional<QStringList>;

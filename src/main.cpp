@@ -1,11 +1,9 @@
 #include <QApplication>
 #include <QIcon>
-#include <QLocale>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickWindow>
 #include <QTimer>
-#include <QTranslator>
 
 #include <iostream>
 
@@ -36,10 +34,6 @@ int main (int argc, char *argv[])
     // Lets Wayland compositors match the window to the installed .desktop file and its icon
     QGuiApplication::setDesktopFileName(SC_APP_ID);
 
-    // The UI is written in English; a built-in translation for the system language replaces it
-    QTranslator translator;
-    if(translator.load(QLocale(), "sc-localization-launcher", "_", ":/i18n")) app.installTranslator(&translator);
-
     // A second start only brings the running launcher to the front, before any backend work starts
     // After an update the old launcher is still quitting; wait for it instead of activating it
     SingleInstance instance(SC_APP_ID, app.arguments().contains("--after-update") ? 10000 : 100);
@@ -55,6 +49,8 @@ int main (int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("backend", &backend);
+    // The UI is written in English; a built-in translation for the chosen or the system language replaces it
+    backend.followInterfaceLanguage(&engine);
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed, &app, [] { QCoreApplication::exit(-1); }, Qt::QueuedConnection);
     engine.addImportPath("qrc:/qt/qml");
     engine.load(QUrl("qrc:/qt/qml/SCLauncher/Main.qml"));

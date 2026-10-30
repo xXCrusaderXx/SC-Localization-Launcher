@@ -130,6 +130,7 @@ class GuiTest : public QObject
         bridge = std::make_unique<BackendBridge>();
         engine = std::make_unique<QQmlApplicationEngine>();
         engine->rootContext()->setContextProperty("backend", bridge.get());
+        bridge->followInterfaceLanguage(engine.get());
         engine->load(QUrl("qrc:/qt/qml/SCLauncher/Main.qml"));
         QVERIFY(!engine->rootObjects().isEmpty());
         window = qobject_cast<QQuickWindow*>(engine->rootObjects().first());
@@ -629,6 +630,33 @@ class GuiTest : public QObject
         QTRY_VERIFY(bridge->state()["programs"].toList().isEmpty());
         QTest::keyClick(window, Qt::Key_Escape);
         QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    void switchesTheInterfaceLanguage ()
+    {
+        QStringList codes;
+        for(const auto& language : BackendBridge::interfaceLanguages()) codes << language.toMap()["code"].toString();
+        if(!codes.contains("de")) QSKIP("Built without Qt Linguist, no translations");
+        QCOMPARE(codes.first(), QString("en"));
+
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        QTRY_VERIFY(panel->property("visible").toBool());
+        QTRY_VERIFY(findText("Start Star Citizen after the update"));
+        auto* box = engine->rootObjects().first()->findChild<QObject*>("interfaceLanguageBox");
+        QVERIFY(box);
+        // As a pick from the list does; index 0 is the system language
+        QMetaObject::invokeMethod(box, "activated", Q_ARG(int, int(codes.indexOf("de")) + 1));
+        QTRY_COMPARE(bridge->state()["interfaceLanguage"].toString(), QString("de"));
+        QTRY_VERIFY(findText("Star Citizen nach dem Update starten"));
+        QCOMPARE(readSettingsFile()["interfaceLanguage"].get<std::string>(), std::string("de"));
+
+        // Back to the system language, which is English in the tests (LANGUAGE=en)
+        QMetaObject::invokeMethod(box, "activated", Q_ARG(int, 0));
+        QTRY_COMPARE(bridge->state()["interfaceLanguage"].toString(), QString());
+        QTRY_VERIFY(findText("Start Star Citizen after the update"));
         panel->setProperty("open", false);
         QTRY_VERIFY(!panel->property("visible").toBool());
     }
