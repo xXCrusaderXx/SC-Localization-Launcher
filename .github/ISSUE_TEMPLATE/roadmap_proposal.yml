@@ -31,9 +31,9 @@ body:
         - 0.9.0 Item values & strings
         - 0.10.0 Tools
         - 0.11.0 Interface languages
-        - 0.12.0 Blueprints
-        - 0.13.0 Statistics & dashboard
         - 1.0.0 Stable
+        - 1.1.0 Blueprints
+        - 1.2.0 Statistics & dashboard
         - After 1.0.0
   - type: textarea
     id: data
