@@ -12,25 +12,33 @@ Popup {
     readonly property var channel: channels.find(c => c.name === channelName) || ({})
     readonly property var settings: channel.gameSettings || ({})
 
-    signal saveRequested(string channel, int maxFps, int maxIdleFps, string customLines)
+    // Values of Protocol::GameSettings.graphicsApi, in the order of the box
+    readonly property var graphicsApis: ["", "vulkan", "dx11"]
+
+    signal saveRequested(string channel, int maxFps, int maxIdleFps, string customLines, string graphicsApi)
 
     // Puts the stored values into the fields, e.g. after switching the channel
     function load() {
         maxFpsField.text = settings.maxFps > 0 ? String(settings.maxFps) : "";
         idleFpsField.text = settings.maxIdleFps > 0 ? String(settings.maxIdleFps) : "";
         customField.text = settings.customLines || "";
+        graphicsApiBox.currentIndex = Math.max(0, graphicsApis.indexOf(settings.graphicsApi || ""));
     }
 
     function statusText() {
         if (channel.settingsError === "frame limit out of range")
             return qsTr("Frame limits go from 1 to 1000; leave the field empty for the game's default.");
+        if (channel.settingsError === "unknown graphics API")
+            return qsTr("Not saved – unknown graphics API.");
         if (channel.settingsError)
             return qsTr("Not saved – this line is no \"key = value\" or sets something the launcher manages itself: %1").arg(channel.settingsError);
         if ((channel.ignoredSettings || []).length > 0)
             return qsTr("Star Citizen ignored these settings at its last start (not whitelisted): %1").arg(channel.ignoredSettings.join(", "));
+        if (channel.graphicsApiWaiting)
+            return qsTr("The graphics API is set after Star Citizen quits, or after the first start of a new game version.");
         if (channel.settingsChecked)
             return qsTr("Star Citizen accepted these settings at its last start.");
-        if (!(settings.maxFps > 0 || settings.maxIdleFps > 0 || (settings.customLines || "") !== ""))
+        if (!(settings.maxFps > 0 || settings.maxIdleFps > 0 || (settings.customLines || "") !== "" || (settings.graphicsApi || "") !== ""))
             return "";
         return qsTr("Takes effect at the next game start; afterwards the launcher shows whether Star Citizen accepted it.");
     }
@@ -86,7 +94,7 @@ Popup {
 
         Text {
             Layout.fillWidth: true
-            text: qsTr("Written into user.cfg of the channel. Other lines of the file stay as they are.")
+            text: qsTr("Written into user.cfg of the channel, the graphics API into the game's GraphicsSettings.json. Everything else in these files stays as it is.")
             wrapMode: Text.Wrap
             color: Theme.muted
             font.pixelSize: 12
@@ -116,6 +124,29 @@ Popup {
             columns: 2
             columnSpacing: 12
             rowSpacing: 8
+
+            Text {
+                text: qsTr("Graphics API")
+                color: Theme.text
+                font.pixelSize: 12
+            }
+
+            ComboBox {
+                id: graphicsApiBox
+
+                objectName: "graphicsApiBox"
+                Layout.preferredWidth: 200
+                model: [qsTr("Game's choice"), "Vulkan", "DirectX 11"]
+                font.pixelSize: 12
+                palette.text: Theme.text
+                palette.base: Theme.inputBackground
+                palette.window: Qt.rgba(0.04, 0.07, 0.13, 0.98)
+                palette.button: Theme.inputBackground
+                palette.buttonText: Theme.text
+                palette.highlight: Theme.accent
+                palette.highlightedText: "white"
+                background: Field {}
+            }
 
             Text {
                 text: qsTr("Frame limit (FPS)")
@@ -212,7 +243,7 @@ Popup {
                 text: qsTr("Save")
                 highlighted: true
                 enabled: dialog.channelName !== ""
-                onClicked: dialog.saveRequested(dialog.channelName, parseInt(maxFpsField.text) || 0, parseInt(idleFpsField.text) || 0, customField.text)
+                onClicked: dialog.saveRequested(dialog.channelName, parseInt(maxFpsField.text) || 0, parseInt(idleFpsField.text) || 0, customField.text, dialog.graphicsApis[graphicsApiBox.currentIndex])
             }
         }
     }

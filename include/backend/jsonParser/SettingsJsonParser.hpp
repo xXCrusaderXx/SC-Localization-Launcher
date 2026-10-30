@@ -34,9 +34,10 @@ struct SettingsFile
     Protocol::Options options;
     // Launcher version whose release notes were shown last
     std::string lastSeenVersion;
+    std::vector<Protocol::Program> programs;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SettingsFile, channels, rsiLauncherPath, options, lastSeenVersion)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SettingsFile, channels, rsiLauncherPath, options, lastSeenVersion, programs)
 
 class SettingsJsonParser
 {

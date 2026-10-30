@@ -567,6 +567,15 @@ class GuiTest : public QObject
         QVERIFY(cfg.open(QIODevice::ReadOnly));
         QVERIFY(cfg.readAll().contains("r_DisplayInfo = 1"));
 
+        // No Wine prefix and no Game.log in the test folder: the API waits for the game
+        auto* graphicsApi = engine->rootObjects().first()->findChild<QObject*>("graphicsApiBox");
+        QVERIFY(graphicsApi);
+        graphicsApi->setProperty("currentIndex", 2);
+        QVERIFY(clickButton("Save"));
+        QTRY_COMPARE(channel("LIVE")["gameSettings"].toMap()["graphicsApi"].toString(), QString("dx11"));
+        QTRY_VERIFY(findText("The graphics API is set after Star Citizen quits, or after the first start of a new game version."));
+        graphicsApi->setProperty("currentIndex", 0);
+
         custom->setProperty("text", "not a setting");
         QVERIFY(clickButton("Save"));
         QTRY_VERIFY(findText("Not saved – this line is no \"key = value\" or sets something the launcher manages itself: not a setting"));
@@ -575,6 +584,49 @@ class GuiTest : public QObject
         custom->setProperty("text", "");
         QVERIFY(clickButton("Save"));
         QTRY_VERIFY(channel("LIVE")["gameSettings"].toMap()["customLines"].toString().isEmpty());
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    void savesProgramsFromTheSettings ()
+    {
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        // The button sits below the visible part of the panel
+        QMetaObject::invokeMethod(panel, "programsRequested");
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("programsDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QVERIFY(findText("No programs yet."));
+        QVERIFY(clickButton("Add command"));
+
+        // Made by a Repeater, so only found in the visual tree
+        std::function<QQuickItem*(QQuickItem*)> walk = [&] (QQuickItem* item) -> QQuickItem*
+        {
+            if(item->objectName() == "programCommand0") return item;
+            for(auto* child : item->childItems())
+                if(auto* found = walk(child)) return found;
+            return nullptr;
+        };
+        QQuickItem* field = nullptr;
+        QTRY_VERIFY((field = walk(window->contentItem())) && field->isVisible() && field->width() > 0);
+        // As typing does; the offscreen window gives no reliable keyboard focus to a field in a popup
+        field->setProperty("text", "true");
+        QMetaObject::invokeMethod(field, "textEdited");
+        QVERIFY(clickButton("Save"));
+        QTRY_COMPARE(bridge->state()["programs"].toList().size(), 1);
+        auto program = bridge->state()["programs"].toList().first().toMap();
+        QCOMPARE(program["command"].toString(), QString("true"));
+        QVERIFY(program["enabled"].toBool());
+        QVERIFY(!program["stopWithGame"].toBool());
+
+        // Leaves no program behind for the other tests
+        QVERIFY(click("−"));
+        QTRY_VERIFY(findText("No programs yet."));
+        QVERIFY(clickButton("Save"));
+        QTRY_VERIFY(bridge->state()["programs"].toList().isEmpty());
         QTest::keyClick(window, Qt::Key_Escape);
         QTRY_VERIFY(!dialog->property("visible").toBool());
         panel->setProperty("open", false);

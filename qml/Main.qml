@@ -563,13 +563,22 @@ ApplicationWindow {
             backend.loadBackups();
         }
         onGameSettingsRequested: gameSettingsDialog.open()
+        onProgramsRequested: programsDialog.open()
+    }
+
+    ProgramsDialog {
+        id: programsDialog
+
+        programs: window.appState.programs || []
+        failedPrograms: window.appState.failedPrograms || []
+        onSaveRequested: programs => backend.setPrograms(programs)
     }
 
     GameSettingsDialog {
         id: gameSettingsDialog
 
         channels: window.visibleChannels
-        onSaveRequested: (channel, maxFps, maxIdleFps, customLines) => backend.setGameSettings(channel, maxFps, maxIdleFps, customLines)
+        onSaveRequested: (channel, maxFps, maxIdleFps, customLines, graphicsApi) => backend.setGameSettings(channel, maxFps, maxIdleFps, customLines, graphicsApi)
     }
 
     BackupDialog {

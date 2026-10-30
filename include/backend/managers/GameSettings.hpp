@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <nlohmann/json.hpp>
 #include <optional>
 #include <regex>
 #include <set>
@@ -59,6 +60,11 @@ inline std::optional<std::vector<Line>> linesOf (const Protocol::GameSettings& s
         error = "frame limit out of range";
         return std::nullopt;
     }
+    if(!settings.graphicsApi.empty() && settings.graphicsApi != "vulkan" && settings.graphicsApi != "dx11")
+    {
+        error = "unknown graphics API";
+        return std::nullopt;
+    }
     auto custom = parseCustom(settings.customLines, error);
     if(!custom) return std::nullopt;
     std::vector<Line> lines;
@@ -94,6 +100,78 @@ inline std::set<std::string> notWhitelisted (const std::filesystem::path& gameLo
         if(line.find("Not Whitelisted") != std::string::npos)
             for(std::sregex_iterator it(line.begin(), line.end(), marked), end; it != end; ++it) keys.insert(lower((*it)[1].str()));
     return keys;
+}
+
+// The game version a channel ran last, e.g. "sc-alpha-4.8.0", from the "Branch:" line at the top of Game.log
+inline std::string branchOf (const std::filesystem::path& gameLog)
+{
+    static const std::regex branch(R"(\bBranch: (\S+))");
+    std::ifstream in(gameLog);
+    std::string line;
+    for(int i = 0; i < 200 && std::getline(in, line); ++i)
+    {
+        std::smatch match;
+        if(std::regex_search(line, match, branch)) return match[1].str();
+    }
+    return "";
+}
+
+// Sets GraphicsRenderer (0 = DirectX 11, 1 = Vulkan) in GraphicsSettings.json of every folder the game made for
+// `branch` in the Wine prefix, <user>/AppData/Local/star citizen/starcitizen_(<branch>)_<id>/; the other values stay.
+// The game makes such a folder with its defaults at the first start of a version. False if there is none yet, or if a
+// file could not be read or written.
+inline bool applyGraphicsApi (const std::filesystem::path& prefix, const std::string& branch, const std::string& api)
+{
+    if(branch.empty()) return false;
+    int renderer = api == "dx11" ? 0 : 1;
+    bool found = false;
+    bool ok = true;
+    std::error_code userError, localError, versionError;
+    for(std::filesystem::directory_iterator user(prefix / "drive_c/users", userError), end; !userError && user != end; user.increment(userError))
+        for(std::filesystem::directory_iterator local(user->path() / "AppData/Local", localError), end; !localError && local != end;
+            local.increment(localError))
+        {
+            if(lower(local->path().filename().string()) != "star citizen") continue;
+            for(std::filesystem::directory_iterator version(local->path(), versionError), end; !versionError && version != end;
+                version.increment(versionError))
+            {
+                if(!version->is_directory() || version->path().filename().string().find("(" + branch + ")") == std::string::npos) continue;
+                found = true;
+                auto file = version->path() / "GraphicsSettings/GraphicsSettings.json";
+                nlohmann::ordered_json json = {{"GraphicsSettings", {{"SettingsVersion", 1}}}};
+                if(std::filesystem::exists(file))
+                {
+                    std::ifstream in(file);
+                    json = nlohmann::ordered_json::parse(in, nullptr, false);
+                    // An unknown layout is left alone
+                    if(!json.is_object() || !json.contains("GraphicsSettings") || !json["GraphicsSettings"].is_object())
+                    {
+                        ok = false;
+                        continue;
+                    }
+                }
+                auto& settings = json["GraphicsSettings"];
+                if(settings.contains("GraphicsRenderer") && settings["GraphicsRenderer"] == renderer) continue;
+                settings["GraphicsRenderer"] = renderer;
+                std::error_code mkdir;
+                std::filesystem::create_directories(file.parent_path(), mkdir);
+                auto temporary = file;
+                temporary += ".tmp";
+                {
+                    std::ofstream out(temporary, std::ios::trunc);
+                    out << json.dump(2);
+                    if(!out)
+                    {
+                        ok = false;
+                        continue;
+                    }
+                }
+                std::error_code rename;
+                std::filesystem::rename(temporary, file, rename);
+                ok &= !rename;
+            }
+        }
+    return found && ok;
 }
 
 }  // namespace GameSettings

@@ -359,11 +359,19 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Not saved – unknown graphics API.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Not saved – this line is no &quot;key = value&quot; or sets something the launcher manages itself: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Star Citizen ignored these settings at its last start (not whitelisted): %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The graphics API is set after Star Citizen quits, or after the first start of a new game version.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -379,7 +387,15 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Written into user.cfg of the channel. Other lines of the file stay as they are.</source>
+        <source>Written into user.cfg of the channel, the graphics API into the game&apos;s GraphicsSettings.json. Everything else in these files stays as it is.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Graphics API</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Game&apos;s choice</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -667,6 +683,53 @@
     </message>
 </context>
 <context>
+    <name>ProgramsDialog</name>
+    <message>
+        <source>Programs with the game</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Started when Star Citizen starts, also when it was started without this launcher. The launcher has to be open, e.g. in the system tray. Quotes work as in a shell; for variables or pipes, start a script or sh -c &apos;…&apos;.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Active</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>End it when the game quits</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No programs yet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Could not be started at the last game start: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose program …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Add command</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Program to start with the game</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>SettingsPanel</name>
     <message>
         <source>Item values</source>
@@ -782,6 +845,14 @@
     </message>
     <message>
         <source>Game settings …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Own programs or scripts that start together with the game</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Programs …</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

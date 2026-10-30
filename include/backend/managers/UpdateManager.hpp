@@ -244,6 +244,7 @@ class UpdateManager
 
     static bool inFlatpak () { return std::filesystem::exists("/.flatpak-info"); }
 
+   public:
     // Inside a Flatpak the game and its launchers live on the host, not in the sandbox.
     // Returns the process id, or nothing if the program could not be started.
     static std::optional<qint64> startOnHost (const QString& program, const QStringList& arguments, const QString& workingDirectory = {})
@@ -274,6 +275,7 @@ class UpdateManager
         return pid;
     }
 
+   private:
     // Wine names a process after its Windows program: the first argument is e.g. "C:\\...\\RSI Launcher.exe"
     static std::string rsiLauncherProgram ()
     {

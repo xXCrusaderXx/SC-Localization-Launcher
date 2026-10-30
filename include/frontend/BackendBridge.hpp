@@ -104,10 +104,25 @@ class BackendBridge : public QObject
     Q_INVOKABLE void runDiagnostics () { backEnd.execute(Protocol::RunDiagnostics{}); }
     Q_INVOKABLE void saveReport () { backEnd.execute(Protocol::SaveReport{}); }
     Q_INVOKABLE void loadBackups () { backEnd.execute(Protocol::LoadBackups{}); }
-    Q_INVOKABLE void setGameSettings (const QString& channel, int maxFps, int maxIdleFps, const QString& customLines)
+    Q_INVOKABLE void setGameSettings (const QString& channel, int maxFps, int maxIdleFps, const QString& customLines, const QString& graphicsApi)
     {
         backEnd.execute(Protocol::SetGameSettings{
-            .channel = channel.toStdString(), .settings = {.maxFps = maxFps, .maxIdleFps = maxIdleFps, .customLines = customLines.toStdString()}});
+            .channel = channel.toStdString(),
+            .settings = {
+                .maxFps = maxFps, .maxIdleFps = maxIdleFps, .customLines = customLines.toStdString(), .graphicsApi = graphicsApi.toStdString()}});
+    }
+    // programs: objects with command, enabled and stopWithGame, as in State.programs
+    Q_INVOKABLE void setPrograms (const QVariantList& programs)
+    {
+        Protocol::SetPrograms command;
+        for(const auto& entry : programs)
+        {
+            auto program = entry.toMap();
+            command.programs.push_back({.command = program.value("command").toString().toStdString(),
+                                        .enabled = program.value("enabled", true).toBool(),
+                                        .stopWithGame = program.value("stopWithGame").toBool()});
+        }
+        backEnd.execute(command);
     }
     Q_INVOKABLE void createBackup (const QString& channel) { backEnd.execute(Protocol::CreateBackup{.channel = channel.toStdString()}); }
     Q_INVOKABLE void restoreBackup (const QString& channel, const QString& backup)

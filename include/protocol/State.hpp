@@ -142,9 +142,23 @@ struct GameSettings
     int maxIdleFps = 0;
     // Own "key = value" lines, one per line
     std::string customLines;
+    // "vulkan" or "dx11", written into the game's GraphicsSettings.json instead of user.cfg; empty = the game's choice
+    std::string graphicsApi;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GameSettings, maxFps, maxIdleFps, customLines)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GameSettings, maxFps, maxIdleFps, customLines, graphicsApi)
+
+// A program the user starts together with the game, see CompanionPrograms
+struct Program
+{
+    // Program and arguments, split like a shell does (quotes, backslash) but without variables or pipes
+    std::string command;
+    bool enabled = true;
+    // Ends the program when Star Citizen quits
+    bool stopWithGame = false;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Program, command, enabled, stopWithGame)
 
 struct Channel
 {
@@ -166,10 +180,12 @@ struct Channel
     std::vector<std::string> ignoredSettings;
     // Why the last SetGameSettings was refused, e.g. a custom line that is no "key = value"
     std::string settingsError;
+    // gameSettings.graphicsApi is not written yet: the game runs, or this game version has not been started yet
+    bool graphicsApiWaiting = false;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status, notices, custom, gameSettings,
-                                                settingsChecked, ignoredSettings, settingsError)
+                                                settingsChecked, ignoredSettings, settingsError, graphicsApiWaiting)
 
 // Updates of the launcher itself, from the GitHub releases of the project
 enum class SelfUpdateStatus
@@ -347,9 +363,13 @@ struct State
     Caches caches;
     Diagnostics diagnostics;
     Backups backups;
+    // Started when StarCitizen.exe starts, also when the game was started without this launcher
+    std::vector<Program> programs;
+    // Commands that could not be started at the last start of the game
+    std::vector<std::string> failedPrograms;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
-                                                handledCommands, whatsNew, caches, diagnostics, backups)
+                                                handledCommands, whatsNew, caches, diagnostics, backups, programs, failedPrograms)
 
 }  // namespace Protocol

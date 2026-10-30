@@ -359,12 +359,20 @@
         <translation>Bildratenlimits gehen von 1 bis 1000; leer lassen für die Vorgabe des Spiels.</translation>
     </message>
     <message>
+        <source>Not saved – unknown graphics API.</source>
+        <translation>Nicht gespeichert – unbekannte Grafik-API.</translation>
+    </message>
+    <message>
         <source>Not saved – this line is no &quot;key = value&quot; or sets something the launcher manages itself: %1</source>
         <translation>Nicht gespeichert – diese Zeile ist kein „Schlüssel = Wert“ oder setzt etwas, das der Launcher selbst verwaltet: %1</translation>
     </message>
     <message>
         <source>Star Citizen ignored these settings at its last start (not whitelisted): %1</source>
         <translation>Star Citizen hat diese Einstellungen beim letzten Start ignoriert (nicht freigegeben): %1</translation>
+    </message>
+    <message>
+        <source>The graphics API is set after Star Citizen quits, or after the first start of a new game version.</source>
+        <translation>Die Grafik-API wird gesetzt, sobald Star Citizen beendet ist, bzw. nach dem ersten Start einer neuen Spielversion.</translation>
     </message>
     <message>
         <source>Star Citizen accepted these settings at its last start.</source>
@@ -379,8 +387,16 @@
         <translation>Spieleinstellungen</translation>
     </message>
     <message>
-        <source>Written into user.cfg of the channel. Other lines of the file stay as they are.</source>
-        <translation>Wird in die user.cfg des Kanals geschrieben. Andere Zeilen der Datei bleiben unverändert.</translation>
+        <source>Written into user.cfg of the channel, the graphics API into the game&apos;s GraphicsSettings.json. Everything else in these files stays as it is.</source>
+        <translation>Wird in die user.cfg des Kanals geschrieben, die Grafik-API in die GraphicsSettings.json des Spiels. Alles andere in diesen Dateien bleibt, wie es ist.</translation>
+    </message>
+    <message>
+        <source>Graphics API</source>
+        <translation>Grafik-API</translation>
+    </message>
+    <message>
+        <source>Game&apos;s choice</source>
+        <translation>Wie im Spiel</translation>
     </message>
     <message>
         <source>Frame limit (FPS)</source>
@@ -667,6 +683,53 @@
     </message>
 </context>
 <context>
+    <name>ProgramsDialog</name>
+    <message>
+        <source>Programs with the game</source>
+        <translation>Programme mit dem Spiel</translation>
+    </message>
+    <message>
+        <source>Started when Star Citizen starts, also when it was started without this launcher. The launcher has to be open, e.g. in the system tray. Quotes work as in a shell; for variables or pipes, start a script or sh -c &apos;…&apos;.</source>
+        <translation>Starten, sobald Star Citizen startet, auch wenn es ohne diesen Launcher gestartet wurde. Der Launcher muss dafür geöffnet sein, z. B. im Systembereich. Anführungszeichen wirken wie in einer Shell; für Variablen oder Pipes ein Skript oder sh -c &apos;…&apos; starten.</translation>
+    </message>
+    <message>
+        <source>Active</source>
+        <translation>Aktiv</translation>
+    </message>
+    <message>
+        <source>End it when the game quits</source>
+        <translation>Mit dem Spiel beenden</translation>
+    </message>
+    <message>
+        <source>No programs yet.</source>
+        <translation>Noch keine Programme.</translation>
+    </message>
+    <message>
+        <source>Could not be started at the last game start: %1</source>
+        <translation>Beim letzten Spielstart nicht gestartet: %1</translation>
+    </message>
+    <message>
+        <source>Choose program …</source>
+        <translation>Programm wählen …</translation>
+    </message>
+    <message>
+        <source>Add command</source>
+        <translation>Befehl hinzufügen</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Schließen</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Speichern</translation>
+    </message>
+    <message>
+        <source>Program to start with the game</source>
+        <translation>Programm, das mit dem Spiel startet</translation>
+    </message>
+</context>
+<context>
     <name>SettingsPanel</name>
     <message>
         <source>Settings</source>
@@ -751,6 +814,14 @@
     <message>
         <source>Game settings …</source>
         <translation>Spieleinstellungen …</translation>
+    </message>
+    <message>
+        <source>Own programs or scripts that start together with the game</source>
+        <translation>Eigene Programme oder Skripte, die zusammen mit dem Spiel starten</translation>
+    </message>
+    <message>
+        <source>Programs …</source>
+        <translation>Programme …</translation>
     </message>
     <message>
         <source>HELP</source>

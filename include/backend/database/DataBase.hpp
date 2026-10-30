@@ -97,6 +97,7 @@ struct ChannelData
     bool settingsChecked = false;
     std::vector<std::string> ignoredSettings;
     std::string settingsError;
+    bool graphicsApiWaiting = false;
 };
 
 // What SelfUpdateManager::install() needs from a release; filled by its check() when a matching signed package exists
@@ -163,6 +164,8 @@ struct BackendData
     Protocol::Caches caches;
     Protocol::Diagnostics diagnostics;
     Protocol::Backups backups;
+    std::vector<Protocol::Program> programs;
+    std::vector<std::string> failedPrograms;
 
     // Set when the app closes; background jobs read it to stop early
     std::atomic<bool> shuttingDown{false};
