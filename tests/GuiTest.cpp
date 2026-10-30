@@ -581,6 +581,49 @@ class GuiTest : public QObject
         QTRY_VERIFY(!panel->property("visible").toBool());
     }
 
+    void savesProgramsFromTheSettings ()
+    {
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        // The button sits below the visible part of the panel
+        QMetaObject::invokeMethod(panel, "programsRequested");
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("programsDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QVERIFY(findText("No programs yet."));
+        QVERIFY(clickButton("Add command"));
+
+        // Made by a Repeater, so only found in the visual tree
+        std::function<QQuickItem*(QQuickItem*)> walk = [&] (QQuickItem* item) -> QQuickItem*
+        {
+            if(item->objectName() == "programCommand0") return item;
+            for(auto* child : item->childItems())
+                if(auto* found = walk(child)) return found;
+            return nullptr;
+        };
+        QQuickItem* field = nullptr;
+        QTRY_VERIFY((field = walk(window->contentItem())) && field->isVisible() && field->width() > 0);
+        // As typing does; the offscreen window gives no reliable keyboard focus to a field in a popup
+        field->setProperty("text", "true");
+        QMetaObject::invokeMethod(field, "textEdited");
+        QVERIFY(clickButton("Save"));
+        QTRY_COMPARE(bridge->state()["programs"].toList().size(), 1);
+        auto program = bridge->state()["programs"].toList().first().toMap();
+        QCOMPARE(program["command"].toString(), QString("true"));
+        QVERIFY(program["enabled"].toBool());
+        QVERIFY(!program["stopWithGame"].toBool());
+
+        // Leaves no program behind for the other tests
+        QVERIFY(click("−"));
+        QTRY_VERIFY(findText("No programs yet."));
+        QVERIFY(clickButton("Save"));
+        QTRY_VERIFY(bridge->state()["programs"].toList().isEmpty());
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
     void ownSourceThroughTheDialog ()
     {
         // The dialog only accepts HTTPS; nothing is downloaded in this test

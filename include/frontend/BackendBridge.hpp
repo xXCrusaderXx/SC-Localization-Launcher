@@ -109,6 +109,19 @@ class BackendBridge : public QObject
         backEnd.execute(Protocol::SetGameSettings{
             .channel = channel.toStdString(), .settings = {.maxFps = maxFps, .maxIdleFps = maxIdleFps, .customLines = customLines.toStdString()}});
     }
+    // programs: objects with command, enabled and stopWithGame, as in State.programs
+    Q_INVOKABLE void setPrograms (const QVariantList& programs)
+    {
+        Protocol::SetPrograms command;
+        for(const auto& entry : programs)
+        {
+            auto program = entry.toMap();
+            command.programs.push_back({.command = program.value("command").toString().toStdString(),
+                                        .enabled = program.value("enabled", true).toBool(),
+                                        .stopWithGame = program.value("stopWithGame").toBool()});
+        }
+        backEnd.execute(command);
+    }
     Q_INVOKABLE void createBackup (const QString& channel) { backEnd.execute(Protocol::CreateBackup{.channel = channel.toStdString()}); }
     Q_INVOKABLE void restoreBackup (const QString& channel, const QString& backup)
     {

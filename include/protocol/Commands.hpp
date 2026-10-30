@@ -163,6 +163,13 @@ struct SetGameSettings
     GameSettings settings;
 };
 
+// Replaces the programs started with the game; entries without a command are dropped
+struct SetPrograms
+{
+    static constexpr const char* name = "setPrograms";
+    std::vector<Program> programs;
+};
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetLanguage, channel, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInstallPath, channel, path)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetRsiLauncherPath, path)
@@ -185,10 +192,11 @@ inline void to_json (nlohmann::json& j, const LoadBackups&) { j = nlohmann::json
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CreateBackup, channel)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RestoreBackup, channel, backup)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetGameSettings, channel, settings)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetPrograms, programs)
 
 using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
                              InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches,
-                             ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings>;
+                             ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

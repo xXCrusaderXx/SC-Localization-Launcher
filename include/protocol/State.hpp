@@ -146,6 +146,18 @@ struct GameSettings
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(GameSettings, maxFps, maxIdleFps, customLines)
 
+// A program the user starts together with the game, see CompanionPrograms
+struct Program
+{
+    // Program and arguments, split like a shell does (quotes, backslash) but without variables or pipes
+    std::string command;
+    bool enabled = true;
+    // Ends the program when Star Citizen quits
+    bool stopWithGame = false;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Program, command, enabled, stopWithGame)
+
 struct Channel
 {
     std::string name;
@@ -347,9 +359,13 @@ struct State
     Caches caches;
     Diagnostics diagnostics;
     Backups backups;
+    // Started when StarCitizen.exe starts, also when the game was started without this launcher
+    std::vector<Program> programs;
+    // Commands that could not be started at the last start of the game
+    std::vector<std::string> failedPrograms;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
-                                                handledCommands, whatsNew, caches, diagnostics, backups)
+                                                handledCommands, whatsNew, caches, diagnostics, backups, programs, failedPrograms)
 
 }  // namespace Protocol

@@ -18,6 +18,7 @@ Item {
     signal diagnosticsRequested
     signal backupsRequested
     signal gameSettingsRequested
+    signal programsRequested
 
     readonly property var options: appState.options || {}
     readonly property var channels: appState.channels || []
@@ -397,6 +398,27 @@ Item {
                         text: qsTr("Game settings …")
                         enabled: !panel.locked
                         onClicked: panel.gameSettingsRequested()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Own programs or scripts that start together with the game")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("Programs …")
+                        enabled: !panel.locked
+                        onClicked: panel.programsRequested()
                     }
                 }
 

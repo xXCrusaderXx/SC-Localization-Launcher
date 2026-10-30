@@ -667,6 +667,53 @@
     </message>
 </context>
 <context>
+    <name>ProgramsDialog</name>
+    <message>
+        <source>Programs with the game</source>
+        <translation>Programme mit dem Spiel</translation>
+    </message>
+    <message>
+        <source>Started when Star Citizen starts, also when it was started without this launcher. The launcher has to be open, e.g. in the system tray. Quotes work as in a shell; for variables or pipes, start a script or sh -c &apos;…&apos;.</source>
+        <translation>Starten, sobald Star Citizen startet, auch wenn es ohne diesen Launcher gestartet wurde. Der Launcher muss dafür geöffnet sein, z. B. im Systembereich. Anführungszeichen wirken wie in einer Shell; für Variablen oder Pipes ein Skript oder sh -c &apos;…&apos; starten.</translation>
+    </message>
+    <message>
+        <source>Active</source>
+        <translation>Aktiv</translation>
+    </message>
+    <message>
+        <source>End it when the game quits</source>
+        <translation>Mit dem Spiel beenden</translation>
+    </message>
+    <message>
+        <source>No programs yet.</source>
+        <translation>Noch keine Programme.</translation>
+    </message>
+    <message>
+        <source>Could not be started at the last game start: %1</source>
+        <translation>Beim letzten Spielstart nicht gestartet: %1</translation>
+    </message>
+    <message>
+        <source>Choose program …</source>
+        <translation>Programm wählen …</translation>
+    </message>
+    <message>
+        <source>Add command</source>
+        <translation>Befehl hinzufügen</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Schließen</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Speichern</translation>
+    </message>
+    <message>
+        <source>Program to start with the game</source>
+        <translation>Programm, das mit dem Spiel startet</translation>
+    </message>
+</context>
+<context>
     <name>SettingsPanel</name>
     <message>
         <source>Settings</source>
@@ -751,6 +798,14 @@
     <message>
         <source>Game settings …</source>
         <translation>Spieleinstellungen …</translation>
+    </message>
+    <message>
+        <source>Own programs or scripts that start together with the game</source>
+        <translation>Eigene Programme oder Skripte, die zusammen mit dem Spiel starten</translation>
+    </message>
+    <message>
+        <source>Programs …</source>
+        <translation>Programme …</translation>
     </message>
     <message>
         <source>HELP</source>
