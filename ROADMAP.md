@@ -13,8 +13,9 @@ Each phase is a GitHub [milestone](https://github.com/xXCrusaderXx/SC-Localizati
 | **0.8.0** | Background operation | Tray icon with status light, periodic update check, updates after the game exits. Headless CLI (`--update`, `--check`, `--version`, … with exit codes 0/1/2) for scripts and `systemd --user` timers, lock against parallel runs. Automatic update checks in the background, delta updates for the AppImage (zsync). "What's new" dialog. |
 | **0.9.0** | Item values & strings | Item stats and type/size/class added to item names and descriptions in the installed `global.ini`, each category optional. Data from the [Star Citizen Wiki API](https://api.star-citizen.wiki). Re-applied after every translation update. |
 | **0.10.0** | Tools | Profile backup (keybindings, `attributes.xml`, characters, `user.cfg`) per channel with restore. Cache cleaner for Linux (game shader cache in the Wine prefix, DXVK/vkd3d, Mesa, NVIDIA). Read-only problem analysis with a report for bug reports. Game settings: frame limits and own lines in `user.cfg`, graphics API (Vulkan or DirectX 11). Programs started together with the game. Moved before Blueprints, which wait for `Game.log` lines of earned blueprints ([#22](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/22)). |
-| **0.11.0** | Blueprints | Spike first: map mission texts to `global.ini` keys and find the `Game.log` lines for earned blueprints. Then: blueprint details in mission descriptions, list of earned blueprints from `Game.log` (also live while playing), import/export. |
-| **0.12.0** | Statistics & dashboard | Play time, ships, quantum jumps, and crashes from `Game.log`, dashboard tiles, HTML export, system information. |
+| **0.11.0** | Interface languages | Interface language selectable in the settings (automatic = system language), applied without a restart. Interface translations for French, Spanish, Italian, Polish, Dutch and Portuguese next to English and German, reviewed by native speakers. |
+| **0.12.0** | Blueprints | Spike first: map mission texts to `global.ini` keys and find the `Game.log` lines for earned blueprints. Then: blueprint details in mission descriptions, list of earned blueprints from `Game.log` (also live while playing), import/export. |
+| **0.13.0** | Statistics & dashboard | Play time, ships, quantum jumps, and crashes from `Game.log`, dashboard tiles, HTML export, system information. |
 | **1.0.0** | Stable | First-start assistant, light/dark theme, user documentation, Flathub submission. |
 
 Phases after 1.0.0 are open. Ideas that don't belong to a phase yet are collected below.
@@ -23,7 +24,6 @@ Phases after 1.0.0 are open. Ideas that don't belong to a phase yet are collecte
 
 Unscheduled proposals, in no particular order. A maintainer moves an idea into a milestone once it is clear and someone works on it.
 
-- More interface languages (`translations/*.ts`).
 - Support for more launch methods besides the LUG Helper and Lutris (e.g. Heroic, Bottles, Steam with Proton).
 - Optional per-channel notifications on the desktop.
 - Window mode, resolution and FOV from the launcher, once their values in `attributes.xml` are confirmed ([#120](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/120)).
