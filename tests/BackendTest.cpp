@@ -1572,6 +1572,59 @@ class BackendTest : public QObject
         QCOMPARE(QByteArray::fromStdString(readFile(ini)), TRANSLATION);
     }
 
+    // Not a zombie: a process that ended may wait for a parent that never reaps it, e.g. in a container
+    static bool processRuns (qint64 pid)
+    {
+        std::string stat = readFile("/proc/" + std::to_string(pid) + "/stat");
+        auto end = stat.rfind(')');
+        return end != std::string::npos && end + 2 < stat.size() && stat[end + 2] != 'Z' && stat[end + 2] != 'X';
+    }
+
+    void splitsProgramCommandsLikeAShell ()
+    {
+        using Words = std::optional<QStringList>;
+        QCOMPARE(CompanionPrograms::splitWords("  a  b\tc "), Words(QStringList{"a", "b", "c"}));
+        QCOMPARE(CompanionPrograms::splitWords("sh -c 'echo $HOME \"x\"'"), Words(QStringList{"sh", "-c", "echo $HOME \"x\""}));
+        QCOMPARE(CompanionPrograms::splitWords("\"/opt/My Tool/run\" a\\ b \"q\\\"\\n\" ''"),
+                 Words(QStringList{"/opt/My Tool/run", "a b", "q\"\\n", ""}));
+        QCOMPARE(CompanionPrograms::splitWords("x'y z'"), Words(QStringList{"xy z"}));
+        QCOMPARE(CompanionPrograms::splitWords("a 'open"), Words());
+    }
+
+    void startsProgramsWithTheGame ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir dir;
+        auto path = std::filesystem::path(dir.path().toStdString());
+        std::string kept = "/bin/sh -c 'echo $$ > \"" + (path / "pid").string() + "\"; exec sleep 30'";
+        std::string disabled = "/bin/sh -c 'touch \"" + (path / "disabled").string() + "\"'";
+        std::string missing = "/nonexistent/program --flag";
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetPrograms{{{kept, true, true}, {"   ", true, false}, {disabled, false, false}, {"  " + missing, true, false}}});
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(latest().programs.size(), size_t(3));
+        QCOMPARE(latest().programs[2].command, missing);
+        QCOMPARE(readSettingsFile()["programs"][0]["command"].get<std::string>(), kept);
+        QVERIFY(!std::filesystem::exists(path / "pid"));
+
+        QProcess game;
+        game.start("/bin/bash", {"-c", QString::fromStdString(fakeWineProcess(testGameProgram()))});
+        QVERIFY(game.waitForStarted());
+        auto playing = waitForState([] (const auto& s) { return s.game == GameStart::Playing; });
+        QTRY_VERIFY(!readFile(path / "pid").empty());
+        qint64 pid = std::stoll(readFile(path / "pid"));
+        bool runsWithGame = processRuns(pid);
+        game.kill();
+        game.waitForFinished();
+        QVERIFY(playing);
+        QVERIFY(runsWithGame);
+        QCOMPARE(latest().failedPrograms, std::vector<std::string>{missing});
+        QVERIFY(!std::filesystem::exists(path / "disabled"));
+
+        QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Idle; }, *playing));
+        QTRY_VERIFY(!processRuns(pid));
+    }
+
     void backgroundUpdateWaitsUntilTheGameIsClosed ()
     {
         qputenv("PATH", "/usr/bin:/bin");

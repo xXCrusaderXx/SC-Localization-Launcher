@@ -15,6 +15,7 @@
 #include "jsonParser/SettingsJsonParser.hpp"
 #include "logging/logging.h"
 #include "managers/CacheCleaner.hpp"
+#include "managers/CompanionPrograms.hpp"
 #include "managers/Diagnostics.hpp"
 #include "managers/GameSettings.hpp"
 #include "managers/ProfileBackup.hpp"
@@ -46,6 +47,7 @@ class BackEnd
     CacheCleaner cacheCleaner;
     Diagnostics diagnostics;
     ProfileBackup profileBackup;
+    CompanionPrograms companionPrograms;
     StateCallback stateCallback;
 
     std::thread languagesJob;
@@ -339,7 +341,10 @@ class BackEnd
     {
         // A game update may have replaced the translation, and an update may have waited for the game to close
         bool gameClosed = data.gameProcess == Database::GameProcess::Game && process != Database::GameProcess::Game;
+        bool gameStarted = data.gameProcess != Database::GameProcess::Game && process == Database::GameProcess::Game;
         data.gameProcess = process;
+        if(gameStarted) data.failedPrograms = companionPrograms.start(data.programs);
+        if(gameClosed) companionPrograms.stop();
         if(gameClosed) checkGameSettings();
         if(gameClosed && data.backgroundChecks) checkChannels();
         // A start in progress decides itself whether the RSI Launcher keeps running; a failed start stays visible
@@ -455,6 +460,8 @@ class BackEnd
         state.caches = data.caches;
         state.diagnostics = data.diagnostics;
         state.backups = data.backups;
+        state.programs = data.programs;
+        state.failedPrograms = data.failedPrograms;
         return state;
     }
 
@@ -483,6 +490,7 @@ class BackEnd
         data.rsiLauncherPath = file.rsiLauncherPath;
         data.options = file.options;
         data.lastSeenVersion = file.lastSeenVersion;
+        data.programs = file.programs;
         // Moves settings of the former SC Deutsch Launcher to the new location right away
         saveSettings();
         checkGameSettings();
@@ -497,6 +505,7 @@ class BackEnd
         file.rsiLauncherPath = data.rsiLauncherPath.string();
         file.options = data.options;
         file.lastSeenVersion = data.lastSeenVersion;
+        file.programs = data.programs;
         return file;
     }
 
@@ -1025,6 +1034,19 @@ class BackEnd
         backupJobFor(command.channel,
                      [this, name = command.channel, backup = command.backup, path = channel->installPath, version = data.selfUpdate.currentVersion]
                      { return profileBackup.restore(name, backup, path, version).value_or("restored"); });
+    }
+
+    void handle (const Protocol::SetPrograms& command)
+    {
+        data.programs.clear();
+        for(auto program : command.programs)
+        {
+            auto first = program.command.find_first_not_of(" \t");
+            if(first == std::string::npos) continue;
+            program.command = program.command.substr(first, program.command.find_last_not_of(" \t") - first + 1);
+            data.programs.push_back(std::move(program));
+        }
+        data.failedPrograms.clear();
     }
 
     void handle (const Protocol::DismissWhatsNew&)

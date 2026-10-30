@@ -132,6 +132,7 @@ set(SC_QML_FILES
   qml/DiagnosticsDialog.qml
   qml/BackupDialog.qml
   qml/GameSettingsDialog.qml
+  qml/ProgramsDialog.qml
 )
 # Drop the qml/ folder from the resource path, so Main.qml is at qrc:/qt/qml/SCLauncher/Main.qml
 foreach(qml_file ${SC_QML_FILES})

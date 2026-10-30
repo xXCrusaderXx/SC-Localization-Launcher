@@ -563,6 +563,15 @@ ApplicationWindow {
             backend.loadBackups();
         }
         onGameSettingsRequested: gameSettingsDialog.open()
+        onProgramsRequested: programsDialog.open()
+    }
+
+    ProgramsDialog {
+        id: programsDialog
+
+        programs: window.appState.programs || []
+        failedPrograms: window.appState.failedPrograms || []
+        onSaveRequested: programs => backend.setPrograms(programs)
     }
 
     GameSettingsDialog {
