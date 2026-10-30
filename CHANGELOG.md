@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-30
+
+Tools: programs that start with the game, and the graphics API.
+
+### Added
+
+- Settings → Tools → "Programs …": your own programs or scripts start together with Star Citizen, also when the game was started without the launcher (the launcher has to be open, e.g. in the tray). Each can be switched off or ended again when the game quits. In the Flatpak they run on the host.
+- "Game settings …" can set the graphics API per channel (Vulkan or DirectX 11) in the game's `GraphicsSettings.json`. Never while the game runs; set again after every game version update, which starts with a fresh file.
+
 ## [0.9.1] - 2026-10-26
 
 Item values in descriptions, and game settings in `user.cfg`.
@@ -131,7 +140,8 @@ First release as *SC Localization Launcher*.
 - When switching languages, the previous language's folder is removed only after the new download succeeded.
 - Only one launcher runs at a time; starting it again brings the open window to the front instead of running two launchers that write the same settings and game folders.
 
-[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.7.0...v0.8.0
