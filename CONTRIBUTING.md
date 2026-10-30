@@ -27,8 +27,8 @@ The `DCO` check enforces this. PRs opened from the repository owner's account ar
 You may use AI coding tools. The rules:
 
 - **You** are the author. You must review and understand every line, and be able to explain and maintain it in review.
-- The DCO sign-off is yours to give. An AI tool must never add `Signed-off-by` for you. A `Co-Authored-By` trailer for the tool is fine.
-- Say in the PR description that you used AI tools and for what (the PR template has a checkbox).
+- The DCO sign-off is yours to give. An AI tool must never add `Signed-off-by` for you.
+- Commit messages and PR descriptions name no AI tool: no `Co-Authored-By` trailer for it, no "Generated with" line.
 - Don't send unreviewed, bulk, or drive-by agent PRs. They will be closed.
 - Agents working in this repository must follow [AGENTS.md](AGENTS.md).
 
