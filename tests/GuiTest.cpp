@@ -567,6 +567,15 @@ class GuiTest : public QObject
         QVERIFY(cfg.open(QIODevice::ReadOnly));
         QVERIFY(cfg.readAll().contains("r_DisplayInfo = 1"));
 
+        // No Wine prefix and no Game.log in the test folder: the API waits for the game
+        auto* graphicsApi = engine->rootObjects().first()->findChild<QObject*>("graphicsApiBox");
+        QVERIFY(graphicsApi);
+        graphicsApi->setProperty("currentIndex", 2);
+        QVERIFY(clickButton("Save"));
+        QTRY_COMPARE(channel("LIVE")["gameSettings"].toMap()["graphicsApi"].toString(), QString("dx11"));
+        QTRY_VERIFY(findText("The graphics API is set after Star Citizen quits, or after the first start of a new game version."));
+        graphicsApi->setProperty("currentIndex", 0);
+
         custom->setProperty("text", "not a setting");
         QVERIFY(clickButton("Save"));
         QTRY_VERIFY(findText("Not saved – this line is no \"key = value\" or sets something the launcher manages itself: not a setting"));

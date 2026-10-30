@@ -1532,6 +1532,65 @@ class BackendTest : public QObject
         QVERIFY(live.ignoredSettings.empty());
     }
 
+    // GraphicsSettings.json as the game makes it for a version, in a prefix like the LUG Helper's
+    static std::filesystem::path graphicsSettings (const std::filesystem::path& prefix, const std::string& branch)
+    {
+        return prefix / ("drive_c/users/me/AppData/Local/star citizen/starcitizen_(" + branch + ")_1qekeb_0/GraphicsSettings/GraphicsSettings.json");
+    }
+
+    static void writeGraphicsSettings (const std::filesystem::path& file, int renderer)
+    {
+        std::filesystem::create_directories(file.parent_path());
+        std::ofstream(file) << "{\n  \"GraphicsSettings\": {\n    \"SettingsVersion\": 1,\n    \"GraphicsRenderer\": " << renderer << "\n  }\n}";
+    }
+
+    void setsTheGraphicsApiOfTheLastGameVersion ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir prefixDir;
+        auto prefix = std::filesystem::path(prefixDir.path().toStdString());
+        auto live = prefix / "drive_c/Program Files/Roberts Space Industries/StarCitizen/LIVE";
+        std::filesystem::create_directories(live);
+        std::ofstream(live / "Game.log")
+            << "<2026-06-18T19:45:48.190Z> FileVersion: 4.8.183.37006\n<2026-06-18T19:45:48.772Z> Branch: sc-alpha-4.8.0\n";
+        auto current = graphicsSettings(prefix, "sc-alpha-4.8.0");
+        auto older = graphicsSettings(prefix, "sc-alpha-4.5.0");
+        writeGraphicsSettings(current, 1);
+        writeGraphicsSettings(older, 1);
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", live.string()});
+
+        auto channel = setGameSettings({0, 0, "", "dx11"});
+        QCOMPARE(channel.settingsError, std::string());
+        QVERIFY(!channel.graphicsApiWaiting);
+        QCOMPARE(readFile(current), std::string("{\n  \"GraphicsSettings\": {\n    \"SettingsVersion\": 1,\n    \"GraphicsRenderer\": 0\n  }\n}"));
+        QVERIFY(readFile(older).find("\"GraphicsRenderer\": 1") != std::string::npos);
+        QVERIFY(readFile(live / "user.cfg").find("Graphics") == std::string::npos);
+        QCOMPARE(readSettingsFile()["channels"]["LIVE"]["gameSettings"]["graphicsApi"].get<std::string>(), std::string("dx11"));
+
+        QCOMPARE(setGameSettings({0, 0, "", "metal"}).settingsError, std::string("unknown graphics API"));
+
+        // A game update: the next start runs a version that has no folder yet, the game makes it with its defaults
+        std::ofstream(live / "Game.log") << "<2026-11-01T10:00:00.000Z> Branch: sc-alpha-4.9.0\n";
+        auto next = graphicsSettings(prefix, "sc-alpha-4.9.0");
+        QVERIFY(setGameSettings({0, 0, "", "dx11"}).graphicsApiWaiting);
+        QProcess game;
+        game.start("/bin/bash", {"-c", QString::fromStdString(fakeWineProcess(testGameProgram()))});
+        QVERIFY(game.waitForStarted());
+        auto playing = waitForState([] (const auto& s) { return s.game == GameStart::Playing; });
+        writeGraphicsSettings(next, 1);
+        game.kill();
+        game.waitForFinished();
+        QVERIFY(playing);
+        QVERIFY(
+            waitForState([] (const auto& s) { return s.game == GameStart::Idle && !BackendTest::channel(s, "LIVE").graphicsApiWaiting; }, *playing));
+        QVERIFY(readFile(next).find("\"GraphicsRenderer\": 0") != std::string::npos);
+
+        // The game's choice again: the files are left as they are
+        QVERIFY(!setGameSettings({0, 0, "", ""}).graphicsApiWaiting);
+        QVERIFY(readFile(next).find("\"GraphicsRenderer\": 0") != std::string::npos);
+    }
+
     void reportsWhenTheRsiLauncherQuitsAtOnce ()
     {
         qputenv("PATH", "/usr/bin:/bin");

@@ -104,10 +104,12 @@ class BackendBridge : public QObject
     Q_INVOKABLE void runDiagnostics () { backEnd.execute(Protocol::RunDiagnostics{}); }
     Q_INVOKABLE void saveReport () { backEnd.execute(Protocol::SaveReport{}); }
     Q_INVOKABLE void loadBackups () { backEnd.execute(Protocol::LoadBackups{}); }
-    Q_INVOKABLE void setGameSettings (const QString& channel, int maxFps, int maxIdleFps, const QString& customLines)
+    Q_INVOKABLE void setGameSettings (const QString& channel, int maxFps, int maxIdleFps, const QString& customLines, const QString& graphicsApi)
     {
         backEnd.execute(Protocol::SetGameSettings{
-            .channel = channel.toStdString(), .settings = {.maxFps = maxFps, .maxIdleFps = maxIdleFps, .customLines = customLines.toStdString()}});
+            .channel = channel.toStdString(),
+            .settings = {
+                .maxFps = maxFps, .maxIdleFps = maxIdleFps, .customLines = customLines.toStdString(), .graphicsApi = graphicsApi.toStdString()}});
     }
     // programs: objects with command, enabled and stopWithGame, as in State.programs
     Q_INVOKABLE void setPrograms (const QVariantList& programs)

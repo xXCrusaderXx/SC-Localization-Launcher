@@ -578,7 +578,7 @@ ApplicationWindow {
         id: gameSettingsDialog
 
         channels: window.visibleChannels
-        onSaveRequested: (channel, maxFps, maxIdleFps, customLines) => backend.setGameSettings(channel, maxFps, maxIdleFps, customLines)
+        onSaveRequested: (channel, maxFps, maxIdleFps, customLines, graphicsApi) => backend.setGameSettings(channel, maxFps, maxIdleFps, customLines, graphicsApi)
     }
 
     BackupDialog {
