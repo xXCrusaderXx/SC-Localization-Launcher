@@ -149,7 +149,16 @@ qt_add_qml_module(${SC_LAUNCHER_BINARY}
 )
 
 # UI translations, picked in the settings or by the system language. Without Qt Linguist the UI is English only.
-set(SC_TS_FILES translations/sc-localization-launcher_de.ts translations/sc-localization-launcher_en.ts)
+set(SC_TS_FILES
+  translations/sc-localization-launcher_de.ts
+  translations/sc-localization-launcher_en.ts
+  translations/sc-localization-launcher_es.ts
+  translations/sc-localization-launcher_fr.ts
+  translations/sc-localization-launcher_it.ts
+  translations/sc-localization-launcher_nl.ts
+  translations/sc-localization-launcher_pl.ts
+  translations/sc-localization-launcher_pt.ts
+)
 find_package(Qt6 QUIET COMPONENTS LinguistTools)
 if(Qt6LinguistTools_FOUND)
   qt_add_translations(${SC_LAUNCHER_BINARY}
