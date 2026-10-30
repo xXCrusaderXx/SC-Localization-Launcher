@@ -359,11 +359,19 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Not saved – unknown graphics API.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Not saved – this line is no &quot;key = value&quot; or sets something the launcher manages itself: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Star Citizen ignored these settings at its last start (not whitelisted): %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The graphics API is set after Star Citizen quits, or after the first start of a new game version.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -379,7 +387,15 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Written into user.cfg of the channel. Other lines of the file stay as they are.</source>
+        <source>Written into user.cfg of the channel, the graphics API into the game&apos;s GraphicsSettings.json. Everything else in these files stays as it is.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Graphics API</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Game&apos;s choice</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

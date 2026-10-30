@@ -97,6 +97,7 @@ struct ChannelData
     bool settingsChecked = false;
     std::vector<std::string> ignoredSettings;
     std::string settingsError;
+    bool graphicsApiWaiting = false;
 };
 
 // What SelfUpdateManager::install() needs from a release; filled by its check() when a matching signed package exists

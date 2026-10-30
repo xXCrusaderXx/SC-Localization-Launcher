@@ -346,6 +346,8 @@ class BackEnd
         if(gameStarted) data.failedPrograms = companionPrograms.start(data.programs);
         if(gameClosed) companionPrograms.stop();
         if(gameClosed) checkGameSettings();
+        if(gameClosed)
+            for(auto& [name, channel] : data.channels) applyGraphicsApi(channel);
         if(gameClosed && data.backgroundChecks) checkChannels();
         // A start in progress decides itself whether the RSI Launcher keeps running; a failed start stays visible
         bool shownRunning = data.game == Protocol::GameStart::Running || data.game == Protocol::GameStart::Playing;
@@ -445,7 +447,7 @@ class BackEnd
             const auto& channel = data.channels.at(name);
             state.channels.push_back({name, channel.installPath.string(), channel.language, availableLanguages(name), channelStatus(name, channel),
                                       notices(name), channel.custom, channel.gameSettings, channel.settingsChecked, channel.ignoredSettings,
-                                      channel.settingsError});
+                                      channel.settingsError, channel.graphicsApiWaiting});
         }
 
         state.rsiLauncherPath = data.rsiLauncherPath.string();
@@ -494,6 +496,7 @@ class BackEnd
         // Moves settings of the former SC Deutsch Launcher to the new location right away
         saveSettings();
         checkGameSettings();
+        for(auto& [name, channel] : data.channels) applyGraphicsApi(channel);
     }
 
     SettingsFile settingsFile () const
@@ -531,6 +534,18 @@ class BackEnd
                 if(ignored.contains(key)) channel.ignoredSettings.push_back(key);
             channel.settingsChecked = true;
         }
+    }
+
+    // The game makes a new GraphicsSettings.json with its defaults for every game version, and its own menu may change
+    // it; so the choice is written again whenever the game quits. Never while the game runs.
+    void applyGraphicsApi (Database::ChannelData& channel)
+    {
+        channel.graphicsApiWaiting = false;
+        if(channel.gameSettings.graphicsApi.empty() || channel.installPath.empty()) return;
+        auto prefix = UpdateManager::findWinePrefix(channel.installPath);
+        channel.graphicsApiWaiting =
+            gamePlaying() || !prefix ||
+            !GameSettings::applyGraphicsApi(*prefix, GameSettings::branchOf(channel.installPath / "Game.log"), channel.gameSettings.graphicsApi);
     }
 
     void loadLanguages ()
@@ -1005,6 +1020,7 @@ class BackEnd
         channel->settingsWritten = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         channel->settingsChecked = false;
         channel->ignoredSettings.clear();
+        applyGraphicsApi(*channel);
     }
 
     void handle (const Protocol::LoadBackups&)
