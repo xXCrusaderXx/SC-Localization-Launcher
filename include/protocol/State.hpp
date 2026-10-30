@@ -367,9 +367,11 @@ struct State
     std::vector<Program> programs;
     // Commands that could not be started at the last start of the game
     std::vector<std::string> failedPrograms;
+    // Code of the launcher's own interface translation, e.g. "fr"; empty = the system language
+    std::string interfaceLanguage;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
-                                                handledCommands, whatsNew, caches, diagnostics, backups, programs, failedPrograms)
+                                                handledCommands, whatsNew, caches, diagnostics, backups, programs, failedPrograms, interfaceLanguage)
 
 }  // namespace Protocol

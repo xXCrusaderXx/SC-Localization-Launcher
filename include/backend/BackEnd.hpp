@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <functional>
+#include <regex>
 #include <set>
 #include <thread>
 
@@ -464,6 +465,7 @@ class BackEnd
         state.backups = data.backups;
         state.programs = data.programs;
         state.failedPrograms = data.failedPrograms;
+        state.interfaceLanguage = data.interfaceLanguage;
         return state;
     }
 
@@ -493,6 +495,7 @@ class BackEnd
         data.options = file.options;
         data.lastSeenVersion = file.lastSeenVersion;
         data.programs = file.programs;
+        data.interfaceLanguage = file.interfaceLanguage;
         // Moves settings of the former SC Deutsch Launcher to the new location right away
         saveSettings();
         checkGameSettings();
@@ -509,6 +512,7 @@ class BackEnd
         file.options = data.options;
         file.lastSeenVersion = data.lastSeenVersion;
         file.programs = data.programs;
+        file.interfaceLanguage = data.interfaceLanguage;
         return file;
     }
 
@@ -1063,6 +1067,13 @@ class BackEnd
             data.programs.push_back(std::move(program));
         }
         data.failedPrograms.clear();
+    }
+
+    // Only the code is checked; the window falls back to English for a language it does not ship
+    void handle (const Protocol::SetInterfaceLanguage& command)
+    {
+        static const std::regex code("[a-z]{2,3}(_[A-Z]{2})?");
+        if(command.language.empty() || std::regex_match(command.language, code)) data.interfaceLanguage = command.language;
     }
 
     void handle (const Protocol::DismissWhatsNew&)

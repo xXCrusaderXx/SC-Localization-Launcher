@@ -147,6 +147,46 @@ Item {
                     Layout.rightMargin: 24
                     spacing: 14
 
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 12
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: qsTr("Language of the launcher")
+                            wrapMode: Text.Wrap
+                            color: Theme.text
+                            font.pixelSize: 13
+                        }
+
+                        ComboBox {
+                            id: interfaceLanguageBox
+
+                            // "" = the system language, then the built-in translations by code
+                            readonly property var codes: [""].concat(backend.interfaceLanguages.map(l => l.code))
+
+                            objectName: "interfaceLanguageBox"
+                            Layout.preferredWidth: 220
+                            model: [qsTr("Automatic (system language)")].concat(backend.interfaceLanguages.map(l => l.name))
+                            currentIndex: Math.max(0, codes.indexOf(panel.appState.interfaceLanguage || ""))
+                            onActivated: index => backend.setInterfaceLanguage(codes[index])
+                            font.pixelSize: 12
+                            palette.text: Theme.text
+                            palette.base: Theme.inputBackground
+                            palette.window: Qt.rgba(0.04, 0.07, 0.13, 0.98)
+                            palette.button: Theme.inputBackground
+                            palette.buttonText: Theme.text
+                            palette.highlight: Theme.accent
+                            palette.highlightedText: "white"
+                            background: Rectangle {
+                                implicitHeight: 32
+                                radius: 8
+                                color: Theme.inputBackground
+                                border.color: Theme.border
+                            }
+                        }
+                    }
+
                     Toggle {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
