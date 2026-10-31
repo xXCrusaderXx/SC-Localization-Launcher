@@ -446,7 +446,7 @@ Item {
 
                     Text {
                         Layout.fillWidth: true
-                        text: qsTr("Frame limits and own lines in user.cfg per channel")
+                        text: qsTr("Frame limits, own lines and the graphics API per channel")
                         wrapMode: Text.Wrap
                         color: Theme.muted
                         font.pixelSize: 11
@@ -523,6 +523,29 @@ Item {
                         text: qsTr("Setup assistant …")
                         enabled: !panel.locked
                         onClicked: panel.setupRequested()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Installation, first start, languages and solutions to common problems")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        // German has its own guide, every other language reads the English one
+                        readonly property string language: panel.appState.interfaceLanguage || Qt.locale().name
+
+                        text: qsTr("User guide")
+                        onClicked: Qt.openUrlExternally("https://github.com/xXCrusaderXx/SC-Localization-Launcher/blob/main/docs/user-guide" + (language.startsWith("de") ? ".de" : "") + ".md")
                     }
                 }
 

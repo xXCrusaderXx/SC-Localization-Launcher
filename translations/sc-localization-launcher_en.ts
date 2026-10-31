@@ -867,7 +867,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Frame limits and own lines in user.cfg per channel</source>
+        <source>Frame limits, own lines and the graphics API per channel</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -900,6 +900,14 @@
     </message>
     <message>
         <source>Setup assistant …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Installation, first start, languages and solutions to common problems</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>User guide</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

@@ -867,8 +867,8 @@
         <translation>Back-ups …</translation>
     </message>
     <message>
-        <source>Frame limits and own lines in user.cfg per channel</source>
-        <translation>Framelimieten en eigen regels in de user.cfg per kanaal</translation>
+        <source>Frame limits, own lines and the graphics API per channel</source>
+        <translation>Framelimieten, eigen regels en grafische API per kanaal</translation>
     </message>
     <message>
         <source>Game settings …</source>
@@ -901,6 +901,14 @@
     <message>
         <source>Setup assistant …</source>
         <translation>Installatie-assistent …</translation>
+    </message>
+    <message>
+        <source>Installation, first start, languages and solutions to common problems</source>
+        <translation>Installatie, eerste start, talen en oplossingen voor veelvoorkomende problemen</translation>
+    </message>
+    <message>
+        <source>User guide</source>
+        <translation>Handleiding</translation>
     </message>
     <message>
         <source>Log files</source>

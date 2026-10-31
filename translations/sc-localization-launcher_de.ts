@@ -697,7 +697,7 @@
     </message>
     <message>
         <source>Started when Star Citizen starts, also when it was started without this launcher. The launcher has to be open, e.g. in the system tray. Quotes work as in a shell; for variables or pipes, start a script or sh -c &apos;…&apos;.</source>
-        <translation>Starten, sobald Star Citizen startet, auch wenn es ohne diesen Launcher gestartet wurde. Der Launcher muss dafür geöffnet sein, z. B. im Systembereich. Anführungszeichen wirken wie in einer Shell; für Variablen oder Pipes ein Skript oder sh -c &apos;…&apos; starten.</translation>
+        <translation>Starten, sobald Star Citizen startet, auch wenn es ohne diesen Launcher gestartet wurde. Der Launcher muss dafür geöffnet sein, z. B. im Infobereich. Anführungszeichen wirken wie in einer Shell; für Variablen oder Pipes ein Skript oder sh -c &apos;…&apos; starten.</translation>
     </message>
     <message>
         <source>Active</source>
@@ -835,8 +835,8 @@
         <translation>Sicherungen …</translation>
     </message>
     <message>
-        <source>Frame limits and own lines in user.cfg per channel</source>
-        <translation>Bildratenlimits und eigene Zeilen in der user.cfg pro Kanal</translation>
+        <source>Frame limits, own lines and the graphics API per channel</source>
+        <translation>Bildratenbegrenzung, eigene Zeilen und Grafik-API pro Spielversion</translation>
     </message>
     <message>
         <source>Game settings …</source>
@@ -869,6 +869,14 @@
     <message>
         <source>Setup assistant …</source>
         <translation>Einrichtungsassistent …</translation>
+    </message>
+    <message>
+        <source>Installation, first start, languages and solutions to common problems</source>
+        <translation>Installation, erster Start, Sprachen und Lösungen für häufige Probleme</translation>
+    </message>
+    <message>
+        <source>User guide</source>
+        <translation>Anleitung</translation>
     </message>
     <message>
         <source>Log files</source>
