@@ -177,6 +177,13 @@ struct SetInterfaceLanguage
     std::string language;
 };
 
+// "dark", "light", or empty to follow the system
+struct SetTheme
+{
+    static constexpr const char* name = "setTheme";
+    std::string theme;
+};
+
 // The setup assistant was finished or skipped; it is not offered again
 struct FinishSetup
 {
@@ -208,11 +215,12 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RestoreBackup, channel, backup)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetGameSettings, channel, settings)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetPrograms, programs)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInterfaceLanguage, language)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetTheme, theme)
 
 using Command =
     std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate, InstallUpdate,
                  RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches, ClearCaches, RunDiagnostics,
-                 SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms, SetInterfaceLanguage, FinishSetup>;
+                 SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms, SetInterfaceLanguage, FinishSetup, SetTheme>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

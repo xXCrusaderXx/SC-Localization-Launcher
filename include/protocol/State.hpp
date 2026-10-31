@@ -371,10 +371,12 @@ struct State
     std::string interfaceLanguage;
     // First start: the window offers the setup assistant until FinishSetup
     bool setupNeeded = false;
+    // "dark" or "light"; empty = like the system
+    std::string theme;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
                                                 handledCommands, whatsNew, caches, diagnostics, backups, programs, failedPrograms, interfaceLanguage,
-                                                setupNeeded)
+                                                setupNeeded, theme)
 
 }  // namespace Protocol

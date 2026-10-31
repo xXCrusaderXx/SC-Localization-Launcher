@@ -467,6 +467,7 @@ class BackEnd
         state.failedPrograms = data.failedPrograms;
         state.interfaceLanguage = data.interfaceLanguage;
         state.setupNeeded = !data.setupDone;
+        state.theme = data.theme;
         return state;
     }
 
@@ -497,6 +498,7 @@ class BackEnd
         data.lastSeenVersion = file.lastSeenVersion;
         data.programs = file.programs;
         data.interfaceLanguage = file.interfaceLanguage;
+        data.theme = file.theme;
         // Settings from before the assistant: whoever set a game folder is set up already
         data.setupDone = file.setupDone || std::any_of(file.channels.begin(), file.channels.end(),
                                                        [] (const auto& channel) { return !channel.second.installPath.empty(); });
@@ -518,6 +520,7 @@ class BackEnd
         file.programs = data.programs;
         file.interfaceLanguage = data.interfaceLanguage;
         file.setupDone = data.setupDone;
+        file.theme = data.theme;
         return file;
     }
 
@@ -1082,6 +1085,11 @@ class BackEnd
     }
 
     void handle (const Protocol::FinishSetup&) { data.setupDone = true; }
+
+    void handle (const Protocol::SetTheme& command)
+    {
+        if(command.theme.empty() || command.theme == "dark" || command.theme == "light") data.theme = command.theme;
+    }
 
     void handle (const Protocol::DismissWhatsNew&)
     {

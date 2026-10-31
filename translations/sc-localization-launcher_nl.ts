@@ -759,6 +759,22 @@
         <translation>Taal van de launcher</translation>
     </message>
     <message>
+        <source>Appearance</source>
+        <translation>Weergave</translation>
+    </message>
+    <message>
+        <source>Like the system</source>
+        <translation>Zoals het systeem</translation>
+    </message>
+    <message>
+        <source>Dark</source>
+        <translation>Donker</translation>
+    </message>
+    <message>
+        <source>Light</source>
+        <translation>Licht</translation>
+    </message>
+    <message>
         <source>Start Star Citizen after the update</source>
         <translation>Star Citizen na de update starten</translation>
     </message>

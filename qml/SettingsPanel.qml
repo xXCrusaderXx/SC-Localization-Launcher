@@ -48,7 +48,7 @@ Item {
     // Dimmed backdrop, closes the panel on click
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(0, 0, 0, 0.5)
+        color: Theme.scrim
         opacity: panel.open ? 1 : 0
 
         Behavior on opacity {
@@ -69,7 +69,7 @@ Item {
         width: 520
         height: parent.height
         x: panel.open ? panel.width - width : panel.width
-        color: Qt.rgba(0.04, 0.07, 0.13, 0.97)
+        color: Theme.popup
         border.color: Theme.border
 
         Behavior on x {
@@ -164,6 +164,44 @@ Item {
                             objectName: "interfaceLanguageBox"
                             Layout.preferredWidth: 220
                             current: panel.appState.interfaceLanguage || ""
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 12
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: qsTr("Appearance")
+                            wrapMode: Text.Wrap
+                            color: Theme.text
+                            font.pixelSize: 13
+                        }
+
+                        ComboBox {
+                            // Values of State.theme, in the order of the list
+                            readonly property var themes: ["", "dark", "light"]
+
+                            objectName: "themeBox"
+                            Layout.preferredWidth: 220
+                            model: [qsTr("Like the system"), qsTr("Dark"), qsTr("Light")]
+                            currentIndex: Math.max(0, themes.indexOf(panel.appState.theme || ""))
+                            onActivated: index => backend.setTheme(themes[index])
+                            font.pixelSize: 12
+                            palette.text: Theme.text
+                            palette.base: Theme.inputBackground
+                            palette.window: Theme.popup
+                            palette.button: Theme.inputBackground
+                            palette.buttonText: Theme.text
+                            palette.highlight: Theme.accent
+                            palette.highlightedText: "white"
+                            background: Rectangle {
+                                implicitHeight: 32
+                                radius: 8
+                                color: Theme.inputBackground
+                                border.color: Theme.border
+                            }
                         }
                     }
 

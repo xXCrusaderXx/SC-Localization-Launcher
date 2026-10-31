@@ -1661,6 +1661,18 @@ class BackendTest : public QObject
         QVERIFY(!latest().setupNeeded);
     }
 
+    void storesTheTheme ()
+    {
+        QVERIFY(start());
+        QCOMPARE(latest().theme, std::string());
+        backEnd->execute(Protocol::SetTheme{"light"});
+        backEnd->execute(Protocol::SetTheme{"pink"});
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(latest().theme, std::string("light"));
+        QVERIFY(restart());
+        QCOMPARE(latest().theme, std::string("light"));
+    }
+
     void storesTheInterfaceLanguage ()
     {
         QVERIFY(start());
