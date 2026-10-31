@@ -59,6 +59,9 @@ ApplicationWindow {
         value: window.appState.theme === "dark" || (window.appState.theme !== "light" && backend.systemDark)
     }
 
+    // Numbers and dates in the format of the interface language
+    readonly property var uiLocale: Qt.locale(appState.interfaceLanguage || "")
+
     // Read by the GUI test
     readonly property bool darkTheme: Theme.dark
 
@@ -73,7 +76,11 @@ ApplicationWindow {
         if (hasWhatsNew)
             whatsNewDialog.open();
     }
-    Component.onCompleted: backend.loadWhatsNew()
+    Component.onCompleted: {
+        backend.loadWhatsNew();
+        // For the dashboard; reloaded by the backend after every game start
+        backend.loadStatistics();
+    }
     onClosing: close => {
         if (closesToTray) {
             close.accepted = false;
@@ -235,6 +242,8 @@ ApplicationWindow {
     }
 
     ColumnLayout {
+        id: mainColumn
+
         anchors {
             left: parent.left
             top: header.bottom
@@ -385,7 +394,27 @@ ApplicationWindow {
 
         // Keeps the rows at the top when fewer channels are shown
         Item {
+            id: channelsEnd
+
             Layout.fillHeight: true
+        }
+
+        Dashboard {
+            id: dashboard
+
+            objectName: "dashboard"
+            Layout.fillWidth: true
+            Layout.bottomMargin: 8
+            statistics: window.appState.statistics || ({})
+            tiles: window.appState.dashboardTiles || []
+            numberLocale: window.uiLocale
+            // Title row plus 70 px per row of tiles, in the room the channel rows leave
+            rows: Math.max(0, Math.min(2, Math.floor((mainColumn.height - channelsEnd.y - 34) / 70)))
+            onCustomizeRequested: dashboardDialog.open()
+            onStatisticsRequested: {
+                statisticsDialog.open();
+                backend.loadStatistics();
+            }
         }
     }
 
@@ -603,9 +632,19 @@ ApplicationWindow {
     StatisticsDialog {
         id: statisticsDialog
 
+        numberLocale: window.uiLocale
         statistics: window.appState.statistics || ({})
         onSaveRequested: html => backend.saveStatisticsReport(html)
         onShowReportRequested: path => backend.openReportFolder(path)
+    }
+
+    DashboardDialog {
+        id: dashboardDialog
+
+        tiles: window.appState.dashboardTiles || []
+        allTiles: dashboard.allTiles
+        labelOf: id => dashboard.labelOf(id)
+        onSaveRequested: tiles => backend.setDashboardTiles(tiles)
     }
 
     SetupAssistant {

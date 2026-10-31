@@ -139,6 +139,12 @@ class BackendBridge : public QObject
     // "dark", "light", or empty to follow the system
     Q_INVOKABLE void setTheme (const QString& theme) { backEnd.execute(Protocol::SetTheme{.theme = theme.toStdString()}); }
 
+    Q_INVOKABLE void setDashboardTiles (const QStringList& tiles)
+    {
+        Protocol::SetDashboardTiles command;
+        for(const auto& tile : tiles) command.tiles.push_back(tile.toStdString());
+        backEnd.execute(command);
+    }
     Q_INVOKABLE void loadStatistics () { backEnd.execute(Protocol::LoadStatistics{}); }
     Q_INVOKABLE void saveStatisticsReport (const QString& html) { backEnd.execute(Protocol::SaveStatisticsReport{.html = html.toStdString()}); }
 

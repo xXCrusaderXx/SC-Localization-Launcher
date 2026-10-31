@@ -226,6 +226,92 @@
     </message>
 </context>
 <context>
+    <name>Dashboard</name>
+    <message>
+        <source>%1 h</source>
+        <translation>%1 h</translation>
+    </message>
+    <message>
+        <source>Play time</source>
+        <translation>Temps de jeu</translation>
+    </message>
+    <message>
+        <source>Last played</source>
+        <translation>Dernière partie</translation>
+    </message>
+    <message>
+        <source>Favourite ship</source>
+        <translation>Vaisseau favori</translation>
+    </message>
+    <message>
+        <source>Free space</source>
+        <translation>Espace libre</translation>
+    </message>
+    <message>
+        <source>Game starts</source>
+        <translation>Lancements du jeu</translation>
+    </message>
+    <message>
+        <source>Crashes</source>
+        <translation>Plantages</translation>
+    </message>
+    <message>
+        <source>Disconnects</source>
+        <translation>Déconnexions</translation>
+    </message>
+    <message>
+        <source>Quantum jumps</source>
+        <translation>Sauts quantiques</translation>
+    </message>
+    <message>
+        <source>Missions completed</source>
+        <translation>Missions accomplies</translation>
+    </message>
+    <message>
+        <source>Kills / deaths</source>
+        <translation>Éliminations / morts</translation>
+    </message>
+    <message>
+        <source>%1 GB</source>
+        <translation>%1&#xa0;Go</translation>
+    </message>
+    <message>
+        <source>DASHBOARD</source>
+        <translation>TABLEAU DE BORD</translation>
+    </message>
+    <message>
+        <source>Customize …</source>
+        <translation>Personnaliser …</translation>
+    </message>
+    <message>
+        <source>No tiles chosen.</source>
+        <translation>Aucune tuile choisie.</translation>
+    </message>
+</context>
+<context>
+    <name>DashboardDialog</name>
+    <message>
+        <source>Customize the dashboard</source>
+        <translation>Personnaliser le tableau de bord</translation>
+    </message>
+    <message>
+        <source>Up to %1 tiles, shown in this order. The main window shows as many rows as fit.</source>
+        <translation>Jusqu&apos;à %1 tuiles, dans cet ordre. La fenêtre principale affiche autant de rangées que possible.</translation>
+    </message>
+    <message>
+        <source>More tiles</source>
+        <translation>Autres tuiles</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Fermer</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Enregistrer</translation>
+    </message>
+</context>
+<context>
     <name>DiagnosticsDialog</name>
     <message>
         <source>System</source>

@@ -226,6 +226,92 @@
     </message>
 </context>
 <context>
+    <name>Dashboard</name>
+    <message>
+        <source>%1 h</source>
+        <translation>%1 h</translation>
+    </message>
+    <message>
+        <source>Play time</source>
+        <translation>Czas gry</translation>
+    </message>
+    <message>
+        <source>Last played</source>
+        <translation>Ostatnia gra</translation>
+    </message>
+    <message>
+        <source>Favourite ship</source>
+        <translation>Ulubiony statek</translation>
+    </message>
+    <message>
+        <source>Free space</source>
+        <translation>Wolne miejsce</translation>
+    </message>
+    <message>
+        <source>Game starts</source>
+        <translation>Uruchomienia gry</translation>
+    </message>
+    <message>
+        <source>Crashes</source>
+        <translation>Awarie</translation>
+    </message>
+    <message>
+        <source>Disconnects</source>
+        <translation>Rozłączenia</translation>
+    </message>
+    <message>
+        <source>Quantum jumps</source>
+        <translation>Skoki kwantowe</translation>
+    </message>
+    <message>
+        <source>Missions completed</source>
+        <translation>Ukończone misje</translation>
+    </message>
+    <message>
+        <source>Kills / deaths</source>
+        <translation>Zabójstwa / śmierci</translation>
+    </message>
+    <message>
+        <source>%1 GB</source>
+        <translation>%1 GB</translation>
+    </message>
+    <message>
+        <source>DASHBOARD</source>
+        <translation>PULPIT</translation>
+    </message>
+    <message>
+        <source>Customize …</source>
+        <translation>Dostosuj …</translation>
+    </message>
+    <message>
+        <source>No tiles chosen.</source>
+        <translation>Nie wybrano kafelków.</translation>
+    </message>
+</context>
+<context>
+    <name>DashboardDialog</name>
+    <message>
+        <source>Customize the dashboard</source>
+        <translation>Dostosuj pulpit</translation>
+    </message>
+    <message>
+        <source>Up to %1 tiles, shown in this order. The main window shows as many rows as fit.</source>
+        <translation>Do %1 kafelków, w tej kolejności. Okno główne pokazuje tyle rzędów, ile się zmieści.</translation>
+    </message>
+    <message>
+        <source>More tiles</source>
+        <translation>Więcej kafelków</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Zamknij</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Zapisz</translation>
+    </message>
+</context>
+<context>
     <name>DiagnosticsDialog</name>
     <message>
         <source>System</source>

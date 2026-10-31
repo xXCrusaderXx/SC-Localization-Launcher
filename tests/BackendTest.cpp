@@ -1732,6 +1732,8 @@ class BackendTest : public QObject
         QCOMPARE(stats.days.size(), size_t(2));
         QCOMPARE(stats.days[0].date, std::string("2026-01-10"));
         QCOMPARE(stats.days[0].seconds, std::int64_t(3600));
+        QCOMPARE(stats.lastSessionSeconds, std::int64_t(2700));
+        QVERIFY(stats.diskFreeBytes > 0);
         // Nothing of the player's name reaches the state
         QVERIFY(jsonText(nlohmann::json(stats)).find("TestPilot") == std::string::npos);
 
@@ -1741,6 +1743,23 @@ class BackendTest : public QObject
         QVERIFY(!report.empty());
         QCOMPARE(readFile(report), std::string("<html>report</html>"));
         std::filesystem::remove(report);
+    }
+
+    void storesTheDashboardTiles ()
+    {
+        QVERIFY(start());
+        QCOMPARE(latest().dashboardTiles, Protocol::DEFAULT_DASHBOARD_TILES);
+        // Unknown and repeated tiles are dropped, the order stays
+        backEnd->execute(Protocol::SetDashboardTiles{{"crashes", "nonsense", "playTime", "crashes"}});
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(latest().dashboardTiles, (std::vector<std::string>{"crashes", "playTime"}));
+        backEnd->execute(Protocol::SetDashboardTiles{Protocol::DASHBOARD_TILES});
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(latest().dashboardTiles.size(), Protocol::MAX_DASHBOARD_TILES);
+        // None is a choice too, and is kept
+        backEnd->execute(Protocol::SetDashboardTiles{});
+        QVERIFY(restart());
+        QVERIFY(latest().dashboardTiles.empty());
     }
 
     void storesTheTheme ()

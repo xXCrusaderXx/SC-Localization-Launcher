@@ -153,7 +153,7 @@ class GuiTest : public QObject
     void cleanup ()
     {
         for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog", "backupDialog",
-                                "gameSettingsDialog", "programsDialog", "setupAssistant", "statisticsDialog"})
+                                "gameSettingsDialog", "programsDialog", "setupAssistant", "statisticsDialog", "dashboardDialog"})
         {
             auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
             if(!dialog || !dialog->property("visible").toBool()) continue;
@@ -715,6 +715,41 @@ class GuiTest : public QObject
         QTRY_VERIFY(!dialog->property("visible").toBool());
         panel->setProperty("open", false);
         QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    void dashboardTilesCanBeChosen ()
+    {
+        auto* dashboard = engine->rootObjects().first()->findChild<QQuickItem*>("dashboard");
+        QVERIFY(dashboard);
+        QTRY_VERIFY(dashboard->isVisible());
+        // Default tiles; their values come from the statistics loaded at start
+        QTRY_VERIFY(bridge->state()["statistics"].toMap()["loaded"].toBool());
+        QVERIFY(findText("Play time"));
+        QVERIFY(findText("Free space"));
+
+        QVERIFY(click("Customize …"));
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("dashboardDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        // Adds "Crashes" at the end through its "+" button
+        std::function<QQuickItem*(QQuickItem*)> walk = [&] (QQuickItem* item) -> QQuickItem*
+        {
+            if(item->objectName() == "addTile_crashes") return item;
+            for(auto* child : item->childItems())
+                if(auto* found = walk(child)) return found;
+            return nullptr;
+        };
+        QQuickItem* add = nullptr;
+        QTRY_VERIFY((add = walk(window->contentItem())) && add->width() > 0);
+        QMetaObject::invokeMethod(add, "clicked");
+        QVERIFY(clickButton("Save"));
+        QTRY_COMPARE(bridge->state()["dashboardTiles"].toStringList(), (QStringList{"playTime", "lastPlayed", "topShip", "freeSpace", "crashes"}));
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        QCOMPARE(readSettingsFile()["dashboardTiles"].size(), size_t(5));
+
+        // Back to the default for the other tests
+        bridge->setDashboardTiles({"playTime", "lastPlayed", "topShip", "freeSpace"});
+        QTRY_COMPARE(bridge->state()["dashboardTiles"].toStringList().size(), 4);
     }
 
     void switchesTheTheme ()
