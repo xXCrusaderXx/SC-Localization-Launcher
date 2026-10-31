@@ -148,12 +148,22 @@ qt_add_qml_module(${SC_LAUNCHER_BINARY}
   QML_FILES ${SC_QML_FILES}
 )
 
-# UI translations, picked by the system language. Without Qt Linguist the UI is English only.
+# UI translations, picked in the settings or by the system language. Without Qt Linguist the UI is English only.
+set(SC_TS_FILES
+  translations/sc-localization-launcher_de.ts
+  translations/sc-localization-launcher_en.ts
+  translations/sc-localization-launcher_es.ts
+  translations/sc-localization-launcher_fr.ts
+  translations/sc-localization-launcher_it.ts
+  translations/sc-localization-launcher_nl.ts
+  translations/sc-localization-launcher_pl.ts
+  translations/sc-localization-launcher_pt.ts
+)
 find_package(Qt6 QUIET COMPONENTS LinguistTools)
 if(Qt6LinguistTools_FOUND)
   qt_add_translations(${SC_LAUNCHER_BINARY}
     # _en only translates the English plural forms of %n texts; everything else stays unfinished and uses the source text
-    TS_FILES translations/sc-localization-launcher_de.ts translations/sc-localization-launcher_en.ts
+    TS_FILES ${SC_TS_FILES}
     RESOURCE_PREFIX /i18n
     # No line numbers in the .ts files, otherwise every QML change touches them and PRs conflict
     LUPDATE_OPTIONS -locations none

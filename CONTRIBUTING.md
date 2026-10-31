@@ -102,7 +102,9 @@ The launcher checks every entry when it loads the file. An invalid entry is skip
 
 ### Translating the interface
 
-The launcher's own interface is English by default and follows the system language. Translations live in `translations/*.ts` (Qt Linguist). To add one, copy an existing `.ts` file, change its `language` attribute, translate it with Qt Linguist (`linguist`), and register it in `CMakeLists.txt` next to the existing ones. Strings in QML use `qsTr()`.
+The launcher's own interface is English by default and follows the system language, or the language picked under Settings → Behaviour. Translations live in `translations/*.ts` (Qt Linguist). To add one, add `translations/sc-localization-launcher_<code>.ts` to `SC_TS_FILES` in `CMakeLists.txt`, run `cmake --build build --target update_translations`, and translate the new file with Qt Linguist (`linguist`). Strings in QML use `qsTr()`.
+
+French, Spanish, Italian, Polish, Dutch and Portuguese (Brazil) started as drafts and have not all been checked by native speakers yet. Corrections are welcome as small PRs that change only the `.ts` file. `GuiTest` fails if a shipped language has an unfinished string or loses a placeholder (`%1`, `%n`); the English file is the exception, it only holds plural forms.
 
 ---
 

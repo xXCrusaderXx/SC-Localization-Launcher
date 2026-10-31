@@ -166,6 +166,7 @@ struct BackendData
     Protocol::Backups backups;
     std::vector<Protocol::Program> programs;
     std::vector<std::string> failedPrograms;
+    std::string interfaceLanguage;
 
     // Set when the app closes; background jobs read it to stop early
     std::atomic<bool> shuttingDown{false};

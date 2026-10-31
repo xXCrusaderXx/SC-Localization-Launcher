@@ -2,12 +2,16 @@
 
 #include <QCoreApplication>
 #include <QDesktopServices>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QJsonDocument>
+#include <QLocale>
 #include <QObject>
 #include <QProcess>
+#include <QQmlEngine>
+#include <QTranslator>
 #include <QUrl>
 #include <QVariantMap>
 
@@ -22,10 +26,15 @@ class BackendBridge : public QObject
     Q_OBJECT
     Q_PROPERTY(QVariantMap state READ state NOTIFY stateChanged)
     Q_PROPERTY(QString logFolder READ logFolder CONSTANT)
+    Q_PROPERTY(QVariantList interfaceLanguages READ interfaceLanguages CONSTANT)
 
    private:
     LoggerFramework::LogEx lg;
     QVariantMap currentState;
+    QTranslator translator;
+    // Set by followInterfaceLanguage(); without it the interface stays as it is (command line, tests)
+    QQmlEngine* engine = nullptr;
+    QString appliedLanguage;
     // Declared last: its thread calls back into this object
     BackEnd backEnd;
 
@@ -49,6 +58,7 @@ class BackendBridge : public QObject
                       [this, variant]
                       {
                           currentState = variant;
+                          applyInterfaceLanguage(currentState.value("interfaceLanguage").toString());
                           emit stateChanged();
                       },
                       Qt::QueuedConnection);
@@ -61,6 +71,51 @@ class BackendBridge : public QObject
     }
 
     QVariantMap state () const { return currentState; }
+
+    // The interface translations built into the launcher: code and name in its own language, English first
+    static QVariantList interfaceLanguages ()
+    {
+        QStringList codes;
+        for(const auto& file : QDir(":/i18n").entryList({"sc-localization-launcher_*.qm"}, QDir::Files, QDir::Name))
+            codes << file.mid(QString("sc-localization-launcher_").size()).chopped(3);
+        codes.removeAll("en");
+        codes.prepend("en");
+        QVariantList languages;
+        for(const auto& code : codes)
+        {
+            // Qt names English after the US ("American English")
+            QString name = code == "en" ? QString("English") : QLocale(code).nativeLanguageName();
+            if(!name.isEmpty()) name[0] = name[0].toUpper();
+            languages << QVariantMap{{"code", code}, {"name", name}};
+        }
+        return languages;
+    }
+
+    // From now on the interface follows state.interfaceLanguage, at once and without a restart
+    void followInterfaceLanguage (QQmlEngine* qmlEngine)
+    {
+        engine = qmlEngine;
+        appliedLanguage = "-";
+        applyInterfaceLanguage(currentState.value("interfaceLanguage").toString());
+    }
+
+    void applyInterfaceLanguage (const QString& language)
+    {
+        if(!engine || language == appliedLanguage) return;
+        appliedLanguage = language;
+        QCoreApplication::removeTranslator(&translator);
+        // The interface is written in English; without a translation for the language it stays English
+        bool loaded = language.isEmpty() ? translator.load(QLocale(), "sc-localization-launcher", "_", ":/i18n")
+                                         : translator.load("sc-localization-launcher_" + language, ":/i18n");
+        if(loaded) QCoreApplication::installTranslator(&translator);
+        engine->retranslate();
+    }
+
+    // Empty = the system language
+    Q_INVOKABLE void setInterfaceLanguage (const QString& language)
+    {
+        backEnd.execute(Protocol::SetInterfaceLanguage{.language = language.toStdString()});
+    }
 
     // language is a code from state.languages, the backend rejects unknown codes
     Q_INVOKABLE void setLanguage (const QString& channel, const QString& language)

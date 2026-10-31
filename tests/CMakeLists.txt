@@ -33,6 +33,7 @@ add_executable(GuiTest
 )
 # Widgets as in the app: QTEST_MAIN then creates a QApplication, which the tray icon needs
 target_link_libraries(GuiTest PRIVATE sc_test_support Qt6::Quick Qt6::Widgets)
+target_compile_definitions(GuiTest PRIVATE SC_TRANSLATIONS_DIR="${CMAKE_SOURCE_DIR}/translations")
 
 # The same QML module as the app. Source file properties are per directory, so they are set again here.
 list(TRANSFORM SC_QML_FILES PREPEND ${CMAKE_SOURCE_DIR}/ OUTPUT_VARIABLE SC_TEST_QML_FILES)
@@ -47,6 +48,12 @@ qt_add_qml_module(GuiTest
   RESOURCE_PREFIX /qt/qml
   QML_FILES ${SC_TEST_QML_FILES}
 )
+# The app's interface translations, so the test can switch the language
+if(Qt6LinguistTools_FOUND)
+  list(TRANSFORM SC_TS_FILES PREPEND ${CMAKE_SOURCE_DIR}/ OUTPUT_VARIABLE SC_TEST_TS_FILES)
+  qt_add_lrelease(GuiTest TS_FILES ${SC_TEST_TS_FILES} QM_FILES_OUTPUT_VARIABLE SC_TEST_QM_FILES)
+  qt_add_resources(GuiTest gui_test_translations PREFIX /i18n BASE ${CMAKE_CURRENT_BINARY_DIR} FILES ${SC_TEST_QM_FILES})
+endif()
 
 foreach(test BackendTest DirectoryFinderTest SingleInstanceTest CommandLineTest WikiApiClientTest GuiTest)
   add_test(NAME ${test} COMMAND ${test})

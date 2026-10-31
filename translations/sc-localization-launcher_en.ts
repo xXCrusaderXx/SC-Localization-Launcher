@@ -748,6 +748,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Language of the launcher</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Automatic (system language)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Start Star Citizen after the update</source>
         <translation type="unfinished"></translation>
     </message>

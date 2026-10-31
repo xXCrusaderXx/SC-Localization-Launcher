@@ -1,10 +1,14 @@
 #include <QDir>
+#include <QFile>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QTranslator>
+#include <QXmlStreamReader>
 #include <algorithm>
 #include <functional>
 #include <memory>
@@ -130,6 +134,7 @@ class GuiTest : public QObject
         bridge = std::make_unique<BackendBridge>();
         engine = std::make_unique<QQmlApplicationEngine>();
         engine->rootContext()->setContextProperty("backend", bridge.get());
+        bridge->followInterfaceLanguage(engine.get());
         engine->load(QUrl("qrc:/qt/qml/SCLauncher/Main.qml"));
         QVERIFY(!engine->rootObjects().isEmpty());
         window = qobject_cast<QQuickWindow*>(engine->rootObjects().first());
@@ -631,6 +636,70 @@ class GuiTest : public QObject
         QTRY_VERIFY(!dialog->property("visible").toBool());
         panel->setProperty("open", false);
         QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    void switchesTheInterfaceLanguage ()
+    {
+        QStringList codes;
+        for(const auto& language : BackendBridge::interfaceLanguages()) codes << language.toMap()["code"].toString();
+        if(!codes.contains("de")) QSKIP("Built without Qt Linguist, no translations");
+        QCOMPARE(codes.first(), QString("en"));
+
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        QTRY_VERIFY(panel->property("visible").toBool());
+        QTRY_VERIFY(findText("Start Star Citizen after the update"));
+        auto* box = engine->rootObjects().first()->findChild<QObject*>("interfaceLanguageBox");
+        QVERIFY(box);
+        // As a pick from the list does; index 0 is the system language
+        QMetaObject::invokeMethod(box, "activated", Q_ARG(int, int(codes.indexOf("de")) + 1));
+        QTRY_COMPARE(bridge->state()["interfaceLanguage"].toString(), QString("de"));
+        QTRY_VERIFY(findText("Star Citizen nach dem Update starten"));
+        QCOMPARE(readSettingsFile()["interfaceLanguage"].get<std::string>(), std::string("de"));
+
+        // Back to the system language, which is English in the tests (LANGUAGE=en)
+        QMetaObject::invokeMethod(box, "activated", Q_ARG(int, 0));
+        QTRY_COMPARE(bridge->state()["interfaceLanguage"].toString(), QString());
+        QTRY_VERIFY(findText("Start Star Citizen after the update"));
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    // Every shipped interface language loads, is complete and keeps the placeholders of the English text
+    void shipsCompleteInterfaceLanguages ()
+    {
+        QStringList codes;
+        for(const auto& language : BackendBridge::interfaceLanguages()) codes << language.toMap()["code"].toString();
+        if(!codes.contains("de")) QSKIP("Built without Qt Linguist, no translations");
+        QStringList tsFiles = QDir(SC_TRANSLATIONS_DIR).entryList({"sc-localization-launcher_*.ts"});
+        QCOMPARE(codes.size(), tsFiles.size());
+        static const QRegularExpression placeholder("%(\\d|n)");
+        for(const auto& code : codes)
+        {
+            QTranslator translator;
+            QVERIFY2(translator.load("sc-localization-launcher_" + code, ":/i18n"), qPrintable(code));
+            // English only translates plural forms, everything else is the source text
+            if(code == "en") continue;
+            QFile file(QString(SC_TRANSLATIONS_DIR) + "/sc-localization-launcher_" + code + ".ts");
+            QVERIFY(file.open(QIODevice::ReadOnly));
+            QXmlStreamReader xml(&file);
+            QString source;
+            while(xml.readNext() != QXmlStreamReader::EndDocument && !xml.hasError())
+            {
+                if(!xml.isStartElement()) continue;
+                if(xml.name() == QLatin1String("source")) source = xml.readElementText();
+                if(xml.name() != QLatin1String("translation")) continue;
+                QVERIFY2(xml.attributes().value("type").isEmpty(), qPrintable(code + ": " + source));
+                QString text = xml.readElementText(QXmlStreamReader::IncludeChildElements);
+                QVERIFY2(!text.trimmed().isEmpty(), qPrintable(code + ": " + source));
+                for(auto it = placeholder.globalMatch(source); it.hasNext();)
+                {
+                    QString wanted = it.next().captured();
+                    QVERIFY2(text.contains(wanted), qPrintable(code + ": " + wanted + " missing in " + text));
+                }
+            }
+            QVERIFY2(!xml.hasError(), qPrintable(code + ": " + xml.errorString()));
+        }
     }
 
     void ownSourceThroughTheDialog ()
