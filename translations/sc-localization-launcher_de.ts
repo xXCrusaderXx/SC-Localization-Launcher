@@ -424,6 +424,13 @@
     </message>
 </context>
 <context>
+    <name>InterfaceLanguageBox</name>
+    <message>
+        <source>Automatic (system language)</source>
+        <translation>Automatisch (Systemsprache)</translation>
+    </message>
+</context>
+<context>
     <name>LanguagePicker</name>
     <message>
         <source>%1 (not available)</source>
@@ -744,10 +751,6 @@
         <translation>Sprache des Launchers</translation>
     </message>
     <message>
-        <source>Automatic (system language)</source>
-        <translation>Automatisch (Systemsprache)</translation>
-    </message>
-    <message>
         <source>Start Star Citizen after the update</source>
         <translation>Star Citizen nach dem Update starten</translation>
     </message>
@@ -844,6 +847,14 @@
         <translation>Installation prüfen …</translation>
     </message>
     <message>
+        <source>Game folders, translation and the main options, step by step</source>
+        <translation>Spielordner, Übersetzung und die wichtigsten Optionen, Schritt für Schritt</translation>
+    </message>
+    <message>
+        <source>Setup assistant …</source>
+        <translation>Einrichtungsassistent …</translation>
+    </message>
+    <message>
         <source>Log files</source>
         <translation>Log-Dateien</translation>
     </message>
@@ -878,6 +889,113 @@
     <message>
         <source>License: %1</source>
         <translation>Lizenz: %1</translation>
+    </message>
+</context>
+<context>
+    <name>SetupAssistant</name>
+    <message>
+        <source>Step %1 of %2</source>
+        <translation>Schritt %1 von %2</translation>
+    </message>
+    <message>
+        <source>Welcome</source>
+        <translation>Willkommen</translation>
+    </message>
+    <message>
+        <source>This launcher installs community translations of Star Citizen and keeps them up to date. A few steps and you are ready; everything can be changed later in the settings.</source>
+        <translation>Dieser Launcher installiert Community-Übersetzungen für Star Citizen und hält sie aktuell. Ein paar Schritte, dann bist du startklar; alles lässt sich später in den Einstellungen ändern.</translation>
+    </message>
+    <message>
+        <source>Language of the launcher</source>
+        <translation>Sprache des Launchers</translation>
+    </message>
+    <message>
+        <source>Find Star Citizen</source>
+        <translation>Star Citizen finden</translation>
+    </message>
+    <message>
+        <source>The launcher looks for the RSI Launcher and the game versions (LIVE, PTU, …) on your drives, including Lutris and LUG Helper installations.</source>
+        <translation>Der Launcher sucht den RSI Launcher und die Spielversionen (LIVE, PTU, …) auf deinen Laufwerken, auch in Installationen von Lutris und dem LUG Helper.</translation>
+    </message>
+    <message>
+        <source>Search automatically</source>
+        <translation>Automatisch suchen</translation>
+    </message>
+    <message>
+        <source>Choose folder …</source>
+        <translation>Ordner wählen …</translation>
+    </message>
+    <message>
+        <source>Searching …</source>
+        <translation>Suche läuft …</translation>
+    </message>
+    <message>
+        <source>Found: %1</source>
+        <translation>Gefunden: %1</translation>
+    </message>
+    <message>
+        <source>Nothing found yet. Choose the LIVE folder of the game, e.g. …/StarCitizen/LIVE.</source>
+        <translation>Noch nichts gefunden. Wähle den LIVE-Ordner des Spiels, z. B. …/StarCitizen/LIVE.</translation>
+    </message>
+    <message>
+        <source>Choose a translation</source>
+        <translation>Übersetzung wählen</translation>
+    </message>
+    <message>
+        <source>Which language should Star Citizen use? It is set for every game version found.</source>
+        <translation>In welcher Sprache soll Star Citizen laufen? Sie wird für jede gefundene Spielversion eingestellt.</translation>
+    </message>
+    <message>
+        <source>No game folder yet; go back one step.</source>
+        <translation>Noch kein Spielordner; geh einen Schritt zurück.</translation>
+    </message>
+    <message>
+        <source>Loading the list of translations …</source>
+        <translation>Liste der Übersetzungen wird geladen …</translation>
+    </message>
+    <message>
+        <source>Almost done</source>
+        <translation>Fast fertig</translation>
+    </message>
+    <message>
+        <source>Update translations automatically</source>
+        <translation>Übersetzungen automatisch aktualisieren</translation>
+    </message>
+    <message>
+        <source>Checks every hour and installs new versions; waits while Star Citizen runs</source>
+        <translation>Prüft stündlich und installiert neue Versionen; wartet, solange Star Citizen läuft</translation>
+    </message>
+    <message>
+        <source>Keep running in the system tray</source>
+        <translation>Im Infobereich weiterlaufen</translation>
+    </message>
+    <message>
+        <source>Closing the window keeps the launcher in the tray, so it goes on checking</source>
+        <translation>Beim Schließen des Fensters bleibt der Launcher im Infobereich und prüft weiter</translation>
+    </message>
+    <message>
+        <source>&quot;Install now&quot; downloads the translation; Star Citizen itself is not started.</source>
+        <translation>„Jetzt installieren“ lädt die Übersetzung herunter; Star Citizen selbst wird nicht gestartet.</translation>
+    </message>
+    <message>
+        <source>Skip</source>
+        <translation>Überspringen</translation>
+    </message>
+    <message>
+        <source>Back</source>
+        <translation>Zurück</translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation>Weiter</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Fertig</translation>
+    </message>
+    <message>
+        <source>Install now</source>
+        <translation>Jetzt installieren</translation>
     </message>
 </context>
 <context>

@@ -111,6 +111,8 @@ class BackendBridge : public QObject
         engine->retranslate();
     }
 
+    Q_INVOKABLE void finishSetup () { backEnd.execute(Protocol::FinishSetup{}); }
+
     // Empty = the system language
     Q_INVOKABLE void setInterfaceLanguage (const QString& language)
     {

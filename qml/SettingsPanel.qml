@@ -19,6 +19,7 @@ Item {
     signal backupsRequested
     signal gameSettingsRequested
     signal programsRequested
+    signal setupRequested
 
     readonly property var options: appState.options || {}
     readonly property var channels: appState.channels || []
@@ -159,31 +160,10 @@ Item {
                             font.pixelSize: 13
                         }
 
-                        ComboBox {
-                            id: interfaceLanguageBox
-
-                            // "" = the system language, then the built-in translations by code
-                            readonly property var codes: [""].concat(backend.interfaceLanguages.map(l => l.code))
-
+                        InterfaceLanguageBox {
                             objectName: "interfaceLanguageBox"
                             Layout.preferredWidth: 220
-                            model: [qsTr("Automatic (system language)")].concat(backend.interfaceLanguages.map(l => l.name))
-                            currentIndex: Math.max(0, codes.indexOf(panel.appState.interfaceLanguage || ""))
-                            onActivated: index => backend.setInterfaceLanguage(codes[index])
-                            font.pixelSize: 12
-                            palette.text: Theme.text
-                            palette.base: Theme.inputBackground
-                            palette.window: Qt.rgba(0.04, 0.07, 0.13, 0.98)
-                            palette.button: Theme.inputBackground
-                            palette.buttonText: Theme.text
-                            palette.highlight: Theme.accent
-                            palette.highlightedText: "white"
-                            background: Rectangle {
-                                implicitHeight: 32
-                                radius: 8
-                                color: Theme.inputBackground
-                                border.color: Theme.border
-                            }
+                            current: panel.appState.interfaceLanguage || ""
                         }
                     }
 
@@ -484,6 +464,27 @@ Item {
                     DialogButton {
                         text: qsTr("Check installation …")
                         onClicked: panel.diagnosticsRequested()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Game folders, translation and the main options, step by step")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("Setup assistant …")
+                        enabled: !panel.locked
+                        onClicked: panel.setupRequested()
                     }
                 }
 
