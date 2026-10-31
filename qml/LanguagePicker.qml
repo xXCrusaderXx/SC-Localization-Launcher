@@ -131,7 +131,7 @@ ComboBox {
 
         background: Rectangle {
             radius: 10
-            color: Qt.rgba(0.04, 0.07, 0.13, 0.98)
+            color: Theme.popup
             border.color: Theme.border
         }
     }

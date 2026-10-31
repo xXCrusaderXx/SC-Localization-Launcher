@@ -424,6 +424,13 @@
     </message>
 </context>
 <context>
+    <name>InterfaceLanguageBox</name>
+    <message>
+        <source>Automatic (system language)</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>LanguagePicker</name>
     <message>
         <source>%1 (not available)</source>
@@ -752,7 +759,19 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Automatic (system language)</source>
+        <source>Appearance</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Like the system</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Dark</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Light</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -848,7 +867,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Frame limits and own lines in user.cfg per channel</source>
+        <source>Frame limits, own lines and the graphics API per channel</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -876,7 +895,130 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Game folders, translation and the main options, step by step</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Setup assistant …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Installation, first start, languages and solutions to common problems</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>User guide</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Log files</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>SetupAssistant</name>
+    <message>
+        <source>Step %1 of %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Welcome</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This launcher installs community translations of Star Citizen and keeps them up to date. A few steps and you are ready; everything can be changed later in the settings.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Language of the launcher</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Find Star Citizen</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The launcher looks for the RSI Launcher and the game versions (LIVE, PTU, …) on your drives, including Lutris and LUG Helper installations.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Search automatically</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose folder …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Searching …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Found: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Nothing found yet. Choose the LIVE folder of the game, e.g. …/StarCitizen/LIVE.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Choose a translation</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Which language should Star Citizen use? It is set for every game version found.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No game folder yet; go back one step.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Loading the list of translations …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Almost done</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Update translations automatically</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Checks every hour and installs new versions; waits while Star Citizen runs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keep running in the system tray</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Closing the window keeps the launcher in the tray, so it goes on checking</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>&quot;Install now&quot; downloads the translation; Star Citizen itself is not started.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Skip</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Back</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Install now</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

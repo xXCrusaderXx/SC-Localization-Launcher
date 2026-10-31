@@ -424,6 +424,13 @@
     </message>
 </context>
 <context>
+    <name>InterfaceLanguageBox</name>
+    <message>
+        <source>Automatic (system language)</source>
+        <translation>Automatisch (systeemtaal)</translation>
+    </message>
+</context>
+<context>
     <name>LanguagePicker</name>
     <message>
         <source>%1 (not available)</source>
@@ -752,8 +759,20 @@
         <translation>Taal van de launcher</translation>
     </message>
     <message>
-        <source>Automatic (system language)</source>
-        <translation>Automatisch (systeemtaal)</translation>
+        <source>Appearance</source>
+        <translation>Weergave</translation>
+    </message>
+    <message>
+        <source>Like the system</source>
+        <translation>Zoals het systeem</translation>
+    </message>
+    <message>
+        <source>Dark</source>
+        <translation>Donker</translation>
+    </message>
+    <message>
+        <source>Light</source>
+        <translation>Licht</translation>
     </message>
     <message>
         <source>Start Star Citizen after the update</source>
@@ -848,8 +867,8 @@
         <translation>Back-ups …</translation>
     </message>
     <message>
-        <source>Frame limits and own lines in user.cfg per channel</source>
-        <translation>Framelimieten en eigen regels in de user.cfg per kanaal</translation>
+        <source>Frame limits, own lines and the graphics API per channel</source>
+        <translation>Framelimieten, eigen regels en grafische API per kanaal</translation>
     </message>
     <message>
         <source>Game settings …</source>
@@ -876,8 +895,131 @@
         <translation>Installatie controleren …</translation>
     </message>
     <message>
+        <source>Game folders, translation and the main options, step by step</source>
+        <translation>Spelmappen, vertaling en de belangrijkste opties, stap voor stap</translation>
+    </message>
+    <message>
+        <source>Setup assistant …</source>
+        <translation>Installatie-assistent …</translation>
+    </message>
+    <message>
+        <source>Installation, first start, languages and solutions to common problems</source>
+        <translation>Installatie, eerste start, talen en oplossingen voor veelvoorkomende problemen</translation>
+    </message>
+    <message>
+        <source>User guide</source>
+        <translation>Handleiding</translation>
+    </message>
+    <message>
         <source>Log files</source>
         <translation>Logbestanden</translation>
+    </message>
+</context>
+<context>
+    <name>SetupAssistant</name>
+    <message>
+        <source>Step %1 of %2</source>
+        <translation>Stap %1 van %2</translation>
+    </message>
+    <message>
+        <source>Welcome</source>
+        <translation>Welkom</translation>
+    </message>
+    <message>
+        <source>This launcher installs community translations of Star Citizen and keeps them up to date. A few steps and you are ready; everything can be changed later in the settings.</source>
+        <translation>Deze launcher installeert communityvertalingen van Star Citizen en houdt ze actueel. Een paar stappen en je bent klaar; alles kun je later in de instellingen wijzigen.</translation>
+    </message>
+    <message>
+        <source>Language of the launcher</source>
+        <translation>Taal van de launcher</translation>
+    </message>
+    <message>
+        <source>Find Star Citizen</source>
+        <translation>Star Citizen zoeken</translation>
+    </message>
+    <message>
+        <source>The launcher looks for the RSI Launcher and the game versions (LIVE, PTU, …) on your drives, including Lutris and LUG Helper installations.</source>
+        <translation>De launcher zoekt de RSI Launcher en de spelversies (LIVE, PTU, …) op je schijven, ook in installaties van Lutris en de LUG Helper.</translation>
+    </message>
+    <message>
+        <source>Search automatically</source>
+        <translation>Automatisch zoeken</translation>
+    </message>
+    <message>
+        <source>Choose folder …</source>
+        <translation>Map kiezen …</translation>
+    </message>
+    <message>
+        <source>Searching …</source>
+        <translation>Bezig met zoeken …</translation>
+    </message>
+    <message>
+        <source>Found: %1</source>
+        <translation>Gevonden: %1</translation>
+    </message>
+    <message>
+        <source>Nothing found yet. Choose the LIVE folder of the game, e.g. …/StarCitizen/LIVE.</source>
+        <translation>Nog niets gevonden. Kies de LIVE-map van het spel, bijv. …/StarCitizen/LIVE.</translation>
+    </message>
+    <message>
+        <source>Choose a translation</source>
+        <translation>Kies een vertaling</translation>
+    </message>
+    <message>
+        <source>Which language should Star Citizen use? It is set for every game version found.</source>
+        <translation>In welke taal moet Star Citizen draaien? Die wordt ingesteld voor elke gevonden spelversie.</translation>
+    </message>
+    <message>
+        <source>No game folder yet; go back one step.</source>
+        <translation>Nog geen spelmap; ga een stap terug.</translation>
+    </message>
+    <message>
+        <source>Loading the list of translations …</source>
+        <translation>Lijst met vertalingen laden …</translation>
+    </message>
+    <message>
+        <source>Almost done</source>
+        <translation>Bijna klaar</translation>
+    </message>
+    <message>
+        <source>Update translations automatically</source>
+        <translation>Vertalingen automatisch bijwerken</translation>
+    </message>
+    <message>
+        <source>Checks every hour and installs new versions; waits while Star Citizen runs</source>
+        <translation>Controleert elk uur en installeert nieuwe versies; wacht zolang Star Citizen draait</translation>
+    </message>
+    <message>
+        <source>Keep running in the system tray</source>
+        <translation>In het systeemvak blijven draaien</translation>
+    </message>
+    <message>
+        <source>Closing the window keeps the launcher in the tray, so it goes on checking</source>
+        <translation>Bij het sluiten van het venster blijft de launcher in het systeemvak en blijft controleren</translation>
+    </message>
+    <message>
+        <source>&quot;Install now&quot; downloads the translation; Star Citizen itself is not started.</source>
+        <translation>‘Nu installeren’ downloadt de vertaling; Star Citizen zelf wordt niet gestart.</translation>
+    </message>
+    <message>
+        <source>Skip</source>
+        <translation>Overslaan</translation>
+    </message>
+    <message>
+        <source>Back</source>
+        <translation>Terug</translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation>Volgende</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Klaar</translation>
+    </message>
+    <message>
+        <source>Install now</source>
+        <translation>Nu installeren</translation>
     </message>
 </context>
 <context>

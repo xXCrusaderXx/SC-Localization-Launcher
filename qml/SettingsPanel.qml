@@ -19,6 +19,7 @@ Item {
     signal backupsRequested
     signal gameSettingsRequested
     signal programsRequested
+    signal setupRequested
 
     readonly property var options: appState.options || {}
     readonly property var channels: appState.channels || []
@@ -47,7 +48,7 @@ Item {
     // Dimmed backdrop, closes the panel on click
     Rectangle {
         anchors.fill: parent
-        color: Qt.rgba(0, 0, 0, 0.5)
+        color: Theme.scrim
         opacity: panel.open ? 1 : 0
 
         Behavior on opacity {
@@ -68,7 +69,7 @@ Item {
         width: 520
         height: parent.height
         x: panel.open ? panel.width - width : panel.width
-        color: Qt.rgba(0.04, 0.07, 0.13, 0.97)
+        color: Theme.popup
         border.color: Theme.border
 
         Behavior on x {
@@ -159,21 +160,38 @@ Item {
                             font.pixelSize: 13
                         }
 
-                        ComboBox {
-                            id: interfaceLanguageBox
-
-                            // "" = the system language, then the built-in translations by code
-                            readonly property var codes: [""].concat(backend.interfaceLanguages.map(l => l.code))
-
+                        InterfaceLanguageBox {
                             objectName: "interfaceLanguageBox"
                             Layout.preferredWidth: 220
-                            model: [qsTr("Automatic (system language)")].concat(backend.interfaceLanguages.map(l => l.name))
-                            currentIndex: Math.max(0, codes.indexOf(panel.appState.interfaceLanguage || ""))
-                            onActivated: index => backend.setInterfaceLanguage(codes[index])
+                            current: panel.appState.interfaceLanguage || ""
+                        }
+                    }
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 12
+
+                        Text {
+                            Layout.fillWidth: true
+                            text: qsTr("Appearance")
+                            wrapMode: Text.Wrap
+                            color: Theme.text
+                            font.pixelSize: 13
+                        }
+
+                        ComboBox {
+                            // Values of State.theme, in the order of the list
+                            readonly property var themes: ["", "dark", "light"]
+
+                            objectName: "themeBox"
+                            Layout.preferredWidth: 220
+                            model: [qsTr("Like the system"), qsTr("Dark"), qsTr("Light")]
+                            currentIndex: Math.max(0, themes.indexOf(panel.appState.theme || ""))
+                            onActivated: index => backend.setTheme(themes[index])
                             font.pixelSize: 12
                             palette.text: Theme.text
                             palette.base: Theme.inputBackground
-                            palette.window: Qt.rgba(0.04, 0.07, 0.13, 0.98)
+                            palette.window: Theme.popup
                             palette.button: Theme.inputBackground
                             palette.buttonText: Theme.text
                             palette.highlight: Theme.accent
@@ -428,7 +446,7 @@ Item {
 
                     Text {
                         Layout.fillWidth: true
-                        text: qsTr("Frame limits and own lines in user.cfg per channel")
+                        text: qsTr("Frame limits, own lines and the graphics API per channel")
                         wrapMode: Text.Wrap
                         color: Theme.muted
                         font.pixelSize: 11
@@ -484,6 +502,50 @@ Item {
                     DialogButton {
                         text: qsTr("Check installation …")
                         onClicked: panel.diagnosticsRequested()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Game folders, translation and the main options, step by step")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("Setup assistant …")
+                        enabled: !panel.locked
+                        onClicked: panel.setupRequested()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Installation, first start, languages and solutions to common problems")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        // German has its own guide, every other language reads the English one
+                        readonly property string language: panel.appState.interfaceLanguage || Qt.locale().name
+
+                        text: qsTr("User guide")
+                        onClicked: Qt.openUrlExternally("https://github.com/xXCrusaderXx/SC-Localization-Launcher/blob/main/docs/user-guide" + (language.startsWith("de") ? ".de" : "") + ".md")
                     }
                 }
 

@@ -5,6 +5,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-31
+
+The first stable version: a setup assistant, a light theme and a user guide.
+
+### Added
+
+- Setup assistant on the first start: the launcher's language, finding the game, the translation for every game version found, and the main options, in four steps that can each be skipped. Settings → Help → "Setup assistant …" opens it again. Existing installations don't see it.
+- Settings → Behaviour → "Appearance": like the system, dark or light. The launcher follows a change of the desktop's colour scheme while it runs.
+- User guide in English and German ([docs/user-guide.md](docs/user-guide.md)), opened from Settings → Help → "User guide".
+
+### Changed
+
+- The description of "Game settings …" mentions the graphics API, and the German interface says "Infobereich" for the tray everywhere.
+
 ## [0.11.0] - 2026-10-31
 
 The launcher speaks more languages.
@@ -149,7 +163,8 @@ First release as *SC Localization Launcher*.
 - When switching languages, the previous language's folder is removed only after the new download succeeded.
 - Only one launcher runs at a time; starting it again brings the open window to the front instead of running two launchers that write the same settings and game folders.
 
-[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.11.0...v1.0.0
 [0.11.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.9.0...v0.9.1

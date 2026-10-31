@@ -424,6 +424,13 @@
     </message>
 </context>
 <context>
+    <name>InterfaceLanguageBox</name>
+    <message>
+        <source>Automatic (system language)</source>
+        <translation>Automatica (lingua di sistema)</translation>
+    </message>
+</context>
+<context>
     <name>LanguagePicker</name>
     <message>
         <source>%1 (not available)</source>
@@ -752,8 +759,20 @@
         <translation>Lingua del launcher</translation>
     </message>
     <message>
-        <source>Automatic (system language)</source>
-        <translation>Automatica (lingua di sistema)</translation>
+        <source>Appearance</source>
+        <translation>Aspetto</translation>
+    </message>
+    <message>
+        <source>Like the system</source>
+        <translation>Come il sistema</translation>
+    </message>
+    <message>
+        <source>Dark</source>
+        <translation>Scuro</translation>
+    </message>
+    <message>
+        <source>Light</source>
+        <translation>Chiaro</translation>
     </message>
     <message>
         <source>Start Star Citizen after the update</source>
@@ -848,8 +867,8 @@
         <translation>Backup …</translation>
     </message>
     <message>
-        <source>Frame limits and own lines in user.cfg per channel</source>
-        <translation>Limiti FPS e righe personali nello user.cfg per canale</translation>
+        <source>Frame limits, own lines and the graphics API per channel</source>
+        <translation>Limiti di FPS, righe personali e API grafica per canale</translation>
     </message>
     <message>
         <source>Game settings …</source>
@@ -876,8 +895,131 @@
         <translation>Controlla installazione …</translation>
     </message>
     <message>
+        <source>Game folders, translation and the main options, step by step</source>
+        <translation>Cartelle del gioco, traduzione e opzioni principali, passo dopo passo</translation>
+    </message>
+    <message>
+        <source>Setup assistant …</source>
+        <translation>Configurazione guidata …</translation>
+    </message>
+    <message>
+        <source>Installation, first start, languages and solutions to common problems</source>
+        <translation>Installazione, primo avvio, lingue e soluzioni ai problemi comuni</translation>
+    </message>
+    <message>
+        <source>User guide</source>
+        <translation>Guida utente</translation>
+    </message>
+    <message>
         <source>Log files</source>
         <translation>File di log</translation>
+    </message>
+</context>
+<context>
+    <name>SetupAssistant</name>
+    <message>
+        <source>Step %1 of %2</source>
+        <translation>Passo %1 di %2</translation>
+    </message>
+    <message>
+        <source>Welcome</source>
+        <translation>Benvenuto</translation>
+    </message>
+    <message>
+        <source>This launcher installs community translations of Star Citizen and keeps them up to date. A few steps and you are ready; everything can be changed later in the settings.</source>
+        <translation>Questo launcher installa le traduzioni della community di Star Citizen e le mantiene aggiornate. Pochi passi e sei pronto; potrai cambiare tutto in seguito nelle impostazioni.</translation>
+    </message>
+    <message>
+        <source>Language of the launcher</source>
+        <translation>Lingua del launcher</translation>
+    </message>
+    <message>
+        <source>Find Star Citizen</source>
+        <translation>Trova Star Citizen</translation>
+    </message>
+    <message>
+        <source>The launcher looks for the RSI Launcher and the game versions (LIVE, PTU, …) on your drives, including Lutris and LUG Helper installations.</source>
+        <translation>Il launcher cerca il RSI Launcher e le versioni del gioco (LIVE, PTU, …) sui tuoi dischi, comprese le installazioni di Lutris e LUG Helper.</translation>
+    </message>
+    <message>
+        <source>Search automatically</source>
+        <translation>Cerca automaticamente</translation>
+    </message>
+    <message>
+        <source>Choose folder …</source>
+        <translation>Scegli cartella …</translation>
+    </message>
+    <message>
+        <source>Searching …</source>
+        <translation>Ricerca in corso …</translation>
+    </message>
+    <message>
+        <source>Found: %1</source>
+        <translation>Trovato: %1</translation>
+    </message>
+    <message>
+        <source>Nothing found yet. Choose the LIVE folder of the game, e.g. …/StarCitizen/LIVE.</source>
+        <translation>Ancora nulla trovato. Scegli la cartella LIVE del gioco, ad es. …/StarCitizen/LIVE.</translation>
+    </message>
+    <message>
+        <source>Choose a translation</source>
+        <translation>Scegli una traduzione</translation>
+    </message>
+    <message>
+        <source>Which language should Star Citizen use? It is set for every game version found.</source>
+        <translation>In quale lingua vuoi Star Citizen? Viene impostata per ogni versione del gioco trovata.</translation>
+    </message>
+    <message>
+        <source>No game folder yet; go back one step.</source>
+        <translation>Nessuna cartella del gioco; torna indietro di un passo.</translation>
+    </message>
+    <message>
+        <source>Loading the list of translations …</source>
+        <translation>Caricamento dell&apos;elenco delle traduzioni …</translation>
+    </message>
+    <message>
+        <source>Almost done</source>
+        <translation>Quasi fatto</translation>
+    </message>
+    <message>
+        <source>Update translations automatically</source>
+        <translation>Aggiorna le traduzioni automaticamente</translation>
+    </message>
+    <message>
+        <source>Checks every hour and installs new versions; waits while Star Citizen runs</source>
+        <translation>Controlla ogni ora e installa le nuove versioni; attende mentre Star Citizen è in esecuzione</translation>
+    </message>
+    <message>
+        <source>Keep running in the system tray</source>
+        <translation>Resta attivo nell&apos;area di notifica</translation>
+    </message>
+    <message>
+        <source>Closing the window keeps the launcher in the tray, so it goes on checking</source>
+        <translation>Chiudendo la finestra il launcher resta nell&apos;area di notifica e continua a controllare</translation>
+    </message>
+    <message>
+        <source>&quot;Install now&quot; downloads the translation; Star Citizen itself is not started.</source>
+        <translation>«Installa ora» scarica la traduzione; Star Citizen non viene avviato.</translation>
+    </message>
+    <message>
+        <source>Skip</source>
+        <translation>Salta</translation>
+    </message>
+    <message>
+        <source>Back</source>
+        <translation>Indietro</translation>
+    </message>
+    <message>
+        <source>Next</source>
+        <translation>Avanti</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation>Fine</translation>
+    </message>
+    <message>
+        <source>Install now</source>
+        <translation>Installa ora</translation>
     </message>
 </context>
 <context>

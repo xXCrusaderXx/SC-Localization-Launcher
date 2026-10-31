@@ -369,9 +369,14 @@ struct State
     std::vector<std::string> failedPrograms;
     // Code of the launcher's own interface translation, e.g. "fr"; empty = the system language
     std::string interfaceLanguage;
+    // First start: the window offers the setup assistant until FinishSetup
+    bool setupNeeded = false;
+    // "dark" or "light"; empty = like the system
+    std::string theme;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
-                                                handledCommands, whatsNew, caches, diagnostics, backups, programs, failedPrograms, interfaceLanguage)
+                                                handledCommands, whatsNew, caches, diagnostics, backups, programs, failedPrograms, interfaceLanguage,
+                                                setupNeeded, theme)
 
 }  // namespace Protocol

@@ -653,9 +653,12 @@ class BackendTest : public QObject
         QVERIFY(running.waitForStarted());
 
         QVERIFY(start());
+        // bash needs a moment before it runs under the game's name
+        bool seen = waitForState([] (const auto& s) { return s.game == GameStart::Playing; }).has_value();
         auto update = checkAndInstall();
         running.kill();
         running.waitForFinished();
+        QVERIFY(seen);
         QCOMPARE(update.error, std::string("Star Citizen is running"));
         QCOMPARE(readFile(appImage), std::string("old version"));
     }
@@ -1637,6 +1640,37 @@ class BackendTest : public QObject
         std::string stat = readFile("/proc/" + std::to_string(pid) + "/stat");
         auto end = stat.rfind(')');
         return end != std::string::npos && end + 2 < stat.size() && stat[end + 2] != 'Z' && stat[end + 2] != 'X';
+    }
+
+    void offersTheSetupOnlyOnTheFirstStart ()
+    {
+        QVERIFY(start());
+        QVERIFY(latest().setupNeeded);
+        backEnd->execute(Protocol::FinishSetup{});
+        QVERIFY(waitForPreviousCommands());
+        QVERIFY(!latest().setupNeeded);
+        QVERIFY(readSettingsFile()["setupDone"].get<bool>());
+        QVERIFY(restart());
+        QVERIFY(!latest().setupNeeded);
+
+        // Settings of an earlier version with a game folder count as set up
+        backEnd.reset();
+        resetUserDir();
+        writeSettingsFile(legacySettings("/games/StarCitizen/LIVE", "eng", false), PATHS::JSON_FILES::SETTINGS_LEGACY);
+        QVERIFY(restart());
+        QVERIFY(!latest().setupNeeded);
+    }
+
+    void storesTheTheme ()
+    {
+        QVERIFY(start());
+        QCOMPARE(latest().theme, std::string());
+        backEnd->execute(Protocol::SetTheme{"light"});
+        backEnd->execute(Protocol::SetTheme{"pink"});
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(latest().theme, std::string("light"));
+        QVERIFY(restart());
+        QCOMPARE(latest().theme, std::string("light"));
     }
 
     void storesTheInterfaceLanguage ()

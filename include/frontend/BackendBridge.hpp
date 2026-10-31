@@ -3,14 +3,17 @@
 #include <QCoreApplication>
 #include <QDesktopServices>
 #include <QDir>
+#include <QEvent>
 #include <QFile>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QJsonDocument>
 #include <QLocale>
 #include <QObject>
+#include <QPalette>
 #include <QProcess>
 #include <QQmlEngine>
+#include <QStyleHints>
 #include <QTranslator>
 #include <QUrl>
 #include <QVariantMap>
@@ -27,6 +30,7 @@ class BackendBridge : public QObject
     Q_PROPERTY(QVariantMap state READ state NOTIFY stateChanged)
     Q_PROPERTY(QString logFolder READ logFolder CONSTANT)
     Q_PROPERTY(QVariantList interfaceLanguages READ interfaceLanguages CONSTANT)
+    Q_PROPERTY(bool systemDark READ systemDark NOTIFY systemDarkChanged)
 
    private:
     LoggerFramework::LogEx lg;
@@ -68,6 +72,17 @@ class BackendBridge : public QObject
     {
         // Only the window checks in the background; the command line changes nothing on its own
         backEnd.execute(Protocol::StartBackgroundChecks{});
+        // The desktop may switch between light and dark while the launcher runs
+        QCoreApplication::instance()->installEventFilter(this);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+        connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, &BackendBridge::systemDarkChanged);
+#endif
+    }
+
+    bool eventFilter (QObject* watched, QEvent* event) override
+    {
+        if(watched == QCoreApplication::instance() && event->type() == QEvent::ApplicationPaletteChange) emit systemDarkChanged();
+        return QObject::eventFilter(watched, event);
     }
 
     QVariantMap state () const { return currentState; }
@@ -110,6 +125,21 @@ class BackendBridge : public QObject
         if(loaded) QCoreApplication::installTranslator(&translator);
         engine->retranslate();
     }
+
+    // Whether the desktop uses a dark colour scheme
+    static bool systemDark ()
+    {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+        if(auto scheme = QGuiApplication::styleHints()->colorScheme(); scheme != Qt::ColorScheme::Unknown) return scheme == Qt::ColorScheme::Dark;
+#endif
+        // Qt 6.4 knows no colour scheme; the platform theme's window colour tells it
+        return QGuiApplication::palette().color(QPalette::Window).lightness() < 128;
+    }
+
+    // "dark", "light", or empty to follow the system
+    Q_INVOKABLE void setTheme (const QString& theme) { backEnd.execute(Protocol::SetTheme{.theme = theme.toStdString()}); }
+
+    Q_INVOKABLE void finishSetup () { backEnd.execute(Protocol::FinishSetup{}); }
 
     // Empty = the system language
     Q_INVOKABLE void setInterfaceLanguage (const QString& language)
@@ -223,4 +253,5 @@ class BackendBridge : public QObject
 
    signals:
     void stateChanged ();
+    void systemDarkChanged ();
 };

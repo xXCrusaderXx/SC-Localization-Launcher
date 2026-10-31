@@ -466,6 +466,8 @@ class BackEnd
         state.programs = data.programs;
         state.failedPrograms = data.failedPrograms;
         state.interfaceLanguage = data.interfaceLanguage;
+        state.setupNeeded = !data.setupDone;
+        state.theme = data.theme;
         return state;
     }
 
@@ -496,6 +498,10 @@ class BackEnd
         data.lastSeenVersion = file.lastSeenVersion;
         data.programs = file.programs;
         data.interfaceLanguage = file.interfaceLanguage;
+        data.theme = file.theme;
+        // Settings from before the assistant: whoever set a game folder is set up already
+        data.setupDone = file.setupDone || std::any_of(file.channels.begin(), file.channels.end(),
+                                                       [] (const auto& channel) { return !channel.second.installPath.empty(); });
         // Moves settings of the former SC Deutsch Launcher to the new location right away
         saveSettings();
         checkGameSettings();
@@ -513,6 +519,8 @@ class BackEnd
         file.lastSeenVersion = data.lastSeenVersion;
         file.programs = data.programs;
         file.interfaceLanguage = data.interfaceLanguage;
+        file.setupDone = data.setupDone;
+        file.theme = data.theme;
         return file;
     }
 
@@ -1074,6 +1082,13 @@ class BackEnd
     {
         static const std::regex code("[a-z]{2,3}(_[A-Z]{2})?");
         if(command.language.empty() || std::regex_match(command.language, code)) data.interfaceLanguage = command.language;
+    }
+
+    void handle (const Protocol::FinishSetup&) { data.setupDone = true; }
+
+    void handle (const Protocol::SetTheme& command)
+    {
+        if(command.theme.empty() || command.theme == "dark" || command.theme == "light") data.theme = command.theme;
     }
 
     void handle (const Protocol::DismissWhatsNew&)

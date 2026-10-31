@@ -153,7 +153,7 @@ class GuiTest : public QObject
     void cleanup ()
     {
         for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog", "backupDialog",
-                                "gameSettingsDialog"})
+                                "gameSettingsDialog", "programsDialog", "setupAssistant"})
         {
             auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
             if(!dialog || !dialog->property("visible").toBool()) continue;
@@ -634,6 +634,72 @@ class GuiTest : public QObject
         QTRY_VERIFY(bridge->state()["programs"].toList().isEmpty());
         QTest::keyClick(window, Qt::Key_Escape);
         QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    void setupAssistantFromTheSettings ()
+    {
+        QString previous = channel("LIVE")["language"].toString();
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        QMetaObject::invokeMethod(panel, "setupRequested");
+        auto* assistant = engine->rootObjects().first()->findChild<QObject*>("setupAssistant");
+        QVERIFY(assistant);
+        QTRY_VERIFY(assistant->property("opened").toBool());
+        QTRY_VERIFY(!panel->property("visible").toBool());
+        QVERIFY(findText("Step 1 of 4"));
+
+        QVERIFY(clickButton("Next"));
+        QTRY_VERIFY(findText("Step 2 of 4"));
+        // The channels with a game folder from the test settings
+        QStringList found;
+        for(const auto& c : bridge->state()["channels"].toList())
+            if(!c.toMap()["installPath"].toString().isEmpty()) found << c.toMap()["name"].toString();
+        QVERIFY(found.contains("LIVE"));
+        QTRY_VERIFY(findText("Found: " + found.join(", ")));
+        QVERIFY(clickButton("Next"));
+        QTRY_VERIFY(findText("Step 3 of 4"));
+        auto* translation = engine->rootObjects().first()->findChild<QObject*>("setupTranslationBox");
+        QVERIFY(translation);
+        QStringList names = translation->property("model").toStringList();
+        QVERIFY(names.contains("Deutsch"));
+        // As a pick from the list does
+        QMetaObject::invokeMethod(translation, "activated", Q_ARG(int, int(names.indexOf("Deutsch"))));
+        QTRY_COMPARE(channel("LIVE")["language"].toString(), QString("de"));
+
+        QVERIFY(clickButton("Next"));
+        QTRY_VERIFY(findText("Step 4 of 4"));
+        QVERIFY(clickButton("Done"));
+        QTRY_VERIFY(!assistant->property("visible").toBool());
+        QTRY_VERIFY(readSettingsFile()["setupDone"].get<bool>());
+        QVERIFY(!bridge->state()["setupNeeded"].toBool());
+
+        // Leaves LIVE as the other tests expect it
+        bridge->setLanguage("LIVE", previous);
+        QTRY_COMPARE(channel("LIVE")["language"].toString(), previous);
+    }
+
+    void switchesTheTheme ()
+    {
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        QTRY_VERIFY(panel->property("visible").toBool());
+        auto* box = engine->rootObjects().first()->findChild<QObject*>("themeBox");
+        QVERIFY(box);
+
+        // As a pick from the list does: 1 = dark, 2 = light, 0 = like the system
+        QMetaObject::invokeMethod(box, "activated", Q_ARG(int, 2));
+        QTRY_COMPARE(bridge->state()["theme"].toString(), QString("light"));
+        QTRY_VERIFY(!window->property("darkTheme").toBool());
+        QCOMPARE(window->color(), QColor("#eef2f7"));
+        QMetaObject::invokeMethod(box, "activated", Q_ARG(int, 1));
+        QTRY_VERIFY(window->property("darkTheme").toBool());
+        QCOMPARE(window->color(), QColor("#0b1220"));
+
+        QMetaObject::invokeMethod(box, "activated", Q_ARG(int, 0));
+        QTRY_COMPARE(bridge->state()["theme"].toString(), QString());
+        QCOMPARE(window->property("darkTheme").toBool(), BackendBridge::systemDark());
         panel->setProperty("open", false);
         QTRY_VERIFY(!panel->property("visible").toBool());
     }
