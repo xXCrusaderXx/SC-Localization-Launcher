@@ -868,8 +868,8 @@
         <translation>Kopie zapasowe …</translation>
     </message>
     <message>
-        <source>Frame limits and own lines in user.cfg per channel</source>
-        <translation>Limity klatek i własne linie w user.cfg dla każdego kanału</translation>
+        <source>Frame limits, own lines and the graphics API per channel</source>
+        <translation>Limity klatek, własne linie i API grafiki dla każdego kanału</translation>
     </message>
     <message>
         <source>Game settings …</source>
@@ -902,6 +902,14 @@
     <message>
         <source>Setup assistant …</source>
         <translation>Kreator konfiguracji …</translation>
+    </message>
+    <message>
+        <source>Installation, first start, languages and solutions to common problems</source>
+        <translation>Instalacja, pierwsze uruchomienie, języki i rozwiązania typowych problemów</translation>
+    </message>
+    <message>
+        <source>User guide</source>
+        <translation>Instrukcja</translation>
     </message>
     <message>
         <source>Log files</source>

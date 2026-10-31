@@ -867,8 +867,8 @@
         <translation>Backup …</translation>
     </message>
     <message>
-        <source>Frame limits and own lines in user.cfg per channel</source>
-        <translation>Limiti FPS e righe personali nello user.cfg per canale</translation>
+        <source>Frame limits, own lines and the graphics API per channel</source>
+        <translation>Limiti di FPS, righe personali e API grafica per canale</translation>
     </message>
     <message>
         <source>Game settings …</source>
@@ -901,6 +901,14 @@
     <message>
         <source>Setup assistant …</source>
         <translation>Configurazione guidata …</translation>
+    </message>
+    <message>
+        <source>Installation, first start, languages and solutions to common problems</source>
+        <translation>Installazione, primo avvio, lingue e soluzioni ai problemi comuni</translation>
+    </message>
+    <message>
+        <source>User guide</source>
+        <translation>Guida utente</translation>
     </message>
     <message>
         <source>Log files</source>
