@@ -989,6 +989,14 @@
         <translation>Vérifier l&apos;installation …</translation>
     </message>
     <message>
+        <source>Hardware, driver and the game&apos;s performance index per start, for bug reports</source>
+        <translation>Matériel, pilote et indice de performance du jeu par lancement, pour les rapports de bug</translation>
+    </message>
+    <message>
+        <source>System information …</source>
+        <translation>Informations système …</translation>
+    </message>
+    <message>
         <source>Game folders, translation and the main options, step by step</source>
         <translation>Dossiers du jeu, traduction et options principales, étape par étape</translation>
     </message>
@@ -1224,6 +1232,133 @@
     <message>
         <source>No ship flown yet</source>
         <translation>Aucun vaisseau piloté</translation>
+    </message>
+    <message>
+        <source>The report could not be saved.</source>
+        <translation>Le rapport n&apos;a pas pu être enregistré.</translation>
+    </message>
+    <message>
+        <source>Saved: %1</source>
+        <translation>Enregistré&#xa0;: %1</translation>
+    </message>
+    <message>
+        <source>Show in folder</source>
+        <translation>Afficher dans le dossier</translation>
+    </message>
+    <message>
+        <source>Save as HTML</source>
+        <translation>Enregistrer en HTML</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Fermer</translation>
+    </message>
+</context>
+<context>
+    <name>SystemInfoDialog</name>
+    <message>
+        <source>A forecast needs at least three game starts.</source>
+        <translation>Une prévision nécessite au moins trois lancements du jeu.</translation>
+    </message>
+    <message>
+        <source>Expected at the next start: CPU %1–%2, GPU %3–%4.</source>
+        <translation>Attendu au prochain lancement : CPU %1–%2, GPU %3–%4.</translation>
+    </message>
+    <message>
+        <source>CPU</source>
+        <translation>CPU</translation>
+    </message>
+    <message>
+        <source>GPU</source>
+        <translation>GPU</translation>
+    </message>
+    <message>
+        <source>%1 %2 % slower than usual</source>
+        <translation>%1 %2 % plus lent que d&apos;habitude</translation>
+    </message>
+    <message>
+        <source>%1 %2 % faster than usual</source>
+        <translation>%1 %2 % plus rapide que d&apos;habitude</translation>
+    </message>
+    <message>
+        <source>The graphics driver changed from %1 to %2.</source>
+        <translation>Le pilote graphique est passé de %1 à %2.</translation>
+    </message>
+    <message>
+        <source>The game version changed from %1 to %2.</source>
+        <translation>La version du jeu est passée de %1 à %2.</translation>
+    </message>
+    <message>
+        <source>Last start: %1.</source>
+        <translation>Dernier lancement : %1.</translation>
+    </message>
+    <message>
+        <source>Processor</source>
+        <translation>Processeur</translation>
+    </message>
+    <message>
+        <source>%1 threads</source>
+        <translation>%1 threads</translation>
+    </message>
+    <message>
+        <source>Memory</source>
+        <translation>Mémoire</translation>
+    </message>
+    <message>
+        <source>%1 GB</source>
+        <translation>%1&#xa0;Go</translation>
+    </message>
+    <message>
+        <source>Graphics card</source>
+        <translation>Carte graphique</translation>
+    </message>
+    <message>
+        <source>Graphics API</source>
+        <translation>API graphique</translation>
+    </message>
+    <message>
+        <source>Driver</source>
+        <translation>Pilote</translation>
+    </message>
+    <message>
+        <source>Game version</source>
+        <translation>Version du jeu</translation>
+    </message>
+    <message>
+        <source>Operating system</source>
+        <translation>Système d&apos;exploitation</translation>
+    </message>
+    <message>
+        <source>System information</source>
+        <translation>Informations système</translation>
+    </message>
+    <message>
+        <source>Performance index</source>
+        <translation>Indice de performance</translation>
+    </message>
+    <message>
+        <source>The game measures both at every start; higher is faster. CPU and GPU use different scales and can&apos;t be compared with each other.</source>
+        <translation>Le jeu mesure les deux à chaque lancement ; plus c&apos;est élevé, plus c&apos;est rapide. CPU et GPU utilisent des échelles différentes et ne se comparent pas entre eux.</translation>
+    </message>
+    <message>
+        <source>Date</source>
+        <translation>Date</translation>
+    </message>
+    <message>
+        <source>Reading the game&apos;s logs …</source>
+        <translation>Lecture des journaux du jeu …</translation>
+    </message>
+    <message>
+        <source>No game logs found yet. They appear after the first start of Star Citizen.</source>
+        <translation>Aucun journal du jeu trouvé. Ils apparaissent après le premier lancement de Star Citizen.</translation>
+    </message>
+    <message>
+        <source>As the game saw your computer at its last start (%1).</source>
+        <translation>Votre ordinateur tel que le jeu l&apos;a vu à son dernier lancement (%1).</translation>
+    </message>
+    <message>
+        <source>Last start: CPU %1, GPU %2.</source>
+        <translation>Dernier lancement : CPU %1, GPU %2.</translation>
     </message>
     <message>
         <source>The report could not be saved.</source>

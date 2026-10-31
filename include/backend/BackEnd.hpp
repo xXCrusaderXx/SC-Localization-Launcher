@@ -1138,7 +1138,8 @@ class BackEnd
         char stamp[32];
         std::time_t now = std::time(nullptr);
         std::strftime(stamp, sizeof(stamp), "%Y%m%d-%H%M%S", std::localtime(&now));
-        auto file = Diagnostics::reportFolder() / ("sc-statistics-" + std::string(stamp) + ".html");
+        std::string kind = command.kind == "system-info" ? "system-info" : "statistics";
+        auto file = Diagnostics::reportFolder() / ("sc-" + kind + "-" + std::string(stamp) + ".html");
         std::ofstream out(file, std::ios::binary | std::ios::trunc);
         out << command.html;
         if(out.flush())

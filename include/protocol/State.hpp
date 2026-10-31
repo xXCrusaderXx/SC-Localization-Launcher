@@ -361,6 +361,33 @@ struct PlayDay
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(PlayDay, date, seconds)
 
+// The computer as the game saw it at one start, from the head of its Game.log
+struct SystemSnapshot
+{
+    // Seconds since the epoch
+    std::int64_t time = 0;
+    // FileVersion, e.g. 4.8.183.37006
+    std::string gameVersion;
+    std::string cpu;
+    int threads = 0;
+    int memoryMb = 0;
+    // The first adapter the game lists, the one it renders with
+    std::string gpu;
+    int videoMemoryMb = 0;
+    // "vulkan" when the game chose a Vulkan device, otherwise "dx11"
+    std::string renderer;
+    // Vulkan only
+    std::string driverVersion;
+    std::string vulkanVersion;
+    // The game's own benchmark at start: higher is faster. The two use different scales and can't be compared with
+    // each other, only with the same index of other starts.
+    double cpuIndex = 0;
+    double gpuIndex = 0;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SystemSnapshot, time, gameVersion, cpu, threads, memoryMb, gpu, videoMemoryMb, renderer,
+                                                driverVersion, vulkanVersion, cpuIndex, gpuIndex)
+
 // Play statistics from the Game.log files of all channels, see GameStatistics; filled by LoadStatistics
 struct Statistics
 {
@@ -391,6 +418,8 @@ struct Statistics
     std::int64_t lastSessionSeconds = 0;
     // Free space on the drive of the first channel folder; -1 if unknown
     std::int64_t diskFreeBytes = -1;
+    // One per game start that measured its performance, oldest first
+    std::vector<SystemSnapshot> systems;
     // Written by SaveStatisticsReport
     std::string reportPath;
     std::string error;
@@ -398,7 +427,7 @@ struct Statistics
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Statistics, busy, loaded, sessions, playSeconds, crashes, disconnects, quantumJumps,
                                                 missionsCompleted, missionsFailed, kills, deaths, ships, regions, days, firstPlayed, lastPlayed,
-                                                lastSessionSeconds, diskFreeBytes, reportPath, error)
+                                                lastSessionSeconds, diskFreeBytes, systems, reportPath, error)
 
 // Tile ids the dashboard knows, and the ones shown until the user chooses
 inline const std::vector<std::string> DASHBOARD_TILES = {"playTime", "lastPlayed",  "topShip",      "freeSpace", "sessions",

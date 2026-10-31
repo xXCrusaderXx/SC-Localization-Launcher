@@ -989,6 +989,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Hardware, driver and the game&apos;s performance index per start, for bug reports</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>System information …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Game folders, translation and the main options, step by step</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1223,6 +1231,133 @@
     </message>
     <message>
         <source>No ship flown yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The report could not be saved.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Saved: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show in folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save as HTML</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>SystemInfoDialog</name>
+    <message>
+        <source>A forecast needs at least three game starts.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Expected at the next start: CPU %1–%2, GPU %3–%4.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>CPU</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GPU</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 %2 % slower than usual</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 %2 % faster than usual</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The graphics driver changed from %1 to %2.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The game version changed from %1 to %2.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Last start: %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Processor</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 threads</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Memory</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 GB</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Graphics card</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Graphics API</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Driver</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Game version</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Operating system</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>System information</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Performance index</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The game measures both at every start; higher is faster. CPU and GPU use different scales and can&apos;t be compared with each other.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Date</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Reading the game&apos;s logs …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No game logs found yet. They appear after the first start of Star Citizen.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>As the game saw your computer at its last start (%1).</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Last start: CPU %1, GPU %2.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

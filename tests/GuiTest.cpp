@@ -153,7 +153,7 @@ class GuiTest : public QObject
     void cleanup ()
     {
         for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog", "backupDialog",
-                                "gameSettingsDialog", "programsDialog", "setupAssistant", "statisticsDialog", "dashboardDialog"})
+                                "gameSettingsDialog", "programsDialog", "setupAssistant", "statisticsDialog", "dashboardDialog", "systemInfoDialog"})
         {
             auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
             if(!dialog || !dialog->property("visible").toBool()) continue;
@@ -708,6 +708,40 @@ class GuiTest : public QObject
         QByteArray html = report.readAll();
         QVERIFY(html.contains("AEGS Sabre"));
         QVERIFY(html.startsWith("<!DOCTYPE html>"));
+        report.remove();
+
+        std::filesystem::remove_all(live / "logbackups");
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    void showsSystemInformationFromTheSettings ()
+    {
+        std::filesystem::path live = liveDir.path().toStdString();
+        std::filesystem::create_directories(live / "logbackups");
+        std::ofstream(live / "logbackups" / "Game Build(1) 10 Jan 26 (18 00 00).log")
+            << "<2026-01-10T18:00:00.000Z> FileVersion: 4.5.172.1234\n"
+               "<2026-01-10T18:00:00.000Z> Host CPU: Test CPU\n"
+               "<2026-01-10T18:00:01.000Z> Logging video adapters:\n"
+               "<2026-01-10T18:00:01.000Z> - Test GPU (vendor = 0x1002, device = 0x73bf)\n"
+               "<2026-01-10T18:00:02.000Z> Performance Index: 213.87 (CPU), 329.72 (GPU)\n";
+
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        QMetaObject::invokeMethod(panel, "systemInfoRequested");
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("systemInfoDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_VERIFY(findText("Test GPU"));
+        QVERIFY(findText("Graphics card"));
+
+        QVERIFY(clickButton("Save as HTML"));
+        QTRY_VERIFY(bridge->state()["statistics"].toMap()["reportPath"].toString().contains("sc-system-info-"));
+        QFile report(bridge->state()["statistics"].toMap()["reportPath"].toString());
+        QVERIFY(report.open(QIODevice::ReadOnly));
+        QVERIFY(report.readAll().contains("Test CPU"));
         report.remove();
 
         std::filesystem::remove_all(live / "logbackups");
