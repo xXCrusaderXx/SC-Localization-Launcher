@@ -197,6 +197,13 @@ struct SaveStatisticsReport
     std::string html;
 };
 
+// The dashboard's tiles in their order; unknown ids and repeats are dropped, at most MAX_DASHBOARD_TILES
+struct SetDashboardTiles
+{
+    static constexpr const char* name = "setDashboardTiles";
+    std::vector<std::string> tiles;
+};
+
 // The setup assistant was finished or skipped; it is not offered again
 struct FinishSetup
 {
@@ -232,11 +239,12 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetGameSettings, channel, settings)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetPrograms, programs)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInterfaceLanguage, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetTheme, theme)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetDashboardTiles, tiles)
 
 using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
                              InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches,
                              ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms,
-                             SetInterfaceLanguage, FinishSetup, SetTheme, LoadStatistics, SaveStatisticsReport>;
+                             SetInterfaceLanguage, FinishSetup, SetTheme, LoadStatistics, SaveStatisticsReport, SetDashboardTiles>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

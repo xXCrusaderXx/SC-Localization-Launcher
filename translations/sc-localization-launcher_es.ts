@@ -226,6 +226,92 @@
     </message>
 </context>
 <context>
+    <name>Dashboard</name>
+    <message>
+        <source>%1 h</source>
+        <translation>%1 h</translation>
+    </message>
+    <message>
+        <source>Play time</source>
+        <translation>Tiempo de juego</translation>
+    </message>
+    <message>
+        <source>Last played</source>
+        <translation>Última partida</translation>
+    </message>
+    <message>
+        <source>Favourite ship</source>
+        <translation>Nave favorita</translation>
+    </message>
+    <message>
+        <source>Free space</source>
+        <translation>Espacio libre</translation>
+    </message>
+    <message>
+        <source>Game starts</source>
+        <translation>Inicios del juego</translation>
+    </message>
+    <message>
+        <source>Crashes</source>
+        <translation>Cierres inesperados</translation>
+    </message>
+    <message>
+        <source>Disconnects</source>
+        <translation>Desconexiones</translation>
+    </message>
+    <message>
+        <source>Quantum jumps</source>
+        <translation>Saltos cuánticos</translation>
+    </message>
+    <message>
+        <source>Missions completed</source>
+        <translation>Misiones completadas</translation>
+    </message>
+    <message>
+        <source>Kills / deaths</source>
+        <translation>Bajas / muertes</translation>
+    </message>
+    <message>
+        <source>%1 GB</source>
+        <translation>%1 GB</translation>
+    </message>
+    <message>
+        <source>DASHBOARD</source>
+        <translation>PANEL</translation>
+    </message>
+    <message>
+        <source>Customize …</source>
+        <translation>Personalizar …</translation>
+    </message>
+    <message>
+        <source>No tiles chosen.</source>
+        <translation>No hay mosaicos elegidos.</translation>
+    </message>
+</context>
+<context>
+    <name>DashboardDialog</name>
+    <message>
+        <source>Customize the dashboard</source>
+        <translation>Personalizar el panel</translation>
+    </message>
+    <message>
+        <source>Up to %1 tiles, shown in this order. The main window shows as many rows as fit.</source>
+        <translation>Hasta %1 mosaicos, en este orden. La ventana principal muestra tantas filas como quepan.</translation>
+    </message>
+    <message>
+        <source>More tiles</source>
+        <translation>Más mosaicos</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Guardar</translation>
+    </message>
+</context>
+<context>
     <name>DiagnosticsDialog</name>
     <message>
         <source>System</source>

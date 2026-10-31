@@ -226,6 +226,92 @@
     </message>
 </context>
 <context>
+    <name>Dashboard</name>
+    <message>
+        <source>%1 h</source>
+        <translation>%1 u</translation>
+    </message>
+    <message>
+        <source>Play time</source>
+        <translation>Speeltijd</translation>
+    </message>
+    <message>
+        <source>Last played</source>
+        <translation>Laatst gespeeld</translation>
+    </message>
+    <message>
+        <source>Favourite ship</source>
+        <translation>Favoriete schip</translation>
+    </message>
+    <message>
+        <source>Free space</source>
+        <translation>Vrije ruimte</translation>
+    </message>
+    <message>
+        <source>Game starts</source>
+        <translation>Spelstarts</translation>
+    </message>
+    <message>
+        <source>Crashes</source>
+        <translation>Crashes</translation>
+    </message>
+    <message>
+        <source>Disconnects</source>
+        <translation>Verbroken verbindingen</translation>
+    </message>
+    <message>
+        <source>Quantum jumps</source>
+        <translation>Kwantumsprongen</translation>
+    </message>
+    <message>
+        <source>Missions completed</source>
+        <translation>Missies voltooid</translation>
+    </message>
+    <message>
+        <source>Kills / deaths</source>
+        <translation>Kills / doden</translation>
+    </message>
+    <message>
+        <source>%1 GB</source>
+        <translation>%1 GB</translation>
+    </message>
+    <message>
+        <source>DASHBOARD</source>
+        <translation>DASHBOARD</translation>
+    </message>
+    <message>
+        <source>Customize …</source>
+        <translation>Aanpassen …</translation>
+    </message>
+    <message>
+        <source>No tiles chosen.</source>
+        <translation>Geen tegels gekozen.</translation>
+    </message>
+</context>
+<context>
+    <name>DashboardDialog</name>
+    <message>
+        <source>Customize the dashboard</source>
+        <translation>Dashboard aanpassen</translation>
+    </message>
+    <message>
+        <source>Up to %1 tiles, shown in this order. The main window shows as many rows as fit.</source>
+        <translation>Tot %1 tegels, in deze volgorde. Het hoofdvenster toont zoveel rijen als er passen.</translation>
+    </message>
+    <message>
+        <source>More tiles</source>
+        <translation>Meer tegels</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Sluiten</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Opslaan</translation>
+    </message>
+</context>
+<context>
     <name>DiagnosticsDialog</name>
     <message>
         <source>System</source>

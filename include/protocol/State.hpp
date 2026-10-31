@@ -387,6 +387,10 @@ struct Statistics
     // Seconds since the epoch; 0 without any session
     std::int64_t firstPlayed = 0;
     std::int64_t lastPlayed = 0;
+    // Length of the newest game start
+    std::int64_t lastSessionSeconds = 0;
+    // Free space on the drive of the first channel folder; -1 if unknown
+    std::int64_t diskFreeBytes = -1;
     // Written by SaveStatisticsReport
     std::string reportPath;
     std::string error;
@@ -394,7 +398,14 @@ struct Statistics
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Statistics, busy, loaded, sessions, playSeconds, crashes, disconnects, quantumJumps,
                                                 missionsCompleted, missionsFailed, kills, deaths, ships, regions, days, firstPlayed, lastPlayed,
-                                                reportPath, error)
+                                                lastSessionSeconds, diskFreeBytes, reportPath, error)
+
+// Tile ids the dashboard knows, and the ones shown until the user chooses
+inline const std::vector<std::string> DASHBOARD_TILES = {"playTime", "lastPlayed",  "topShip",      "freeSpace", "sessions",
+                                                         "crashes",  "disconnects", "quantumJumps", "missions",  "killsDeaths"};
+inline const std::vector<std::string> DEFAULT_DASHBOARD_TILES = {"playTime", "lastPlayed", "topShip", "freeSpace"};
+// Two rows of four
+inline constexpr size_t MAX_DASHBOARD_TILES = 8;
 
 struct State
 {
@@ -426,10 +437,12 @@ struct State
     // "dark" or "light"; empty = like the system
     std::string theme;
     Statistics statistics;
+    // Tiles of the main window's dashboard, in order, see DASHBOARD_TILES
+    std::vector<std::string> dashboardTiles;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
                                                 handledCommands, whatsNew, caches, diagnostics, backups, programs, failedPrograms, interfaceLanguage,
-                                                setupNeeded, theme, statistics)
+                                                setupNeeded, theme, statistics, dashboardTiles)
 
 }  // namespace Protocol

@@ -38,10 +38,11 @@ struct SettingsFile
     std::string interfaceLanguage;
     bool setupDone = false;
     std::string theme;
+    std::vector<std::string> dashboardTiles = Protocol::DEFAULT_DASHBOARD_TILES;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SettingsFile, channels, rsiLauncherPath, options, lastSeenVersion, programs, interfaceLanguage,
-                                                setupDone, theme)
+                                                setupDone, theme, dashboardTiles)
 
 class SettingsJsonParser
 {

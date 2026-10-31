@@ -226,6 +226,92 @@
     </message>
 </context>
 <context>
+    <name>Dashboard</name>
+    <message>
+        <source>%1 h</source>
+        <translation>%1 h</translation>
+    </message>
+    <message>
+        <source>Play time</source>
+        <translation>Tempo de jogo</translation>
+    </message>
+    <message>
+        <source>Last played</source>
+        <translation>Última partida</translation>
+    </message>
+    <message>
+        <source>Favourite ship</source>
+        <translation>Nave favorita</translation>
+    </message>
+    <message>
+        <source>Free space</source>
+        <translation>Espaço livre</translation>
+    </message>
+    <message>
+        <source>Game starts</source>
+        <translation>Inícios do jogo</translation>
+    </message>
+    <message>
+        <source>Crashes</source>
+        <translation>Travamentos</translation>
+    </message>
+    <message>
+        <source>Disconnects</source>
+        <translation>Desconexões</translation>
+    </message>
+    <message>
+        <source>Quantum jumps</source>
+        <translation>Saltos quânticos</translation>
+    </message>
+    <message>
+        <source>Missions completed</source>
+        <translation>Missões concluídas</translation>
+    </message>
+    <message>
+        <source>Kills / deaths</source>
+        <translation>Abates / mortes</translation>
+    </message>
+    <message>
+        <source>%1 GB</source>
+        <translation>%1 GB</translation>
+    </message>
+    <message>
+        <source>DASHBOARD</source>
+        <translation>PAINEL</translation>
+    </message>
+    <message>
+        <source>Customize …</source>
+        <translation>Personalizar …</translation>
+    </message>
+    <message>
+        <source>No tiles chosen.</source>
+        <translation>Nenhum bloco escolhido.</translation>
+    </message>
+</context>
+<context>
+    <name>DashboardDialog</name>
+    <message>
+        <source>Customize the dashboard</source>
+        <translation>Personalizar o painel</translation>
+    </message>
+    <message>
+        <source>Up to %1 tiles, shown in this order. The main window shows as many rows as fit.</source>
+        <translation>Até %1 blocos, nesta ordem. A janela principal mostra quantas linhas couberem.</translation>
+    </message>
+    <message>
+        <source>More tiles</source>
+        <translation>Mais blocos</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Fechar</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Salvar</translation>
+    </message>
+</context>
+<context>
     <name>DiagnosticsDialog</name>
     <message>
         <source>System</source>

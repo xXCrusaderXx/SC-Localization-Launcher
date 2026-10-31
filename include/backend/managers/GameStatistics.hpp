@@ -169,6 +169,7 @@ class GameStatistics
             std::strftime(date, sizeof(date), "%Y-%m-%d", std::gmtime(&start));
             days[date] += seconds;
             first = first ? std::min(first, session.start) : session.start;
+            if(session.end >= last) stats.lastSessionSeconds = seconds;
             last = std::max(last, session.end);
         }
         auto byCount = [] (const std::map<std::string, int>& counts)

@@ -21,11 +21,14 @@ Popup {
     }
     readonly property int busiestDay: Math.max(1, ...(statistics.days || []).map(d => d.seconds))
 
+    // The interface language's number format
+    property var numberLocale: Qt.locale()
+
     signal saveRequested(string html)
     signal showReportRequested(string path)
 
     function hours(seconds) {
-        return qsTr("%1 h").arg(Number(seconds / 3600).toLocaleString(Qt.locale(), "f", 1));
+        return qsTr("%1 h").arg(Number(seconds / 3600).toLocaleString(dialog.numberLocale, "f", 1));
     }
 
     // "AEGS_Sabre" -> "AEGS Sabre"

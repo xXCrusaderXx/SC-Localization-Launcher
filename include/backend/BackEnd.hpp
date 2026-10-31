@@ -350,6 +350,8 @@ class BackEnd
         if(gameStarted) data.failedPrograms = companionPrograms.start(data.programs);
         if(gameClosed) companionPrograms.stop();
         if(gameClosed) checkGameSettings();
+        // The finished game start counts now
+        if(gameClosed && data.statistics.loaded) handle(Protocol::LoadStatistics{});
         if(gameClosed)
             for(auto& [name, channel] : data.channels) applyGraphicsApi(channel);
         if(gameClosed && data.backgroundChecks) checkChannels();
@@ -472,6 +474,7 @@ class BackEnd
         state.setupNeeded = !data.setupDone;
         state.theme = data.theme;
         state.statistics = data.statistics;
+        state.dashboardTiles = data.dashboardTiles;
         return state;
     }
 
@@ -503,6 +506,7 @@ class BackEnd
         data.programs = file.programs;
         data.interfaceLanguage = file.interfaceLanguage;
         data.theme = file.theme;
+        data.dashboardTiles = file.dashboardTiles;
         // Settings from before the assistant: whoever set a game folder is set up already
         data.setupDone = file.setupDone || std::any_of(file.channels.begin(), file.channels.end(),
                                                        [] (const auto& channel) { return !channel.second.installPath.empty(); });
@@ -525,6 +529,7 @@ class BackEnd
         file.interfaceLanguage = data.interfaceLanguage;
         file.setupDone = data.setupDone;
         file.theme = data.theme;
+        file.dashboardTiles = data.dashboardTiles;
         return file;
     }
 
@@ -1099,9 +1104,13 @@ class BackEnd
         data.statistics.busy = true;
         // The running game's Game.log is not a finished session yet
         startJob(statisticsJob,
-                 [this, logs = GameStatistics::logsOf(folders, gamePlaying())]
+                 [this, folders, logs = GameStatistics::logsOf(folders, gamePlaying())]
                  {
                      auto stats = gameStatistics.collect(logs, data.shuttingDown);
+                     std::error_code ec;
+                     if(!folders.empty())
+                         if(auto space = std::filesystem::space(folders.front(), ec); !ec)
+                             stats.diskFreeBytes = static_cast<std::int64_t>(space.available);
                      queue.post(
                          [this, stats]
                          {
@@ -1110,6 +1119,16 @@ class BackEnd
                              publish();
                          });
                  });
+    }
+
+    void handle (const Protocol::SetDashboardTiles& command)
+    {
+        std::vector<std::string> tiles;
+        for(const auto& tile : command.tiles)
+            if(tiles.size() < Protocol::MAX_DASHBOARD_TILES && std::find(tiles.begin(), tiles.end(), tile) == tiles.end() &&
+               std::find(Protocol::DASHBOARD_TILES.begin(), Protocol::DASHBOARD_TILES.end(), tile) != Protocol::DASHBOARD_TILES.end())
+                tiles.push_back(tile);
+        data.dashboardTiles = tiles;
     }
 
     void handle (const Protocol::SaveStatisticsReport& command)

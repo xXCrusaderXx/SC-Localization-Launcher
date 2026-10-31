@@ -170,6 +170,7 @@ struct BackendData
     bool setupDone = false;
     std::string theme;
     Protocol::Statistics statistics;
+    std::vector<std::string> dashboardTiles = Protocol::DEFAULT_DASHBOARD_TILES;
 
     // Set when the app closes; background jobs read it to stop early
     std::atomic<bool> shuttingDown{false};
