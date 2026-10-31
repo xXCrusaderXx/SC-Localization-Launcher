@@ -883,6 +883,14 @@
         <translation>Programmi …</translation>
     </message>
     <message>
+        <source>Play time, ships, quantum jumps, missions and crashes from the game&apos;s logs</source>
+        <translation>Tempo di gioco, navi, salti quantici, missioni e crash dai log del gioco</translation>
+    </message>
+    <message>
+        <source>Statistics …</source>
+        <translation>Statistiche …</translation>
+    </message>
+    <message>
         <source>HELP</source>
         <translation>AIUTO</translation>
     </message>
@@ -1020,6 +1028,136 @@
     <message>
         <source>Install now</source>
         <translation>Installa ora</translation>
+    </message>
+</context>
+<context>
+    <name>StatisticsDialog</name>
+    <message>
+        <source>%1 h</source>
+        <translation>%1 h</translation>
+    </message>
+    <message>
+        <source>Europe</source>
+        <translation>Europa</translation>
+    </message>
+    <message>
+        <source>North America</source>
+        <translation>Nord America</translation>
+    </message>
+    <message>
+        <source>Australia</source>
+        <translation>Australia</translation>
+    </message>
+    <message>
+        <source>Asia</source>
+        <translation>Asia</translation>
+    </message>
+    <message>
+        <source>Play time</source>
+        <translation>Tempo di gioco</translation>
+    </message>
+    <message>
+        <source>Game starts</source>
+        <translation>Avvii del gioco</translation>
+    </message>
+    <message>
+        <source>Crashes</source>
+        <translation>Crash</translation>
+    </message>
+    <message>
+        <source>Disconnects</source>
+        <translation>Disconnessioni</translation>
+    </message>
+    <message>
+        <source>Ships flown</source>
+        <translation>Navi pilotate</translation>
+    </message>
+    <message>
+        <source>Quantum jumps</source>
+        <translation>Salti quantici</translation>
+    </message>
+    <message>
+        <source>Missions completed</source>
+        <translation>Missioni completate</translation>
+    </message>
+    <message>
+        <source>Kills / deaths</source>
+        <translation>Uccisioni / morti</translation>
+    </message>
+    <message>
+        <source>Star Citizen statistics</source>
+        <translation>Statistiche di Star Citizen</translation>
+    </message>
+    <message>
+        <source>%1 to %2, from the game&apos;s own logs.</source>
+        <translation>Dal %1 al %2, dai log del gioco.</translation>
+    </message>
+    <message>
+        <source>Ships</source>
+        <translation>Navi</translation>
+    </message>
+    <message>
+        <source>Ship</source>
+        <translation>Nave</translation>
+    </message>
+    <message>
+        <source>Server regions</source>
+        <translation>Regioni dei server</translation>
+    </message>
+    <message>
+        <source>Play time per day</source>
+        <translation>Tempo di gioco al giorno</translation>
+    </message>
+    <message>
+        <source>Statistics</source>
+        <translation>Statistiche</translation>
+    </message>
+    <message>
+        <source>Reading the game&apos;s logs …</source>
+        <translation>Lettura dei log del gioco …</translation>
+    </message>
+    <message>
+        <source>No game logs found yet. They appear after the first start of Star Citizen.</source>
+        <translation>Nessun log del gioco trovato. Compaiono dopo il primo avvio di Star Citizen.</translation>
+    </message>
+    <message>
+        <source>%1 to %2, from the game&apos;s own logs of all channels. Quantum jumps are logged from game version 4.5 on.</source>
+        <translation>Dal %1 al %2, dai log del gioco di tutti i canali. I salti quantici sono registrati dalla versione 4.5.</translation>
+    </message>
+    <message>
+        <source>Play time per day, last six months</source>
+        <translation>Tempo di gioco al giorno, ultimi sei mesi</translation>
+    </message>
+    <message numerus="yes">
+        <source>%1 – %n game start(s)</source>
+        <translation>
+            <numerusform>%1 – %n avvio</numerusform>
+            <numerusform>%1 – %n avvii</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No ship flown yet</source>
+        <translation>Nessuna nave pilotata</translation>
+    </message>
+    <message>
+        <source>The report could not be saved.</source>
+        <translation>Impossibile salvare il rapporto.</translation>
+    </message>
+    <message>
+        <source>Saved: %1</source>
+        <translation>Salvato: %1</translation>
+    </message>
+    <message>
+        <source>Show in folder</source>
+        <translation>Mostra nella cartella</translation>
+    </message>
+    <message>
+        <source>Save as HTML</source>
+        <translation>Salva come HTML</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Chiudi</translation>
     </message>
 </context>
 <context>

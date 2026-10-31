@@ -19,6 +19,7 @@
 #include "managers/CompanionPrograms.hpp"
 #include "managers/Diagnostics.hpp"
 #include "managers/GameSettings.hpp"
+#include "managers/GameStatistics.hpp"
 #include "managers/ProfileBackup.hpp"
 #include "managers/SelfUpdateManager.hpp"
 #include "managers/UpdateManager.hpp"
@@ -49,6 +50,7 @@ class BackEnd
     Diagnostics diagnostics;
     ProfileBackup profileBackup;
     CompanionPrograms companionPrograms;
+    GameStatistics gameStatistics;
     StateCallback stateCallback;
 
     std::thread languagesJob;
@@ -63,6 +65,7 @@ class BackEnd
     std::thread cacheJob;
     std::thread diagnosticsJob;
     std::thread backupJob;
+    std::thread statisticsJob;
 
     // Declared last: its thread uses all members above
     TaskQueue queue;
@@ -468,6 +471,7 @@ class BackEnd
         state.interfaceLanguage = data.interfaceLanguage;
         state.setupNeeded = !data.setupDone;
         state.theme = data.theme;
+        state.statistics = data.statistics;
         return state;
     }
 
@@ -1086,6 +1090,44 @@ class BackEnd
 
     void handle (const Protocol::FinishSetup&) { data.setupDone = true; }
 
+    void handle (const Protocol::LoadStatistics&)
+    {
+        if(data.statistics.busy) return;
+        std::vector<std::filesystem::path> folders;
+        for(const auto& [name, channel] : data.channels)
+            if(!channel.installPath.empty()) folders.push_back(channel.installPath);
+        data.statistics.busy = true;
+        // The running game's Game.log is not a finished session yet
+        startJob(statisticsJob,
+                 [this, logs = GameStatistics::logsOf(folders, gamePlaying())]
+                 {
+                     auto stats = gameStatistics.collect(logs, data.shuttingDown);
+                     queue.post(
+                         [this, stats]
+                         {
+                             data.statistics = stats;
+                             data.statistics.loaded = true;
+                             publish();
+                         });
+                 });
+    }
+
+    void handle (const Protocol::SaveStatisticsReport& command)
+    {
+        data.statistics.reportPath.clear();
+        data.statistics.error.clear();
+        char stamp[32];
+        std::time_t now = std::time(nullptr);
+        std::strftime(stamp, sizeof(stamp), "%Y%m%d-%H%M%S", std::localtime(&now));
+        auto file = Diagnostics::reportFolder() / ("sc-statistics-" + std::string(stamp) + ".html");
+        std::ofstream out(file, std::ios::binary | std::ios::trunc);
+        out << command.html;
+        if(out.flush())
+            data.statistics.reportPath = file.string();
+        else
+            data.statistics.error = "cannot write the report";
+    }
+
     void handle (const Protocol::SetTheme& command)
     {
         if(command.theme.empty() || command.theme == "dark" || command.theme == "light") data.theme = command.theme;
@@ -1129,7 +1171,7 @@ class BackEnd
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
         for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob, &checkTimerJob,
-                         &whatsNewJob, &cacheJob, &diagnosticsJob, &backupJob})
+                         &whatsNewJob, &cacheJob, &diagnosticsJob, &backupJob, &statisticsJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }

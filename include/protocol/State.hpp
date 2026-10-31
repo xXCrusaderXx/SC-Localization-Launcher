@@ -344,6 +344,58 @@ struct Backups
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Backups, busy, entries, result, resultChannel)
 
+struct NamedCount
+{
+    std::string name;
+    int count = 0;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(NamedCount, name, count)
+
+struct PlayDay
+{
+    // YYYY-MM-DD, UTC
+    std::string date;
+    std::int64_t seconds = 0;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(PlayDay, date, seconds)
+
+// Play statistics from the Game.log files of all channels, see GameStatistics; filled by LoadStatistics
+struct Statistics
+{
+    bool busy = false;
+    bool loaded = false;
+    // One per game start
+    int sessions = 0;
+    std::int64_t playSeconds = 0;
+    // Game starts that ended in a crash report of the game
+    int crashes = 0;
+    // Disconnection error popups, e.g. 30000
+    int disconnects = 0;
+    int quantumJumps = 0;
+    int missionsCompleted = 0;
+    int missionsFailed = 0;
+    int kills = 0;
+    int deaths = 0;
+    // Ship entity names without instance number, e.g. AEGS_Sabre; count = game starts it was flown in; most first
+    std::vector<NamedCount> ships;
+    // Server regions such as euw1 or use1; count = game starts on them
+    std::vector<NamedCount> regions;
+    // Days with play time, oldest first
+    std::vector<PlayDay> days;
+    // Seconds since the epoch; 0 without any session
+    std::int64_t firstPlayed = 0;
+    std::int64_t lastPlayed = 0;
+    // Written by SaveStatisticsReport
+    std::string reportPath;
+    std::string error;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Statistics, busy, loaded, sessions, playSeconds, crashes, disconnects, quantumJumps,
+                                                missionsCompleted, missionsFailed, kills, deaths, ships, regions, days, firstPlayed, lastPlayed,
+                                                reportPath, error)
+
 struct State
 {
     // All known languages in display order, ENGLISH first
@@ -373,10 +425,11 @@ struct State
     bool setupNeeded = false;
     // "dark" or "light"; empty = like the system
     std::string theme;
+    Statistics statistics;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
                                                 handledCommands, whatsNew, caches, diagnostics, backups, programs, failedPrograms, interfaceLanguage,
-                                                setupNeeded, theme)
+                                                setupNeeded, theme, statistics)
 
 }  // namespace Protocol

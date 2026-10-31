@@ -883,6 +883,14 @@
         <translation>Programas …</translation>
     </message>
     <message>
+        <source>Play time, ships, quantum jumps, missions and crashes from the game&apos;s logs</source>
+        <translation>Tiempo de juego, naves, saltos cuánticos, misiones y cierres inesperados desde los registros del juego</translation>
+    </message>
+    <message>
+        <source>Statistics …</source>
+        <translation>Estadísticas …</translation>
+    </message>
+    <message>
         <source>HELP</source>
         <translation>AYUDA</translation>
     </message>
@@ -1020,6 +1028,136 @@
     <message>
         <source>Install now</source>
         <translation>Instalar ahora</translation>
+    </message>
+</context>
+<context>
+    <name>StatisticsDialog</name>
+    <message>
+        <source>%1 h</source>
+        <translation>%1 h</translation>
+    </message>
+    <message>
+        <source>Europe</source>
+        <translation>Europa</translation>
+    </message>
+    <message>
+        <source>North America</source>
+        <translation>Norteamérica</translation>
+    </message>
+    <message>
+        <source>Australia</source>
+        <translation>Australia</translation>
+    </message>
+    <message>
+        <source>Asia</source>
+        <translation>Asia</translation>
+    </message>
+    <message>
+        <source>Play time</source>
+        <translation>Tiempo de juego</translation>
+    </message>
+    <message>
+        <source>Game starts</source>
+        <translation>Inicios del juego</translation>
+    </message>
+    <message>
+        <source>Crashes</source>
+        <translation>Cierres inesperados</translation>
+    </message>
+    <message>
+        <source>Disconnects</source>
+        <translation>Desconexiones</translation>
+    </message>
+    <message>
+        <source>Ships flown</source>
+        <translation>Naves pilotadas</translation>
+    </message>
+    <message>
+        <source>Quantum jumps</source>
+        <translation>Saltos cuánticos</translation>
+    </message>
+    <message>
+        <source>Missions completed</source>
+        <translation>Misiones completadas</translation>
+    </message>
+    <message>
+        <source>Kills / deaths</source>
+        <translation>Bajas / muertes</translation>
+    </message>
+    <message>
+        <source>Star Citizen statistics</source>
+        <translation>Estadísticas de Star Citizen</translation>
+    </message>
+    <message>
+        <source>%1 to %2, from the game&apos;s own logs.</source>
+        <translation>Del %1 al %2, desde los registros del juego.</translation>
+    </message>
+    <message>
+        <source>Ships</source>
+        <translation>Naves</translation>
+    </message>
+    <message>
+        <source>Ship</source>
+        <translation>Nave</translation>
+    </message>
+    <message>
+        <source>Server regions</source>
+        <translation>Regiones de servidor</translation>
+    </message>
+    <message>
+        <source>Play time per day</source>
+        <translation>Tiempo de juego por día</translation>
+    </message>
+    <message>
+        <source>Statistics</source>
+        <translation>Estadísticas</translation>
+    </message>
+    <message>
+        <source>Reading the game&apos;s logs …</source>
+        <translation>Leyendo los registros del juego …</translation>
+    </message>
+    <message>
+        <source>No game logs found yet. They appear after the first start of Star Citizen.</source>
+        <translation>Aún no hay registros del juego. Aparecen tras el primer inicio de Star Citizen.</translation>
+    </message>
+    <message>
+        <source>%1 to %2, from the game&apos;s own logs of all channels. Quantum jumps are logged from game version 4.5 on.</source>
+        <translation>Del %1 al %2, desde los registros del juego de todos los canales. Los saltos cuánticos se registran desde la versión 4.5.</translation>
+    </message>
+    <message>
+        <source>Play time per day, last six months</source>
+        <translation>Tiempo de juego por día, últimos seis meses</translation>
+    </message>
+    <message numerus="yes">
+        <source>%1 – %n game start(s)</source>
+        <translation>
+            <numerusform>%1 – %n inicio</numerusform>
+            <numerusform>%1 – %n inicios</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No ship flown yet</source>
+        <translation>Aún no has pilotado ninguna nave</translation>
+    </message>
+    <message>
+        <source>The report could not be saved.</source>
+        <translation>No se pudo guardar el informe.</translation>
+    </message>
+    <message>
+        <source>Saved: %1</source>
+        <translation>Guardado: %1</translation>
+    </message>
+    <message>
+        <source>Show in folder</source>
+        <translation>Mostrar en la carpeta</translation>
+    </message>
+    <message>
+        <source>Save as HTML</source>
+        <translation>Guardar como HTML</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
     </message>
 </context>
 <context>

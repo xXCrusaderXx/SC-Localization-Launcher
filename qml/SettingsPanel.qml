@@ -20,6 +20,7 @@ Item {
     signal gameSettingsRequested
     signal programsRequested
     signal setupRequested
+    signal statisticsRequested
 
     readonly property var options: appState.options || {}
     readonly property var channels: appState.channels || []
@@ -477,6 +478,26 @@ Item {
                         text: qsTr("Programs …")
                         enabled: !panel.locked
                         onClicked: panel.programsRequested()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Play time, ships, quantum jumps, missions and crashes from the game's logs")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("Statistics …")
+                        onClicked: panel.statisticsRequested()
                     }
                 }
 

@@ -169,6 +169,7 @@ struct BackendData
     std::string interfaceLanguage;
     bool setupDone = false;
     std::string theme;
+    Protocol::Statistics statistics;
 
     // Set when the app closes; background jobs read it to stop early
     std::atomic<bool> shuttingDown{false};

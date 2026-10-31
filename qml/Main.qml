@@ -590,10 +590,22 @@ ApplicationWindow {
         }
         onGameSettingsRequested: gameSettingsDialog.open()
         onProgramsRequested: programsDialog.open()
+        onStatisticsRequested: {
+            statisticsDialog.open();
+            backend.loadStatistics();
+        }
         onSetupRequested: {
             settingsPanel.open = false;
             setupAssistant.open();
         }
+    }
+
+    StatisticsDialog {
+        id: statisticsDialog
+
+        statistics: window.appState.statistics || ({})
+        onSaveRequested: html => backend.saveStatisticsReport(html)
+        onShowReportRequested: path => backend.openReportFolder(path)
     }
 
     SetupAssistant {

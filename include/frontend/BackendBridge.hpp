@@ -139,6 +139,9 @@ class BackendBridge : public QObject
     // "dark", "light", or empty to follow the system
     Q_INVOKABLE void setTheme (const QString& theme) { backEnd.execute(Protocol::SetTheme{.theme = theme.toStdString()}); }
 
+    Q_INVOKABLE void loadStatistics () { backEnd.execute(Protocol::LoadStatistics{}); }
+    Q_INVOKABLE void saveStatisticsReport (const QString& html) { backEnd.execute(Protocol::SaveStatisticsReport{.html = html.toStdString()}); }
+
     Q_INVOKABLE void finishSetup () { backEnd.execute(Protocol::FinishSetup{}); }
 
     // Empty = the system language

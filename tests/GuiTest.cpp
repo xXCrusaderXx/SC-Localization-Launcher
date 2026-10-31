@@ -153,7 +153,7 @@ class GuiTest : public QObject
     void cleanup ()
     {
         for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog", "backupDialog",
-                                "gameSettingsDialog", "programsDialog", "setupAssistant"})
+                                "gameSettingsDialog", "programsDialog", "setupAssistant", "statisticsDialog"})
         {
             auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
             if(!dialog || !dialog->property("visible").toBool()) continue;
@@ -678,6 +678,43 @@ class GuiTest : public QObject
         // Leaves LIVE as the other tests expect it
         bridge->setLanguage("LIVE", previous);
         QTRY_COMPARE(channel("LIVE")["language"].toString(), previous);
+    }
+
+    void showsStatisticsFromTheSettings ()
+    {
+        // A finished session in the LIVE folder of the test settings
+        std::filesystem::path live = liveDir.path().toStdString();
+        std::filesystem::create_directories(live / "logbackups");
+        std::ofstream(live / "logbackups" / "Game Build(1) 10 Jan 26 (18 00 00).log")
+            << "<2026-01-10T18:00:00.000Z> Log started\n"
+               "<2026-01-10T18:10:00.000Z> [Notice] <Vehicle Control Flow> CVehicle::Initialize: Local client node [1] granted control token for "
+               "'AEGS_Sabre_123' [2] [Team_CGP4][Vehicle]\n"
+               "<2026-01-10T20:00:00.000Z> [Notice] <SystemQuit> CSystem::Quit invoked with - cause=30016, exitCode=0\n";
+
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        QMetaObject::invokeMethod(panel, "statisticsRequested");
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("statisticsDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_VERIFY(bridge->state()["statistics"].toMap()["loaded"].toBool());
+        QTRY_VERIFY(findText("2.0 h") || findText("2,0 h"));
+        QVERIFY(findText("Game starts"));
+
+        QVERIFY(clickButton("Save as HTML"));
+        QTRY_VERIFY(!bridge->state()["statistics"].toMap()["reportPath"].toString().isEmpty());
+        QFile report(bridge->state()["statistics"].toMap()["reportPath"].toString());
+        QVERIFY(report.open(QIODevice::ReadOnly));
+        QByteArray html = report.readAll();
+        QVERIFY(html.contains("AEGS Sabre"));
+        QVERIFY(html.startsWith("<!DOCTYPE html>"));
+        report.remove();
+
+        std::filesystem::remove_all(live / "logbackups");
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
     }
 
     void switchesTheTheme ()
