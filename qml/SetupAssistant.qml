@@ -42,7 +42,7 @@ Popup {
 
     background: Rectangle {
         radius: 14
-        color: Qt.rgba(0.04, 0.07, 0.13, 0.98)
+        color: Theme.popup
         border.color: Theme.border
     }
 
@@ -170,7 +170,7 @@ Popup {
                     font.pixelSize: 12
                     palette.text: Theme.text
                     palette.base: Theme.inputBackground
-                    palette.window: Qt.rgba(0.04, 0.07, 0.13, 0.98)
+                    palette.window: Theme.popup
                     palette.button: Theme.inputBackground
                     palette.buttonText: Theme.text
                     palette.highlight: Theme.accent

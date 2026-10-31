@@ -759,6 +759,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Appearance</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Like the system</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Dark</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Light</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Start Star Citizen after the update</source>
         <translation type="unfinished"></translation>
     </message>

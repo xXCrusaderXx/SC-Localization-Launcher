@@ -759,6 +759,22 @@
         <translation>Idioma do launcher</translation>
     </message>
     <message>
+        <source>Appearance</source>
+        <translation>Aparência</translation>
+    </message>
+    <message>
+        <source>Like the system</source>
+        <translation>Como o sistema</translation>
+    </message>
+    <message>
+        <source>Dark</source>
+        <translation>Escuro</translation>
+    </message>
+    <message>
+        <source>Light</source>
+        <translation>Claro</translation>
+    </message>
+    <message>
         <source>Start Star Citizen after the update</source>
         <translation>Iniciar o Star Citizen após a atualização</translation>
     </message>

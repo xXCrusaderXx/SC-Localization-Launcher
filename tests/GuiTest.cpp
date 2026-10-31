@@ -680,6 +680,30 @@ class GuiTest : public QObject
         QTRY_COMPARE(channel("LIVE")["language"].toString(), previous);
     }
 
+    void switchesTheTheme ()
+    {
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        QTRY_VERIFY(panel->property("visible").toBool());
+        auto* box = engine->rootObjects().first()->findChild<QObject*>("themeBox");
+        QVERIFY(box);
+
+        // As a pick from the list does: 1 = dark, 2 = light, 0 = like the system
+        QMetaObject::invokeMethod(box, "activated", Q_ARG(int, 2));
+        QTRY_COMPARE(bridge->state()["theme"].toString(), QString("light"));
+        QTRY_VERIFY(!window->property("darkTheme").toBool());
+        QCOMPARE(window->color(), QColor("#eef2f7"));
+        QMetaObject::invokeMethod(box, "activated", Q_ARG(int, 1));
+        QTRY_VERIFY(window->property("darkTheme").toBool());
+        QCOMPARE(window->color(), QColor("#0b1220"));
+
+        QMetaObject::invokeMethod(box, "activated", Q_ARG(int, 0));
+        QTRY_COMPARE(bridge->state()["theme"].toString(), QString());
+        QCOMPARE(window->property("darkTheme").toBool(), BackendBridge::systemDark());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
     void switchesTheInterfaceLanguage ()
     {
         QStringList codes;

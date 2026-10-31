@@ -52,6 +52,16 @@ ApplicationWindow {
     // Release notes of an update that was not shown yet
     readonly property bool hasWhatsNew: ((appState.whatsNew || {}).notes || "") !== ""
 
+    // The setting "Appearance", or the desktop's colour scheme
+    Binding {
+        target: Theme
+        property: "dark"
+        value: window.appState.theme === "dark" || (window.appState.theme !== "light" && backend.systemDark)
+    }
+
+    // Read by the GUI test
+    readonly property bool darkTheme: Theme.dark
+
     // First start: nothing set up yet
     readonly property bool setupNeeded: appState.setupNeeded === true
 
@@ -108,15 +118,15 @@ ApplicationWindow {
             orientation: Gradient.Horizontal
             GradientStop {
                 position: 0.0
-                color: Qt.rgba(0.04, 0.07, 0.13, 0.96)
+                color: Theme.veil(0.96)
             }
             GradientStop {
                 position: 0.6
-                color: Qt.rgba(0.04, 0.07, 0.13, 0.82)
+                color: Theme.veil(0.82)
             }
             GradientStop {
                 position: 1.0
-                color: Qt.rgba(0.04, 0.07, 0.13, 0.1)
+                color: Theme.veil(0.1)
             }
         }
     }
@@ -144,11 +154,20 @@ ApplicationWindow {
             anchors.rightMargin: 12
             spacing: 12
 
-            Image {
-                source: "qrc:/logo.png"
-                sourceSize: Qt.size(38, 38)
-                Layout.preferredWidth: 38
-                Layout.preferredHeight: 38
+            // The logo is white; in the light theme it sits on a dark badge
+            Rectangle {
+                Layout.preferredWidth: 42
+                Layout.preferredHeight: 42
+                radius: 21
+                color: Theme.dark ? "transparent" : "#0b1220"
+
+                Image {
+                    anchors.centerIn: parent
+                    source: "qrc:/logo.png"
+                    sourceSize: Qt.size(38, 38)
+                    width: 38
+                    height: 38
+                }
             }
 
             ColumnLayout {
