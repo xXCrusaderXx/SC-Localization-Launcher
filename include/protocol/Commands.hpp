@@ -177,6 +177,12 @@ struct SetInterfaceLanguage
     std::string language;
 };
 
+// The setup assistant was finished or skipped; it is not offered again
+struct FinishSetup
+{
+    static constexpr const char* name = "finishSetup";
+};
+
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetLanguage, channel, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInstallPath, channel, path)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetRsiLauncherPath, path)
@@ -185,6 +191,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(StartUpdate, channels, allowGameStart)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RepairChannel, channel)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetCustomSource, channel, url, folder)
 inline void to_json (nlohmann::json& j, const StartGame&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const FinishSetup&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const AutoSearch&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const StartBackgroundChecks&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const CheckForUpdate&) { j = nlohmann::json::object(); }
@@ -205,7 +212,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInterfaceLanguage, language)
 using Command =
     std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate, InstallUpdate,
                  RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches, ClearCaches, RunDiagnostics,
-                 SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms, SetInterfaceLanguage>;
+                 SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms, SetInterfaceLanguage, FinishSetup>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

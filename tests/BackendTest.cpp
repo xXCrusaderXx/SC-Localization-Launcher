@@ -1639,6 +1639,25 @@ class BackendTest : public QObject
         return end != std::string::npos && end + 2 < stat.size() && stat[end + 2] != 'Z' && stat[end + 2] != 'X';
     }
 
+    void offersTheSetupOnlyOnTheFirstStart ()
+    {
+        QVERIFY(start());
+        QVERIFY(latest().setupNeeded);
+        backEnd->execute(Protocol::FinishSetup{});
+        QVERIFY(waitForPreviousCommands());
+        QVERIFY(!latest().setupNeeded);
+        QVERIFY(readSettingsFile()["setupDone"].get<bool>());
+        QVERIFY(restart());
+        QVERIFY(!latest().setupNeeded);
+
+        // Settings of an earlier version with a game folder count as set up
+        backEnd.reset();
+        resetUserDir();
+        writeSettingsFile(legacySettings("/games/StarCitizen/LIVE", "eng", false), PATHS::JSON_FILES::SETTINGS_LEGACY);
+        QVERIFY(restart());
+        QVERIFY(!latest().setupNeeded);
+    }
+
     void storesTheInterfaceLanguage ()
     {
         QVERIFY(start());

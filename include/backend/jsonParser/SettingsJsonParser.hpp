@@ -36,9 +36,11 @@ struct SettingsFile
     std::string lastSeenVersion;
     std::vector<Protocol::Program> programs;
     std::string interfaceLanguage;
+    bool setupDone = false;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SettingsFile, channels, rsiLauncherPath, options, lastSeenVersion, programs, interfaceLanguage)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SettingsFile, channels, rsiLauncherPath, options, lastSeenVersion, programs, interfaceLanguage,
+                                                setupDone)
 
 class SettingsJsonParser
 {

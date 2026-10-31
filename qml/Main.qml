@@ -52,6 +52,13 @@ ApplicationWindow {
     // Release notes of an update that was not shown yet
     readonly property bool hasWhatsNew: ((appState.whatsNew || {}).notes || "") !== ""
 
+    // First start: nothing set up yet
+    readonly property bool setupNeeded: appState.setupNeeded === true
+
+    onSetupNeededChanged: {
+        if (setupNeeded)
+            setupAssistant.open();
+    }
     onHasWhatsNewChanged: {
         if (hasWhatsNew)
             whatsNewDialog.open();
@@ -564,6 +571,24 @@ ApplicationWindow {
         }
         onGameSettingsRequested: gameSettingsDialog.open()
         onProgramsRequested: programsDialog.open()
+        onSetupRequested: {
+            settingsPanel.open = false;
+            setupAssistant.open();
+        }
+    }
+
+    SetupAssistant {
+        id: setupAssistant
+
+        appState: window.appState
+        trayAvailable: tray.available
+        onFolderRequested: window.choosePath("LIVE")
+        onFinished: install => {
+            backend.finishSetup();
+            if (install)
+                backend.updateTranslations();
+            close();
+        }
     }
 
     ProgramsDialog {
