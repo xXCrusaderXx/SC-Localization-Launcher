@@ -184,6 +184,19 @@ struct SetTheme
     std::string theme;
 };
 
+// Reads the Game.log files of every channel with a folder, see State.statistics
+struct LoadStatistics
+{
+    static constexpr const char* name = "loadStatistics";
+};
+
+// Saves the statistics page the window built (HTML, in the interface language) into the Downloads folder
+struct SaveStatisticsReport
+{
+    static constexpr const char* name = "saveStatisticsReport";
+    std::string html;
+};
+
 // The setup assistant was finished or skipped; it is not offered again
 struct FinishSetup
 {
@@ -199,6 +212,9 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RepairChannel, channel)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetCustomSource, channel, url, folder)
 inline void to_json (nlohmann::json& j, const StartGame&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const FinishSetup&) { j = nlohmann::json::object(); }
+inline void to_json (nlohmann::json& j, const LoadStatistics&) { j = nlohmann::json::object(); }
+// The page itself is not logged
+inline void to_json (nlohmann::json& j, const SaveStatisticsReport& c) { j = {{"bytes", c.html.size()}}; }
 inline void to_json (nlohmann::json& j, const AutoSearch&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const StartBackgroundChecks&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const CheckForUpdate&) { j = nlohmann::json::object(); }
@@ -217,10 +233,10 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetPrograms, programs)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInterfaceLanguage, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetTheme, theme)
 
-using Command =
-    std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate, InstallUpdate,
-                 RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches, ClearCaches, RunDiagnostics,
-                 SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms, SetInterfaceLanguage, FinishSetup, SetTheme>;
+using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
+                             InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches,
+                             ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms,
+                             SetInterfaceLanguage, FinishSetup, SetTheme, LoadStatistics, SaveStatisticsReport>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

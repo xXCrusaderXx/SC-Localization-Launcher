@@ -883,6 +883,14 @@
         <translation>Programma&apos;s …</translation>
     </message>
     <message>
+        <source>Play time, ships, quantum jumps, missions and crashes from the game&apos;s logs</source>
+        <translation>Speeltijd, schepen, kwantumsprongen, missies en crashes uit de logs van het spel</translation>
+    </message>
+    <message>
+        <source>Statistics …</source>
+        <translation>Statistieken …</translation>
+    </message>
+    <message>
         <source>HELP</source>
         <translation>HULP</translation>
     </message>
@@ -1020,6 +1028,136 @@
     <message>
         <source>Install now</source>
         <translation>Nu installeren</translation>
+    </message>
+</context>
+<context>
+    <name>StatisticsDialog</name>
+    <message>
+        <source>%1 h</source>
+        <translation>%1 u</translation>
+    </message>
+    <message>
+        <source>Europe</source>
+        <translation>Europa</translation>
+    </message>
+    <message>
+        <source>North America</source>
+        <translation>Noord-Amerika</translation>
+    </message>
+    <message>
+        <source>Australia</source>
+        <translation>Australië</translation>
+    </message>
+    <message>
+        <source>Asia</source>
+        <translation>Azië</translation>
+    </message>
+    <message>
+        <source>Play time</source>
+        <translation>Speeltijd</translation>
+    </message>
+    <message>
+        <source>Game starts</source>
+        <translation>Spelstarts</translation>
+    </message>
+    <message>
+        <source>Crashes</source>
+        <translation>Crashes</translation>
+    </message>
+    <message>
+        <source>Disconnects</source>
+        <translation>Verbroken verbindingen</translation>
+    </message>
+    <message>
+        <source>Ships flown</source>
+        <translation>Gevlogen schepen</translation>
+    </message>
+    <message>
+        <source>Quantum jumps</source>
+        <translation>Kwantumsprongen</translation>
+    </message>
+    <message>
+        <source>Missions completed</source>
+        <translation>Missies voltooid</translation>
+    </message>
+    <message>
+        <source>Kills / deaths</source>
+        <translation>Kills / doden</translation>
+    </message>
+    <message>
+        <source>Star Citizen statistics</source>
+        <translation>Star Citizen-statistieken</translation>
+    </message>
+    <message>
+        <source>%1 to %2, from the game&apos;s own logs.</source>
+        <translation>%1 tot %2, uit de logs van het spel.</translation>
+    </message>
+    <message>
+        <source>Ships</source>
+        <translation>Schepen</translation>
+    </message>
+    <message>
+        <source>Ship</source>
+        <translation>Schip</translation>
+    </message>
+    <message>
+        <source>Server regions</source>
+        <translation>Serverregio&apos;s</translation>
+    </message>
+    <message>
+        <source>Play time per day</source>
+        <translation>Speeltijd per dag</translation>
+    </message>
+    <message>
+        <source>Statistics</source>
+        <translation>Statistieken</translation>
+    </message>
+    <message>
+        <source>Reading the game&apos;s logs …</source>
+        <translation>Logs van het spel worden gelezen …</translation>
+    </message>
+    <message>
+        <source>No game logs found yet. They appear after the first start of Star Citizen.</source>
+        <translation>Nog geen logs van het spel gevonden. Ze verschijnen na de eerste start van Star Citizen.</translation>
+    </message>
+    <message>
+        <source>%1 to %2, from the game&apos;s own logs of all channels. Quantum jumps are logged from game version 4.5 on.</source>
+        <translation>%1 tot %2, uit de logs van het spel van alle kanalen. Kwantumsprongen worden pas vanaf spelversie 4.5 gelogd.</translation>
+    </message>
+    <message>
+        <source>Play time per day, last six months</source>
+        <translation>Speeltijd per dag, afgelopen zes maanden</translation>
+    </message>
+    <message numerus="yes">
+        <source>%1 – %n game start(s)</source>
+        <translation>
+            <numerusform>%1 – %n start</numerusform>
+            <numerusform>%1 – %n starts</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No ship flown yet</source>
+        <translation>Nog geen schip gevlogen</translation>
+    </message>
+    <message>
+        <source>The report could not be saved.</source>
+        <translation>Het rapport kon niet worden opgeslagen.</translation>
+    </message>
+    <message>
+        <source>Saved: %1</source>
+        <translation>Opgeslagen: %1</translation>
+    </message>
+    <message>
+        <source>Show in folder</source>
+        <translation>In map tonen</translation>
+    </message>
+    <message>
+        <source>Save as HTML</source>
+        <translation>Opslaan als HTML</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Sluiten</translation>
     </message>
 </context>
 <context>

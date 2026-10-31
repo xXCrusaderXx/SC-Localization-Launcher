@@ -1661,6 +1661,88 @@ class BackendTest : public QObject
         QVERIFY(!latest().setupNeeded);
     }
 
+    // A Game.log as the game writes it, with made-up names and IDs
+    static std::string fakeGameLog (const std::string& day, bool quit)
+    {
+        std::string t = "<" + day + "T";
+        std::string log =
+            t + "18:00:00.000Z> Log started on Sat Jan 10 18:00:00 2026\n" + t + "18:00:01.000Z> Branch: sc-alpha-4.5.0\n" + t +
+            "18:01:00.000Z> [Notice] <AccountLoginCharacterStatus_Character> Character: createdAt 1 - updatedAt 2 - geid 3 - "
+            "accountId 4 - name TestPilot - state STATE_CURRENT [Team_GameServices][Login]\n" +
+            t + "18:02:00.000Z> [Notice] <Join PU> address[1.2.3.4] port[64300] shard[pub_euw1b_1_100] locationId[5] [Team_GameServices]\n" + t +
+            "18:05:00.000Z> [Notice] <Vehicle Control Flow> CVehicle::Initialize::<lambda_1>::operator (): Local client node [6] "
+            "granted control token for 'AEGS_Sabre_7465010201' [7] [Team_CGP4][Vehicle]\n" +
+            t +
+            "18:06:00.000Z> [Notice] <Vehicle Control Flow> CVehicle::Initialize::<lambda_1>::operator (): Local client node [6] "
+            "granted control token for 'AEGS_Sabre_7465010999' [8] [Team_CGP4][Vehicle]\n" +
+            t +
+            "18:10:00.000Z> [Notice] <Quantum Drive Arrived - Arrived at Final Destination> [ItemNavigation][CL][976] | NOT AUTH | "
+            "AEGS_Sabre_7465010201[7]|CSCItemNavigation::OnQuantumDriveArrived|Quantum Drive has arrived at final destination\n" +
+            t +
+            "18:20:00.000Z> [Notice] <Actor Death> CActor::Kill: 'PU_Pilot_Criminal_9' [9] in zone 'RSI_Aurora_10' killed by "
+            "'TestPilot' [3] using 'KLWE_LaserRepeater_S3_11' [Class unknown] with damage type 'VehicleDestruction'\n" +
+            t +
+            "18:30:00.000Z> [Notice] <MissionEnded> Received MissionEnded push message for: mission_id a-b - mission_state "
+            "MISSION_STATE_COMPLETED [Team_GameServices][Missions]\n" +
+            t +
+            "18:40:00.000Z> [Notice] <Actor Death> CActor::Kill: 'TestPilot' [3] in zone 'AEGS_Sabre_7465010201' killed by "
+            "'PU_Pilot_Criminal_12' [12] using 'Weapon_13' [Class unknown] with damage type 'Bullet'\n";
+        if(quit)
+            log += t + "19:00:00.000Z> [Notice] <SystemQuit> CSystem::Quit invoked with - cause=30016, reason=Quit via console command, exitCode=0\n";
+        else
+            log += t +
+                   "18:45:00.000Z> [Notice] <Error Popup Closed> errorCode=30018 [Team_UI][Disconnection]\n"
+                   "Copied Game.log to C:\\users\\steamuser\\AppData\\Local\\Star Citizen\\Crashes\\game.log\n"
+                   "All crash related data successfully handed over to crash info collector process\n";
+        return log;
+    }
+
+    void countsPlayStatisticsFromGameLogs ()
+    {
+        QTemporaryDir game;
+        auto live = std::filesystem::path(game.path().toStdString());
+        std::filesystem::create_directories(live / "logbackups");
+        std::ofstream(live / "logbackups" / "Game Build(1) 10 Jan 26 (18 00 00).log") << fakeGameLog("2026-01-10", true);
+        // Crashed: no quit at the end
+        std::ofstream(live / "Game.log") << fakeGameLog("2026-01-11", false);
+        std::ofstream(live / "logbackups" / "notes.txt") << "not a log\n";
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", live.string()});
+        backEnd->execute(Protocol::LoadStatistics{});
+        auto loaded = waitForState([] (const auto& s) { return s.statistics.loaded && !s.statistics.busy; });
+        QVERIFY(loaded);
+        Protocol::Statistics stats;
+        {
+            std::lock_guard lock(mutex);
+            stats = states[*loaded].statistics;
+        }
+        QCOMPARE(stats.sessions, 2);
+        QCOMPARE(stats.playSeconds, std::int64_t(3600 + 2700));
+        QCOMPARE(stats.crashes, 1);
+        QCOMPARE(stats.disconnects, 1);
+        QCOMPARE(stats.quantumJumps, 2);
+        QCOMPARE(stats.missionsCompleted, 2);
+        QCOMPARE(stats.kills, 2);
+        QCOMPARE(stats.deaths, 2);
+        QCOMPARE(stats.ships.size(), size_t(1));
+        QCOMPARE(stats.ships[0].name, std::string("AEGS_Sabre"));
+        QCOMPARE(stats.ships[0].count, 2);
+        QCOMPARE(stats.regions.size(), size_t(1));
+        QCOMPARE(stats.regions[0].name, std::string("euw1"));
+        QCOMPARE(stats.days.size(), size_t(2));
+        QCOMPARE(stats.days[0].date, std::string("2026-01-10"));
+        QCOMPARE(stats.days[0].seconds, std::int64_t(3600));
+        // Nothing of the player's name reaches the state
+        QVERIFY(jsonText(nlohmann::json(stats)).find("TestPilot") == std::string::npos);
+
+        backEnd->execute(Protocol::SaveStatisticsReport{"<html>report</html>"});
+        QVERIFY(waitForPreviousCommands());
+        auto report = latest().statistics.reportPath;
+        QVERIFY(!report.empty());
+        QCOMPARE(readFile(report), std::string("<html>report</html>"));
+        std::filesystem::remove(report);
+    }
+
     void storesTheTheme ()
     {
         QVERIFY(start());

@@ -883,6 +883,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Play time, ships, quantum jumps, missions and crashes from the game&apos;s logs</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Statistics …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>HELP</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1019,6 +1027,136 @@
     </message>
     <message>
         <source>Install now</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>StatisticsDialog</name>
+    <message>
+        <source>%1 h</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Europe</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>North America</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Australia</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Asia</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Play time</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Game starts</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Crashes</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disconnects</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Ships flown</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Quantum jumps</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Missions completed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Kills / deaths</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Star Citizen statistics</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 to %2, from the game&apos;s own logs.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Ships</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Ship</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Server regions</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Play time per day</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Statistics</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Reading the game&apos;s logs …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>No game logs found yet. They appear after the first start of Star Citizen.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 to %2, from the game&apos;s own logs of all channels. Quantum jumps are logged from game version 4.5 on.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Play time per day, last six months</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>%1 – %n game start(s)</source>
+        <translation>
+            <numerusform>%1 – %n game start</numerusform>
+            <numerusform>%1 – %n game starts</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No ship flown yet</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The report could not be saved.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Saved: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show in folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save as HTML</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
