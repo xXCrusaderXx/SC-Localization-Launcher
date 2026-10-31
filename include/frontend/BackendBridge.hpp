@@ -14,6 +14,7 @@
 #include <QProcess>
 #include <QQmlEngine>
 #include <QStyleHints>
+#include <QSysInfo>
 #include <QTranslator>
 #include <QUrl>
 #include <QVariantMap>
@@ -146,7 +147,13 @@ class BackendBridge : public QObject
         backEnd.execute(command);
     }
     Q_INVOKABLE void loadStatistics () { backEnd.execute(Protocol::LoadStatistics{}); }
-    Q_INVOKABLE void saveStatisticsReport (const QString& html) { backEnd.execute(Protocol::SaveStatisticsReport{.html = html.toStdString()}); }
+    // kind: "statistics" or "system-info"
+    Q_INVOKABLE void saveStatisticsReport (const QString& html, const QString& kind = "statistics")
+    {
+        backEnd.execute(Protocol::SaveStatisticsReport{.html = html.toStdString(), .kind = kind.toStdString()});
+    }
+    // For the system information: the distribution and the kernel the launcher runs on
+    Q_INVOKABLE static QString operatingSystem () { return QSysInfo::prettyProductName() + " · Linux " + QSysInfo::kernelVersion(); }
 
     Q_INVOKABLE void finishSetup () { backEnd.execute(Protocol::FinishSetup{}); }
 

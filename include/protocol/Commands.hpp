@@ -190,11 +190,13 @@ struct LoadStatistics
     static constexpr const char* name = "loadStatistics";
 };
 
-// Saves the statistics page the window built (HTML, in the interface language) into the Downloads folder
+// Saves a page the window built (HTML, in the interface language) into the Downloads folder
 struct SaveStatisticsReport
 {
     static constexpr const char* name = "saveStatisticsReport";
     std::string html;
+    // Part of the file name: "statistics" or "system-info"
+    std::string kind = "statistics";
 };
 
 // The dashboard's tiles in their order; unknown ids and repeats are dropped, at most MAX_DASHBOARD_TILES
@@ -221,7 +223,7 @@ inline void to_json (nlohmann::json& j, const StartGame&) { j = nlohmann::json::
 inline void to_json (nlohmann::json& j, const FinishSetup&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const LoadStatistics&) { j = nlohmann::json::object(); }
 // The page itself is not logged
-inline void to_json (nlohmann::json& j, const SaveStatisticsReport& c) { j = {{"bytes", c.html.size()}}; }
+inline void to_json (nlohmann::json& j, const SaveStatisticsReport& c) { j = {{"bytes", c.html.size()}, {"kind", c.kind}}; }
 inline void to_json (nlohmann::json& j, const AutoSearch&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const StartBackgroundChecks&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const CheckForUpdate&) { j = nlohmann::json::object(); }

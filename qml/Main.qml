@@ -623,6 +623,10 @@ ApplicationWindow {
             statisticsDialog.open();
             backend.loadStatistics();
         }
+        onSystemInfoRequested: {
+            systemInfoDialog.open();
+            backend.loadStatistics();
+        }
         onSetupRequested: {
             settingsPanel.open = false;
             setupAssistant.open();
@@ -635,6 +639,16 @@ ApplicationWindow {
         numberLocale: window.uiLocale
         statistics: window.appState.statistics || ({})
         onSaveRequested: html => backend.saveStatisticsReport(html)
+        onShowReportRequested: path => backend.openReportFolder(path)
+    }
+
+    SystemInfoDialog {
+        id: systemInfoDialog
+
+        statistics: window.appState.statistics || ({})
+        numberLocale: window.uiLocale
+        operatingSystem: backend.operatingSystem()
+        onSaveRequested: html => backend.saveStatisticsReport(html, "system-info")
         onShowReportRequested: path => backend.openReportFolder(path)
     }
 

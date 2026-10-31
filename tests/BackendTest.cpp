@@ -1667,6 +1667,14 @@ class BackendTest : public QObject
         std::string t = "<" + day + "T";
         std::string log =
             t + "18:00:00.000Z> Log started on Sat Jan 10 18:00:00 2026\n" + t + "18:00:01.000Z> Branch: sc-alpha-4.5.0\n" + t +
+            "18:00:01.000Z> FileVersion: 4.5.172.1234\n" + t + "18:00:01.000Z> Host CPU: Test CPU 8-Core Processor\n" + t +
+            "18:00:01.000Z> Logical CPU Count: 16\n" + t +
+            "18:00:02.000Z> 63445MB physical memory installed, 52669MB available, 16 percent of memory in use\n" + t +
+            "18:00:02.000Z> Logging video adapters:\n" + t + "18:00:02.000Z> - Test GPU (RADV TEST) (vendor = 0x1002, device = 0x73bf)\n" + t +
+            "18:00:02.000Z>   - Adapter index: 0\n" + t + "18:00:02.000Z>   - Dedicated video memory: 16368 MB\n" + t +
+            "18:00:02.000Z> - Integrated GPU (vendor = 0x1002, device = 0x164e)\n" + t + "18:00:02.000Z>   - Dedicated video memory: 512 MB\n" + t +
+            "18:00:02.000Z> [VK] Chosen Vulkan GPU Device (Test GPU (RADV TEST)) Driver Version (26.0.6) Vulkan API (1.4.335) \n" + t +
+            "18:00:03.000Z> Performance Index: " + (quit ? "213.87" : "220.50") + " (CPU), 329.72 (GPU)\r\n" + t +
             "18:01:00.000Z> [Notice] <AccountLoginCharacterStatus_Character> Character: createdAt 1 - updatedAt 2 - geid 3 - "
             "accountId 4 - name TestPilot - state STATE_CURRENT [Team_GameServices][Login]\n" +
             t + "18:02:00.000Z> [Notice] <Join PU> address[1.2.3.4] port[64300] shard[pub_euw1b_1_100] locationId[5] [Team_GameServices]\n" + t +
@@ -1733,6 +1741,20 @@ class BackendTest : public QObject
         QCOMPARE(stats.days[0].date, std::string("2026-01-10"));
         QCOMPARE(stats.days[0].seconds, std::int64_t(3600));
         QCOMPARE(stats.lastSessionSeconds, std::int64_t(2700));
+        QCOMPARE(stats.systems.size(), size_t(2));
+        const auto& system = stats.systems.back();
+        QCOMPARE(system.gameVersion, std::string("4.5.172.1234"));
+        QCOMPARE(system.cpu, std::string("Test CPU 8-Core Processor"));
+        QCOMPARE(system.threads, 16);
+        QCOMPARE(system.memoryMb, 63445);
+        QCOMPARE(system.gpu, std::string("Test GPU (RADV TEST)"));
+        QCOMPARE(system.videoMemoryMb, 16368);
+        QCOMPARE(system.renderer, std::string("vulkan"));
+        QCOMPARE(system.driverVersion, std::string("26.0.6"));
+        QCOMPARE(system.vulkanVersion, std::string("1.4.335"));
+        QCOMPARE(system.cpuIndex, 220.5);
+        QCOMPARE(system.gpuIndex, 329.72);
+        QCOMPARE(stats.systems.front().cpuIndex, 213.87);
         QVERIFY(stats.diskFreeBytes > 0);
         // Nothing of the player's name reaches the state
         QVERIFY(jsonText(nlohmann::json(stats)).find("TestPilot") == std::string::npos);

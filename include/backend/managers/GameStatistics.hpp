@@ -37,6 +37,7 @@ class GameStatistics
         int missionsFailed = 0;
         int kills = 0;
         int deaths = 0;
+        Protocol::SystemSnapshot system;
     };
 
    private:
@@ -77,12 +78,23 @@ class GameStatistics
 
         Session session;
         std::string player;
+        static const std::regex fileVersion(R"(> FileVersion: (\S+))");
+        static const std::regex hostCpu(R"(> Host CPU: (.+)$)");
+        static const std::regex threads(R"(> Logical CPU Count: (\d+))");
+        static const std::regex memory(R"(> (\d+)MB physical memory installed)");
+        static const std::regex adapter(R"(> - (.+) \(vendor = )");
+        static const std::regex videoMemory(R"(> +- Dedicated video memory: (\d+) MB)");
+        static const std::regex vulkan(R"(\[VK\] Chosen Vulkan GPU Device \(.*\) Driver Version \(([^)]*)\) Vulkan API \(([^)]*)\))");
+        static const std::regex index(R"(> Performance Index: ([\d.]+) \(CPU\), ([\d.]+) \(GPU\))");
+        auto& system = session.system;
+        system.renderer = "dx11";
         std::vector<std::pair<std::string, std::string>> victimsAndKillers;
         std::ifstream in(log);
         std::string line;
         std::smatch match;
         while(std::getline(in, line))
         {
+            if(!line.empty() && line.back() == '\r') line.pop_back();
             // The crash handler writes its lines without a timestamp
             if(line.find("crash info collector") != std::string::npos || line.find("\\Crashes\\game.log") != std::string::npos)
                 session.crashed = true;
@@ -110,6 +122,31 @@ class GameStatistics
             }
             else if(line.find("<Actor Death>") != std::string::npos && std::regex_search(line, match, death))
                 victimsAndKillers.emplace_back(match[1], match[2]);
+            // The head of the log describes the computer; only the first adapter is the one the game uses
+            else if(line.find("> FileVersion: ") != std::string::npos && std::regex_search(line, match, fileVersion))
+                system.gameVersion = match[1];
+            else if(line.find("> Host CPU: ") != std::string::npos && std::regex_search(line, match, hostCpu))
+                system.cpu = match[1];
+            else if(line.find("> Logical CPU Count: ") != std::string::npos && std::regex_search(line, match, threads))
+                system.threads = std::stoi(match[1]);
+            else if(line.find("MB physical memory installed") != std::string::npos && std::regex_search(line, match, memory))
+                system.memoryMb = std::stoi(match[1]);
+            else if(system.gpu.empty() && line.find("(vendor = ") != std::string::npos && std::regex_search(line, match, adapter))
+                system.gpu = match[1];
+            else if(!system.videoMemoryMb && line.find("Dedicated video memory: ") != std::string::npos &&
+                    std::regex_search(line, match, videoMemory))
+                system.videoMemoryMb = std::stoi(match[1]);
+            else if(line.find("[VK] Chosen Vulkan GPU Device") != std::string::npos && std::regex_search(line, match, vulkan))
+            {
+                system.renderer = "vulkan";
+                system.driverVersion = match[1];
+                system.vulkanVersion = match[2];
+            }
+            else if(line.find("> Performance Index: ") != std::string::npos && std::regex_search(line, match, index))
+            {
+                system.cpuIndex = std::stod(match[1]);
+                system.gpuIndex = std::stod(match[2]);
+            }
         }
         // The character line may come after a death, so kills are counted once the file is read
         for(const auto& [victim, killer] : victimsAndKillers)
@@ -120,6 +157,7 @@ class GameStatistics
             else if(killer == player)
                 ++session.kills;
         }
+        system.time = session.start;
         return session;
     }
 
@@ -162,6 +200,7 @@ class GameStatistics
             stats.missionsFailed += session.missionsFailed;
             stats.kills += session.kills;
             stats.deaths += session.deaths;
+            if(session.system.cpuIndex > 0) stats.systems.push_back(session.system);
             for(const auto& ship : session.ships) ++ships[ship];
             for(const auto& region : session.regions) ++regions[region];
             char date[11];
@@ -179,6 +218,7 @@ class GameStatistics
             std::stable_sort(list.begin(), list.end(), [] (const auto& a, const auto& b) { return a.count > b.count; });
             return list;
         };
+        std::stable_sort(stats.systems.begin(), stats.systems.end(), [] (const auto& a, const auto& b) { return a.time < b.time; });
         stats.ships = byCount(ships);
         stats.regions = byCount(regions);
         for(const auto& [date, seconds] : days) stats.days.push_back({date, seconds});

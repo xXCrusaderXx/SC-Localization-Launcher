@@ -21,6 +21,7 @@ Item {
     signal programsRequested
     signal setupRequested
     signal statisticsRequested
+    signal systemInfoRequested
 
     readonly property var options: appState.options || {}
     readonly property var channels: appState.channels || []
@@ -523,6 +524,26 @@ Item {
                     DialogButton {
                         text: qsTr("Check installation …")
                         onClicked: panel.diagnosticsRequested()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Hardware, driver and the game's performance index per start, for bug reports")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("System information …")
+                        onClicked: panel.systemInfoRequested()
                     }
                 }
 
