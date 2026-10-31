@@ -653,9 +653,12 @@ class BackendTest : public QObject
         QVERIFY(running.waitForStarted());
 
         QVERIFY(start());
+        // bash needs a moment before it runs under the game's name
+        bool seen = waitForState([] (const auto& s) { return s.game == GameStart::Playing; }).has_value();
         auto update = checkAndInstall();
         running.kill();
         running.waitForFinished();
+        QVERIFY(seen);
         QCOMPARE(update.error, std::string("Star Citizen is running"));
         QCOMPARE(readFile(appImage), std::string("old version"));
     }
