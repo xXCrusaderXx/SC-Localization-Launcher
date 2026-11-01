@@ -54,8 +54,8 @@ While Star Citizen runs, translations are never changed. A waiting update follow
 
 **Item values** (Settings → Behaviour, both off by default) come from the [Star Citizen Wiki](https://star-citizen.wiki) and are added to the installed translation with the next update:
 
-- *Add size, class and grade to item names*, e.g. "Holdstrong (S4 Military A)".
-- *Add item values to descriptions*, e.g. "HP 100,000 · Regen 19,000/s" for shields.
+- *Add size, class and grade to item names*, e.g. "Holdstrong (S4 Military A)". Armour gets its weight class, e.g. "ADP Core (Heavy)", and mining lasers their size.
+- *Add item values to descriptions*, e.g. "HP 100,000 · Regen 19,000/s" for shields. Armour and mining items keep their descriptions, which list their values in the game already.
 
 **The launcher's own language** is set under Settings → Behaviour → *Language of the launcher*: *Automatic (system language)* or one of English, Deutsch, Español, Français, Italiano, Nederlands, Polski, Português. *Appearance* chooses a dark or light theme, or follows the system. *Streamer mode* hides your user name and home folder in the paths the launcher shows, while you stream or record.
 

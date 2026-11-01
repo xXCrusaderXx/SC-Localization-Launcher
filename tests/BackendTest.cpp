@@ -1914,6 +1914,40 @@ class BackendTest : public QObject
         QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::Installed);
     }
 
+    void addsWeightClassToArmourAndSizeToMiningLasers ()
+    {
+        serveItemData();
+        server.setFile("/de.ini",
+                       "item_NameArmour_Test=Kern\nitem_DescArmour_Test=Schadensreduktion: 40 %\nitem_NameHelmet_Test=Fliegerhelm\n"
+                       "item_Mining_MiningLaser_Test_S1=Bergbaulaser\n");
+        nlohmann::json mapping{{"version", 1},
+                               {"keys",
+                                {{"item_NameArmour_Test", "u-armour"},
+                                 {"item_DescArmour_Test", "u-armour"},
+                                 {"item_NameHelmet_Test", "u-helmet"},
+                                 {"item_Mining_MiningLaser_Test_S1", "u-laser"}}}};
+        server.setFile("/item-mapping.json", QByteArray::fromStdString(mapping.dump()));
+        auto page = [] (const QByteArray& type) { return "/api/v2/items?filter%5Btype%5D=" + type + "&page%5Bnumber%5D=1&page%5Bsize%5D=200"; };
+        auto items = [] (const nlohmann::json& item)
+        { return QByteArray::fromStdString(nlohmann::json{{"data", {item}}, {"meta", {{"last_page", 1}}}}.dump()); };
+        server.setFile(page("Char_Armor_Torso"), items({{"uuid", "u-armour"}, {"type", "Char_Armor_Torso"}, {"sub_type", "Heavy"}, {"size", 1}}));
+        // Flight helmets have no weight class
+        server.setFile(page("Char_Armor_Helmet"), items({{"uuid", "u-helmet"}, {"type", "Char_Armor_Helmet"}, {"sub_type", "Helmet"}, {"size", 1}}));
+        server.setFile(page("WeaponMining"),
+                       items({{"uuid", "u-laser"}, {"type", "WeaponMining"}, {"sub_type", "Gun"}, {"size", 1}, {"grade", "A"}}));
+        QTemporaryDir game;
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetOption{"itemNameDetails", true});
+        backEnd->execute(Protocol::SetOption{"itemDescriptionStats", true});
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        QVERIFY(setLanguage("LIVE", "de"));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+
+        // The armour's description already lists its values in the game, so it stays as it is
+        QCOMPARE(installedItemFile(game), std::string("item_NameArmour_Test=Kern (Schwer)\nitem_DescArmour_Test=Schadensreduktion: 40 %\n"
+                                                      "item_NameHelmet_Test=Fliegerhelm\nitem_Mining_MiningLaser_Test_S1=Bergbaulaser (S1)\n"));
+    }
+
     void switchingItemValuesOnAndOffUpdatesTheFile ()
     {
         serveItemData();
