@@ -901,6 +901,14 @@
         <translation>Vraagt GitHub naar een nieuwere versie van deze launcher</translation>
     </message>
     <message>
+        <source>Streamer mode</source>
+        <translation>Streamermodus</translation>
+    </message>
+    <message>
+        <source>Hides your user name and home folder in the paths the launcher shows, while you stream or record</source>
+        <translation>Verbergt je gebruikersnaam en thuismap in de getoonde paden terwijl je streamt of opneemt</translation>
+    </message>
+    <message>
         <source>Keep running in the system tray</source>
         <translation>In het systeemvak blijven draaien</translation>
     </message>

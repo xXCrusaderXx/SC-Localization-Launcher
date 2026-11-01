@@ -30,6 +30,9 @@ class BackendBridge : public QObject
     Q_OBJECT
     Q_PROPERTY(QVariantMap state READ state NOTIFY stateChanged)
     Q_PROPERTY(QString logFolder READ logFolder CONSTANT)
+    // For the streamer mode, which hides them in paths
+    Q_PROPERTY(QString homeFolder READ homeFolder CONSTANT)
+    Q_PROPERTY(QString userName READ userName CONSTANT)
     Q_PROPERTY(QVariantList interfaceLanguages READ interfaceLanguages CONSTANT)
     Q_PROPERTY(bool systemDark READ systemDark NOTIFY systemDarkChanged)
 
@@ -265,6 +268,8 @@ class BackendBridge : public QObject
 
     // Where CustomLogger writes; shown in the settings and opened from error messages
     QString logFolder () const { return QString::fromStdString((PATHS::LOGPATH_USER / "logs").string()); }
+    static QString homeFolder () { return QDir::homePath(); }
+    static QString userName () { return qEnvironmentVariable("USER"); }
     Q_INVOKABLE void openLogFolder () const { QDesktopServices::openUrl(QUrl::fromLocalFile(logFolder())); }
 
    signals:

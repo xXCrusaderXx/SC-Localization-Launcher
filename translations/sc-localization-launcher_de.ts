@@ -893,6 +893,14 @@
         <translation>Fragt bei GitHub nach einer neueren Version dieses Launchers</translation>
     </message>
     <message>
+        <source>Streamer mode</source>
+        <translation>Streamer-Modus</translation>
+    </message>
+    <message>
+        <source>Hides your user name and home folder in the paths the launcher shows, while you stream or record</source>
+        <translation>Blendet deinen Benutzernamen und Home-Ordner in angezeigten Pfaden aus, während du streamst oder aufnimmst</translation>
+    </message>
+    <message>
         <source>Keep running in the system tray</source>
         <translation>Im Infobereich weiterlaufen</translation>
     </message>

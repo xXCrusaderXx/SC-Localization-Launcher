@@ -284,7 +284,7 @@ Popup {
         Text {
             Layout.fillWidth: true
             visible: (dialog.statistics.reportPath || "") !== "" || (dialog.statistics.error || "") !== ""
-            text: dialog.statistics.error ? qsTr("The report could not be saved.") : qsTr("Saved: %1").arg(dialog.statistics.reportPath || "")
+            text: dialog.statistics.error ? qsTr("The report could not be saved.") : qsTr("Saved: %1").arg(Theme.shownPath(dialog.statistics.reportPath || ""))
             wrapMode: Text.WrapAnywhere
             color: dialog.statistics.error ? Theme.warning : Theme.success
             font.pixelSize: 11

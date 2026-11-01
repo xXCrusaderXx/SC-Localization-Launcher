@@ -255,6 +255,15 @@ Item {
                     Toggle {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
+                        text: qsTr("Streamer mode")
+                        description: qsTr("Hides your user name and home folder in the paths the launcher shows, while you stream or record")
+                        checked: panel.options.streamerMode === true
+                        onSwitched: on => backend.setOption("streamerMode", on)
+                    }
+
+                    Toggle {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
                         visible: panel.trayAvailable
                         text: qsTr("Keep running in the system tray")
                         description: qsTr("Closing the window keeps the launcher in the tray, so it goes on checking")

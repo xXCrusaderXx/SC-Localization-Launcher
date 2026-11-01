@@ -57,7 +57,7 @@ While Star Citizen runs, translations are never changed. A waiting update follow
 - *Add size, class and grade to item names*, e.g. "Holdstrong (S4 Military A)".
 - *Add item values to descriptions*, e.g. "HP 100,000 · Regen 19,000/s" for shields.
 
-**The launcher's own language** is set under Settings → Behaviour → *Language of the launcher*: *Automatic (system language)* or one of English, Deutsch, Español, Français, Italiano, Nederlands, Polski, Português. *Appearance* chooses a dark or light theme, or follows the system.
+**The launcher's own language** is set under Settings → Behaviour → *Language of the launcher*: *Automatic (system language)* or one of English, Deutsch, Español, Français, Italiano, Nederlands, Polski, Português. *Appearance* chooses a dark or light theme, or follows the system. *Streamer mode* hides your user name and home folder in the paths the launcher shows, while you stream or record.
 
 ## Updates
 

@@ -105,11 +105,13 @@ struct Options
     bool itemNameDetails = false;
     // Puts a line of stats from the Star Citizen Wiki API in front of item descriptions in global.ini
     bool itemDescriptionStats = false;
+    // Hides the user name and home folder in the paths the window shows, for streaming and recording
+    bool streamerMode = false;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Options, launchGameAfterUpdate, updateAtStart, installNewTranslations, minimizeAfterUpdate,
                                                 startWithSystem, showUpdateProgress, checkLauncherUpdatesAtStart, closeToTray, itemNameDetails,
-                                                itemDescriptionStats)
+                                                itemDescriptionStats, streamerMode)
 
 enum class ChannelStatus
 {
