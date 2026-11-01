@@ -127,6 +127,8 @@ Popup {
                                 Layout.fillWidth: true
                                 objectName: "programCommand" + index
                                 text: modelData.command
+                                // Commands may hold paths with the user name; shown while being edited
+                                echoMode: Theme.streamerMode ? TextInput.PasswordEchoOnEdit : TextInput.Normal
                                 placeholderText: "/usr/bin/opentrack"
                                 placeholderTextColor: Theme.disabled
                                 color: Theme.text

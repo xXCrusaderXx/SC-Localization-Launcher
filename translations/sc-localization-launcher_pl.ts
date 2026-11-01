@@ -902,6 +902,14 @@
         <translation>Pyta GitHub o nowszą wersję tego launchera</translation>
     </message>
     <message>
+        <source>Streamer mode</source>
+        <translation>Tryb streamera</translation>
+    </message>
+    <message>
+        <source>Hides your user name and home folder in the paths the launcher shows, while you stream or record</source>
+        <translation>Ukrywa nazwę użytkownika i folder domowy w wyświetlanych ścieżkach podczas streamowania lub nagrywania</translation>
+    </message>
+    <message>
         <source>Keep running in the system tray</source>
         <translation>Działaj w zasobniku systemowym</translation>
     </message>

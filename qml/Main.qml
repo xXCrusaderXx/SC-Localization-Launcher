@@ -59,11 +59,34 @@ ApplicationWindow {
         value: window.appState.theme === "dark" || (window.appState.theme !== "light" && backend.systemDark)
     }
 
+    Binding {
+        target: Theme
+        property: "streamerMode"
+        value: (window.appState.options || {}).streamerMode === true
+    }
+
+    // Constant, but set from here so Theme does not need the backend
+    Binding {
+        target: Theme
+        property: "homeFolder"
+        value: backend.homeFolder
+    }
+
+    Binding {
+        target: Theme
+        property: "userName"
+        value: backend.userName
+    }
+
     // Numbers and dates in the format of the interface language
     readonly property var uiLocale: Qt.locale(appState.interfaceLanguage || "")
 
     // Read by the GUI test
     readonly property bool darkTheme: Theme.dark
+
+    function shownPath(path) {
+        return Theme.shownPath(path);
+    }
 
     // First start: nothing set up yet
     readonly property bool setupNeeded: appState.setupNeeded === true

@@ -786,6 +786,34 @@ class GuiTest : public QObject
         QTRY_COMPARE(bridge->state()["dashboardTiles"].toStringList().size(), 4);
     }
 
+    void streamerModeHidesTheHomeFolder ()
+    {
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        QTRY_VERIFY(panel->property("visible").toBool());
+        QString logs = bridge->logFolder();
+        QVERIFY(logs.startsWith(QDir::homePath()));
+        QVERIFY(findText(logs));
+
+        bridge->setOption("streamerMode", true);
+        QString hidden = "~" + logs.mid(QDir::homePath().size());
+        QTRY_VERIFY(findText(hidden));
+        QVERIFY(!findText(logs));
+        auto shown = [this] (const QString& path)
+        {
+            QVariant result;
+            QMetaObject::invokeMethod(window, "shownPath", Q_RETURN_ARG(QVariant, result), Q_ARG(QVariant, path));
+            return result.toString();
+        };
+        QCOMPARE(shown("/opt/games/drive_c/users/steamuser/AppData"), QString("/opt/games/drive_c/users/…/AppData"));
+
+        bridge->setOption("streamerMode", false);
+        QTRY_VERIFY(findText(logs));
+        QCOMPARE(shown("/opt/games/drive_c/users/steamuser/AppData"), QString("/opt/games/drive_c/users/steamuser/AppData"));
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
     void switchesTheTheme ()
     {
         auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");

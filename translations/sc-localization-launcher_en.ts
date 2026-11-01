@@ -901,6 +901,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Streamer mode</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hides your user name and home folder in the paths the launcher shows, while you stream or record</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Keep running in the system tray</source>
         <translation type="unfinished"></translation>
     </message>

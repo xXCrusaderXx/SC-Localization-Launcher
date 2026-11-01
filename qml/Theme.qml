@@ -1,9 +1,24 @@
 pragma Singleton
 import QtQuick
 
-// Colours of the launcher. `dark` is set by Main.qml from the setting "Appearance" or the system.
+// Colours of the launcher, and how it shows paths. Main.qml sets `dark` from the setting "Appearance" or the system,
+// and the streamer mode with the home folder and user name it hides.
 QtObject {
     property bool dark: true
+    property bool streamerMode: false
+    property string homeFolder: ""
+    property string userName: ""
+
+    // A path as the window shows it: in streamer mode without the home folder and the user name
+    function shownPath(path) {
+        if (!streamerMode || !path)
+            return path;
+        let shown = homeFolder !== "" && path.startsWith(homeFolder) ? "~" + path.slice(homeFolder.length) : path;
+        // Wine prefixes have a user folder of their own
+        shown = shown.replace(/\/users\/[^\/]+/gi, "/users/…");
+        // Short names like "a" would hide parts of every word
+        return userName.length > 2 ? shown.split(userName).join("…") : shown;
+    }
 
     readonly property color background: dark ? "#0b1220" : "#eef2f7"
     readonly property color panel: dark ? Qt.rgba(0.06, 0.09, 0.16, 0.72) : Qt.rgba(1, 1, 1, 0.82)

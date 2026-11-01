@@ -120,7 +120,7 @@ Rectangle {
                         return qsTr("%1 is not installed yet").arg(row.choiceName);
                     if (row.channel.status === "updateAvailable")
                         return row.channel.language === "en" ? qsTr("The translation is removed with the next update") : qsTr("Update available for %1").arg(row.choiceName);
-                    return row.channel.installPath;
+                    return Theme.shownPath(row.channel.installPath);
                 }
                 color: row.broken ? Theme.danger : row.pathSet && (!row.choiceAvailable || row.notice !== "" || row.channel.status !== "installed") ? Theme.warning : Theme.muted
                 // Notices and language names come from the internet
