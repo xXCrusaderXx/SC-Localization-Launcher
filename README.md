@@ -33,7 +33,7 @@ New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)
 - Starts your own programs or scripts together with the game, and ends them with it if you like (Settings → Tools → "Programs …").
 - The interface is available in English, German, French, Spanish, Italian, Polish, Dutch and Portuguese, following the system language or the choice in the settings, with a light or dark theme.
 
-Planned, not available yet: starting with the system, and a progress view.
+Planned, not available yet: statistics and a dashboard, values for armour and mining, starting with the system; see the [roadmap](ROADMAP.md).
 
 The translation texts are maintained by community projects such as [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI). Report wrong or missing texts there, not here.
 

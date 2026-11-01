@@ -226,6 +226,92 @@
     </message>
 </context>
 <context>
+    <name>Dashboard</name>
+    <message>
+        <source>%1 h</source>
+        <translation>%1 u</translation>
+    </message>
+    <message>
+        <source>Play time</source>
+        <translation>Speeltijd</translation>
+    </message>
+    <message>
+        <source>Last played</source>
+        <translation>Laatst gespeeld</translation>
+    </message>
+    <message>
+        <source>Favourite ship</source>
+        <translation>Favoriete schip</translation>
+    </message>
+    <message>
+        <source>Free space</source>
+        <translation>Vrije ruimte</translation>
+    </message>
+    <message>
+        <source>Game starts</source>
+        <translation>Spelstarts</translation>
+    </message>
+    <message>
+        <source>Crashes</source>
+        <translation>Crashes</translation>
+    </message>
+    <message>
+        <source>Disconnects</source>
+        <translation>Verbroken verbindingen</translation>
+    </message>
+    <message>
+        <source>Quantum jumps</source>
+        <translation>Kwantumsprongen</translation>
+    </message>
+    <message>
+        <source>Missions completed</source>
+        <translation>Missies voltooid</translation>
+    </message>
+    <message>
+        <source>Kills / deaths</source>
+        <translation>Kills / doden</translation>
+    </message>
+    <message>
+        <source>%1 GB</source>
+        <translation>%1 GB</translation>
+    </message>
+    <message>
+        <source>DASHBOARD</source>
+        <translation>DASHBOARD</translation>
+    </message>
+    <message>
+        <source>Customize …</source>
+        <translation>Aanpassen …</translation>
+    </message>
+    <message>
+        <source>No tiles chosen.</source>
+        <translation>Geen tegels gekozen.</translation>
+    </message>
+</context>
+<context>
+    <name>DashboardDialog</name>
+    <message>
+        <source>Customize the dashboard</source>
+        <translation>Dashboard aanpassen</translation>
+    </message>
+    <message>
+        <source>Up to %1 tiles, shown in this order. The main window shows as many rows as fit.</source>
+        <translation>Tot %1 tegels, in deze volgorde. Het hoofdvenster toont zoveel rijen als er passen.</translation>
+    </message>
+    <message>
+        <source>More tiles</source>
+        <translation>Meer tegels</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Sluiten</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Opslaan</translation>
+    </message>
+</context>
+<context>
     <name>DiagnosticsDialog</name>
     <message>
         <source>System</source>
@@ -815,6 +901,14 @@
         <translation>Vraagt GitHub naar een nieuwere versie van deze launcher</translation>
     </message>
     <message>
+        <source>Streamer mode</source>
+        <translation>Streamermodus</translation>
+    </message>
+    <message>
+        <source>Hides your user name and home folder in the paths the launcher shows, while you stream or record</source>
+        <translation>Verbergt je gebruikersnaam en thuismap in de getoonde paden terwijl je streamt of opneemt</translation>
+    </message>
+    <message>
         <source>Keep running in the system tray</source>
         <translation>In het systeemvak blijven draaien</translation>
     </message>
@@ -883,6 +977,14 @@
         <translation>Programma&apos;s …</translation>
     </message>
     <message>
+        <source>Play time, ships, quantum jumps, missions and crashes from the game&apos;s logs</source>
+        <translation>Speeltijd, schepen, kwantumsprongen, missies en crashes uit de logs van het spel</translation>
+    </message>
+    <message>
+        <source>Statistics …</source>
+        <translation>Statistieken …</translation>
+    </message>
+    <message>
         <source>HELP</source>
         <translation>HULP</translation>
     </message>
@@ -893,6 +995,14 @@
     <message>
         <source>Check installation …</source>
         <translation>Installatie controleren …</translation>
+    </message>
+    <message>
+        <source>Hardware, driver and the game&apos;s performance index per start, for bug reports</source>
+        <translation>Hardware, stuurprogramma en prestatie-index van het spel per start, voor foutmeldingen</translation>
+    </message>
+    <message>
+        <source>System information …</source>
+        <translation>Systeeminformatie …</translation>
     </message>
     <message>
         <source>Game folders, translation and the main options, step by step</source>
@@ -1020,6 +1130,263 @@
     <message>
         <source>Install now</source>
         <translation>Nu installeren</translation>
+    </message>
+</context>
+<context>
+    <name>StatisticsDialog</name>
+    <message>
+        <source>%1 h</source>
+        <translation>%1 u</translation>
+    </message>
+    <message>
+        <source>Europe</source>
+        <translation>Europa</translation>
+    </message>
+    <message>
+        <source>North America</source>
+        <translation>Noord-Amerika</translation>
+    </message>
+    <message>
+        <source>Australia</source>
+        <translation>Australië</translation>
+    </message>
+    <message>
+        <source>Asia</source>
+        <translation>Azië</translation>
+    </message>
+    <message>
+        <source>Play time</source>
+        <translation>Speeltijd</translation>
+    </message>
+    <message>
+        <source>Game starts</source>
+        <translation>Spelstarts</translation>
+    </message>
+    <message>
+        <source>Crashes</source>
+        <translation>Crashes</translation>
+    </message>
+    <message>
+        <source>Disconnects</source>
+        <translation>Verbroken verbindingen</translation>
+    </message>
+    <message>
+        <source>Ships flown</source>
+        <translation>Gevlogen schepen</translation>
+    </message>
+    <message>
+        <source>Quantum jumps</source>
+        <translation>Kwantumsprongen</translation>
+    </message>
+    <message>
+        <source>Missions completed</source>
+        <translation>Missies voltooid</translation>
+    </message>
+    <message>
+        <source>Kills / deaths</source>
+        <translation>Kills / doden</translation>
+    </message>
+    <message>
+        <source>Star Citizen statistics</source>
+        <translation>Star Citizen-statistieken</translation>
+    </message>
+    <message>
+        <source>%1 to %2, from the game&apos;s own logs.</source>
+        <translation>%1 tot %2, uit de logs van het spel.</translation>
+    </message>
+    <message>
+        <source>Ships</source>
+        <translation>Schepen</translation>
+    </message>
+    <message>
+        <source>Ship</source>
+        <translation>Schip</translation>
+    </message>
+    <message>
+        <source>Server regions</source>
+        <translation>Serverregio&apos;s</translation>
+    </message>
+    <message>
+        <source>Play time per day</source>
+        <translation>Speeltijd per dag</translation>
+    </message>
+    <message>
+        <source>Statistics</source>
+        <translation>Statistieken</translation>
+    </message>
+    <message>
+        <source>Reading the game&apos;s logs …</source>
+        <translation>Logs van het spel worden gelezen …</translation>
+    </message>
+    <message>
+        <source>No game logs found yet. They appear after the first start of Star Citizen.</source>
+        <translation>Nog geen logs van het spel gevonden. Ze verschijnen na de eerste start van Star Citizen.</translation>
+    </message>
+    <message>
+        <source>%1 to %2, from the game&apos;s own logs of all channels. Quantum jumps are logged from game version 4.5 on.</source>
+        <translation>%1 tot %2, uit de logs van het spel van alle kanalen. Kwantumsprongen worden pas vanaf spelversie 4.5 gelogd.</translation>
+    </message>
+    <message>
+        <source>Play time per day, last six months</source>
+        <translation>Speeltijd per dag, afgelopen zes maanden</translation>
+    </message>
+    <message numerus="yes">
+        <source>%1 – %n game start(s)</source>
+        <translation>
+            <numerusform>%1 – %n start</numerusform>
+            <numerusform>%1 – %n starts</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No ship flown yet</source>
+        <translation>Nog geen schip gevlogen</translation>
+    </message>
+    <message>
+        <source>The report could not be saved.</source>
+        <translation>Het rapport kon niet worden opgeslagen.</translation>
+    </message>
+    <message>
+        <source>Saved: %1</source>
+        <translation>Opgeslagen: %1</translation>
+    </message>
+    <message>
+        <source>Show in folder</source>
+        <translation>In map tonen</translation>
+    </message>
+    <message>
+        <source>Save as HTML</source>
+        <translation>Opslaan als HTML</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Sluiten</translation>
+    </message>
+</context>
+<context>
+    <name>SystemInfoDialog</name>
+    <message>
+        <source>A forecast needs at least three game starts.</source>
+        <translation>Een prognose heeft minstens drie spelstarts nodig.</translation>
+    </message>
+    <message>
+        <source>Expected at the next start: CPU %1–%2, GPU %3–%4.</source>
+        <translation>Verwacht bij de volgende start: CPU %1–%2, GPU %3–%4.</translation>
+    </message>
+    <message>
+        <source>CPU</source>
+        <translation>CPU</translation>
+    </message>
+    <message>
+        <source>GPU</source>
+        <translation>GPU</translation>
+    </message>
+    <message>
+        <source>%1 %2 % slower than usual</source>
+        <translation>%1 %2 % langzamer dan normaal</translation>
+    </message>
+    <message>
+        <source>%1 %2 % faster than usual</source>
+        <translation>%1 %2 % sneller dan normaal</translation>
+    </message>
+    <message>
+        <source>The graphics driver changed from %1 to %2.</source>
+        <translation>Het grafische stuurprogramma is gewijzigd van %1 naar %2.</translation>
+    </message>
+    <message>
+        <source>The game version changed from %1 to %2.</source>
+        <translation>De spelversie is gewijzigd van %1 naar %2.</translation>
+    </message>
+    <message>
+        <source>Last start: %1.</source>
+        <translation>Laatste start: %1.</translation>
+    </message>
+    <message>
+        <source>Processor</source>
+        <translation>Processor</translation>
+    </message>
+    <message>
+        <source>%1 threads</source>
+        <translation>%1 threads</translation>
+    </message>
+    <message>
+        <source>Memory</source>
+        <translation>Geheugen</translation>
+    </message>
+    <message>
+        <source>%1 GB</source>
+        <translation>%1 GB</translation>
+    </message>
+    <message>
+        <source>Graphics card</source>
+        <translation>Videokaart</translation>
+    </message>
+    <message>
+        <source>Graphics API</source>
+        <translation>Grafische API</translation>
+    </message>
+    <message>
+        <source>Driver</source>
+        <translation>Stuurprogramma</translation>
+    </message>
+    <message>
+        <source>Game version</source>
+        <translation>Spelversie</translation>
+    </message>
+    <message>
+        <source>Operating system</source>
+        <translation>Besturingssysteem</translation>
+    </message>
+    <message>
+        <source>System information</source>
+        <translation>Systeeminformatie</translation>
+    </message>
+    <message>
+        <source>Performance index</source>
+        <translation>Prestatie-index</translation>
+    </message>
+    <message>
+        <source>The game measures both at every start; higher is faster. CPU and GPU use different scales and can&apos;t be compared with each other.</source>
+        <translation>Het spel meet beide bij elke start; hoger is sneller. CPU en GPU gebruiken verschillende schalen en zijn niet met elkaar te vergelijken.</translation>
+    </message>
+    <message>
+        <source>Date</source>
+        <translation>Datum</translation>
+    </message>
+    <message>
+        <source>Reading the game&apos;s logs …</source>
+        <translation>Logs van het spel worden gelezen …</translation>
+    </message>
+    <message>
+        <source>No game logs found yet. They appear after the first start of Star Citizen.</source>
+        <translation>Nog geen logs van het spel gevonden. Ze verschijnen na de eerste start van Star Citizen.</translation>
+    </message>
+    <message>
+        <source>As the game saw your computer at its last start (%1).</source>
+        <translation>Je computer zoals het spel hem zag bij de laatste start (%1).</translation>
+    </message>
+    <message>
+        <source>Last start: CPU %1, GPU %2.</source>
+        <translation>Laatste start: CPU %1, GPU %2.</translation>
+    </message>
+    <message>
+        <source>The report could not be saved.</source>
+        <translation>Het rapport kon niet worden opgeslagen.</translation>
+    </message>
+    <message>
+        <source>Saved: %1</source>
+        <translation>Opgeslagen: %1</translation>
+    </message>
+    <message>
+        <source>Show in folder</source>
+        <translation>In map tonen</translation>
+    </message>
+    <message>
+        <source>Save as HTML</source>
+        <translation>Opslaan als HTML</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Sluiten</translation>
     </message>
 </context>
 <context>

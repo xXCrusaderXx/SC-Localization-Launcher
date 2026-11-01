@@ -178,7 +178,7 @@ Popup {
         Text {
             Layout.fillWidth: true
             visible: (dialog.diagnostics.reportPath || "") !== "" || (dialog.diagnostics.error || "") !== ""
-            text: dialog.diagnostics.error ? qsTr("The report could not be saved.") : qsTr("Saved: %1").arg(dialog.diagnostics.reportPath || "")
+            text: dialog.diagnostics.error ? qsTr("The report could not be saved.") : qsTr("Saved: %1").arg(Theme.shownPath(dialog.diagnostics.reportPath || ""))
             color: dialog.diagnostics.error ? Theme.danger : Theme.success
             elide: Text.ElideMiddle
             font.pixelSize: 11

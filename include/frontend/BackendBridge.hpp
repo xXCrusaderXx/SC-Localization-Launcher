@@ -14,6 +14,7 @@
 #include <QProcess>
 #include <QQmlEngine>
 #include <QStyleHints>
+#include <QSysInfo>
 #include <QTranslator>
 #include <QUrl>
 #include <QVariantMap>
@@ -29,6 +30,9 @@ class BackendBridge : public QObject
     Q_OBJECT
     Q_PROPERTY(QVariantMap state READ state NOTIFY stateChanged)
     Q_PROPERTY(QString logFolder READ logFolder CONSTANT)
+    // For the streamer mode, which hides them in paths
+    Q_PROPERTY(QString homeFolder READ homeFolder CONSTANT)
+    Q_PROPERTY(QString userName READ userName CONSTANT)
     Q_PROPERTY(QVariantList interfaceLanguages READ interfaceLanguages CONSTANT)
     Q_PROPERTY(bool systemDark READ systemDark NOTIFY systemDarkChanged)
 
@@ -138,6 +142,21 @@ class BackendBridge : public QObject
 
     // "dark", "light", or empty to follow the system
     Q_INVOKABLE void setTheme (const QString& theme) { backEnd.execute(Protocol::SetTheme{.theme = theme.toStdString()}); }
+
+    Q_INVOKABLE void setDashboardTiles (const QStringList& tiles)
+    {
+        Protocol::SetDashboardTiles command;
+        for(const auto& tile : tiles) command.tiles.push_back(tile.toStdString());
+        backEnd.execute(command);
+    }
+    Q_INVOKABLE void loadStatistics () { backEnd.execute(Protocol::LoadStatistics{}); }
+    // kind: "statistics" or "system-info"
+    Q_INVOKABLE void saveStatisticsReport (const QString& html, const QString& kind = "statistics")
+    {
+        backEnd.execute(Protocol::SaveStatisticsReport{.html = html.toStdString(), .kind = kind.toStdString()});
+    }
+    // For the system information: the distribution and the kernel the launcher runs on
+    Q_INVOKABLE static QString operatingSystem () { return QSysInfo::prettyProductName() + " · Linux " + QSysInfo::kernelVersion(); }
 
     Q_INVOKABLE void finishSetup () { backEnd.execute(Protocol::FinishSetup{}); }
 
@@ -249,6 +268,8 @@ class BackendBridge : public QObject
 
     // Where CustomLogger writes; shown in the settings and opened from error messages
     QString logFolder () const { return QString::fromStdString((PATHS::LOGPATH_USER / "logs").string()); }
+    static QString homeFolder () { return QDir::homePath(); }
+    static QString userName () { return qEnvironmentVariable("USER"); }
     Q_INVOKABLE void openLogFolder () const { QDesktopServices::openUrl(QUrl::fromLocalFile(logFolder())); }
 
    signals:

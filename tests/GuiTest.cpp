@@ -153,7 +153,7 @@ class GuiTest : public QObject
     void cleanup ()
     {
         for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog", "backupDialog",
-                                "gameSettingsDialog", "programsDialog", "setupAssistant"})
+                                "gameSettingsDialog", "programsDialog", "setupAssistant", "statisticsDialog", "dashboardDialog", "systemInfoDialog"})
         {
             auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
             if(!dialog || !dialog->property("visible").toBool()) continue;
@@ -678,6 +678,140 @@ class GuiTest : public QObject
         // Leaves LIVE as the other tests expect it
         bridge->setLanguage("LIVE", previous);
         QTRY_COMPARE(channel("LIVE")["language"].toString(), previous);
+    }
+
+    void showsStatisticsFromTheSettings ()
+    {
+        // A finished session in the LIVE folder of the test settings
+        std::filesystem::path live = liveDir.path().toStdString();
+        std::filesystem::create_directories(live / "logbackups");
+        std::ofstream(live / "logbackups" / "Game Build(1) 10 Jan 26 (18 00 00).log")
+            << "<2026-01-10T18:00:00.000Z> Log started\n"
+               "<2026-01-10T18:10:00.000Z> [Notice] <Vehicle Control Flow> CVehicle::Initialize: Local client node [1] granted control token for "
+               "'AEGS_Sabre_123' [2] [Team_CGP4][Vehicle]\n"
+               "<2026-01-10T20:00:00.000Z> [Notice] <SystemQuit> CSystem::Quit invoked with - cause=30016, exitCode=0\n";
+
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        QMetaObject::invokeMethod(panel, "statisticsRequested");
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("statisticsDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_VERIFY(bridge->state()["statistics"].toMap()["loaded"].toBool());
+        QTRY_VERIFY(findText("2.0 h") || findText("2,0 h"));
+        QVERIFY(findText("Game starts"));
+
+        QVERIFY(clickButton("Save as HTML"));
+        QTRY_VERIFY(!bridge->state()["statistics"].toMap()["reportPath"].toString().isEmpty());
+        QFile report(bridge->state()["statistics"].toMap()["reportPath"].toString());
+        QVERIFY(report.open(QIODevice::ReadOnly));
+        QByteArray html = report.readAll();
+        QVERIFY(html.contains("AEGS Sabre"));
+        QVERIFY(html.startsWith("<!DOCTYPE html>"));
+        report.remove();
+
+        std::filesystem::remove_all(live / "logbackups");
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    void showsSystemInformationFromTheSettings ()
+    {
+        std::filesystem::path live = liveDir.path().toStdString();
+        std::filesystem::create_directories(live / "logbackups");
+        std::ofstream(live / "logbackups" / "Game Build(1) 10 Jan 26 (18 00 00).log")
+            << "<2026-01-10T18:00:00.000Z> FileVersion: 4.5.172.1234\n"
+               "<2026-01-10T18:00:00.000Z> Host CPU: Test CPU\n"
+               "<2026-01-10T18:00:01.000Z> Logging video adapters:\n"
+               "<2026-01-10T18:00:01.000Z> - Test GPU (vendor = 0x1002, device = 0x73bf)\n"
+               "<2026-01-10T18:00:02.000Z> Performance Index: 213.87 (CPU), 329.72 (GPU)\n";
+
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        QMetaObject::invokeMethod(panel, "systemInfoRequested");
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("systemInfoDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_VERIFY(findText("Test GPU"));
+        QVERIFY(findText("Graphics card"));
+
+        QVERIFY(clickButton("Save as HTML"));
+        QTRY_VERIFY(bridge->state()["statistics"].toMap()["reportPath"].toString().contains("sc-system-info-"));
+        QFile report(bridge->state()["statistics"].toMap()["reportPath"].toString());
+        QVERIFY(report.open(QIODevice::ReadOnly));
+        QVERIFY(report.readAll().contains("Test CPU"));
+        report.remove();
+
+        std::filesystem::remove_all(live / "logbackups");
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    void dashboardTilesCanBeChosen ()
+    {
+        auto* dashboard = engine->rootObjects().first()->findChild<QQuickItem*>("dashboard");
+        QVERIFY(dashboard);
+        QTRY_VERIFY(dashboard->isVisible());
+        // Default tiles; their values come from the statistics loaded at start
+        QTRY_VERIFY(bridge->state()["statistics"].toMap()["loaded"].toBool());
+        QVERIFY(findText("Play time"));
+        QVERIFY(findText("Free space"));
+
+        QVERIFY(click("Customize …"));
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("dashboardDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        // Adds "Crashes" at the end through its "+" button
+        std::function<QQuickItem*(QQuickItem*)> walk = [&] (QQuickItem* item) -> QQuickItem*
+        {
+            if(item->objectName() == "addTile_crashes") return item;
+            for(auto* child : item->childItems())
+                if(auto* found = walk(child)) return found;
+            return nullptr;
+        };
+        QQuickItem* add = nullptr;
+        QTRY_VERIFY((add = walk(window->contentItem())) && add->width() > 0);
+        QMetaObject::invokeMethod(add, "clicked");
+        QVERIFY(clickButton("Save"));
+        QTRY_COMPARE(bridge->state()["dashboardTiles"].toStringList(), (QStringList{"playTime", "lastPlayed", "topShip", "freeSpace", "crashes"}));
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        QCOMPARE(readSettingsFile()["dashboardTiles"].size(), size_t(5));
+
+        // Back to the default for the other tests
+        bridge->setDashboardTiles({"playTime", "lastPlayed", "topShip", "freeSpace"});
+        QTRY_COMPARE(bridge->state()["dashboardTiles"].toStringList().size(), 4);
+    }
+
+    void streamerModeHidesTheHomeFolder ()
+    {
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        QTRY_VERIFY(panel->property("visible").toBool());
+        QString logs = bridge->logFolder();
+        QVERIFY(logs.startsWith(QDir::homePath()));
+        QVERIFY(findText(logs));
+
+        bridge->setOption("streamerMode", true);
+        QString hidden = "~" + logs.mid(QDir::homePath().size());
+        QTRY_VERIFY(findText(hidden));
+        QVERIFY(!findText(logs));
+        auto shown = [this] (const QString& path)
+        {
+            QVariant result;
+            QMetaObject::invokeMethod(window, "shownPath", Q_RETURN_ARG(QVariant, result), Q_ARG(QVariant, path));
+            return result.toString();
+        };
+        QCOMPARE(shown("/opt/games/drive_c/users/steamuser/AppData"), QString("/opt/games/drive_c/users/…/AppData"));
+
+        bridge->setOption("streamerMode", false);
+        QTRY_VERIFY(findText(logs));
+        QCOMPARE(shown("/opt/games/drive_c/users/steamuser/AppData"), QString("/opt/games/drive_c/users/steamuser/AppData"));
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
     }
 
     void switchesTheTheme ()

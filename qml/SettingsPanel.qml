@@ -20,6 +20,8 @@ Item {
     signal gameSettingsRequested
     signal programsRequested
     signal setupRequested
+    signal statisticsRequested
+    signal systemInfoRequested
 
     readonly property var options: appState.options || {}
     readonly property var channels: appState.channels || []
@@ -253,6 +255,15 @@ Item {
                     Toggle {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
+                        text: qsTr("Streamer mode")
+                        description: qsTr("Hides your user name and home folder in the paths the launcher shows, while you stream or record")
+                        checked: panel.options.streamerMode === true
+                        onSwitched: on => backend.setOption("streamerMode", on)
+                    }
+
+                    Toggle {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
                         visible: panel.trayAvailable
                         text: qsTr("Keep running in the system tray")
                         description: qsTr("Closing the window keeps the launcher in the tray, so it goes on checking")
@@ -480,6 +491,26 @@ Item {
                     }
                 }
 
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Play time, ships, quantum jumps, missions and crashes from the game's logs")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("Statistics …")
+                        onClicked: panel.statisticsRequested()
+                    }
+                }
+
                 SectionTitle {
                     Layout.topMargin: 12
                     text: qsTr("HELP")
@@ -502,6 +533,26 @@ Item {
                     DialogButton {
                         text: qsTr("Check installation …")
                         onClicked: panel.diagnosticsRequested()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Hardware, driver and the game's performance index per start, for bug reports")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("System information …")
+                        onClicked: panel.systemInfoRequested()
                     }
                 }
 

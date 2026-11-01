@@ -105,11 +105,13 @@ struct Options
     bool itemNameDetails = false;
     // Puts a line of stats from the Star Citizen Wiki API in front of item descriptions in global.ini
     bool itemDescriptionStats = false;
+    // Hides the user name and home folder in the paths the window shows, for streaming and recording
+    bool streamerMode = false;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Options, launchGameAfterUpdate, updateAtStart, installNewTranslations, minimizeAfterUpdate,
                                                 startWithSystem, showUpdateProgress, checkLauncherUpdatesAtStart, closeToTray, itemNameDetails,
-                                                itemDescriptionStats)
+                                                itemDescriptionStats, streamerMode)
 
 enum class ChannelStatus
 {
@@ -344,6 +346,98 @@ struct Backups
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Backups, busy, entries, result, resultChannel)
 
+struct NamedCount
+{
+    std::string name;
+    int count = 0;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(NamedCount, name, count)
+
+struct PlayDay
+{
+    // YYYY-MM-DD, UTC
+    std::string date;
+    std::int64_t seconds = 0;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(PlayDay, date, seconds)
+
+// The computer as the game saw it at one start, from the head of its Game.log
+struct SystemSnapshot
+{
+    // Seconds since the epoch
+    std::int64_t time = 0;
+    // FileVersion, e.g. 4.8.183.37006
+    std::string gameVersion;
+    std::string cpu;
+    int threads = 0;
+    int memoryMb = 0;
+    // The first adapter the game lists, the one it renders with
+    std::string gpu;
+    int videoMemoryMb = 0;
+    // "vulkan" when the game chose a Vulkan device, otherwise "dx11"
+    std::string renderer;
+    // Vulkan only
+    std::string driverVersion;
+    std::string vulkanVersion;
+    // The game's own benchmark at start: higher is faster. The two use different scales and can't be compared with
+    // each other, only with the same index of other starts.
+    double cpuIndex = 0;
+    double gpuIndex = 0;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(SystemSnapshot, time, gameVersion, cpu, threads, memoryMb, gpu, videoMemoryMb, renderer,
+                                                driverVersion, vulkanVersion, cpuIndex, gpuIndex)
+
+// Play statistics from the Game.log files of all channels, see GameStatistics; filled by LoadStatistics
+struct Statistics
+{
+    bool busy = false;
+    bool loaded = false;
+    // One per game start
+    int sessions = 0;
+    std::int64_t playSeconds = 0;
+    // Game starts that ended in a crash report of the game
+    int crashes = 0;
+    // Disconnection error popups, e.g. 30000
+    int disconnects = 0;
+    int quantumJumps = 0;
+    int missionsCompleted = 0;
+    int missionsFailed = 0;
+    int kills = 0;
+    int deaths = 0;
+    // Ship entity names without instance number, e.g. AEGS_Sabre; count = game starts it was flown in; most first
+    std::vector<NamedCount> ships;
+    // Server regions such as euw1 or use1; count = game starts on them
+    std::vector<NamedCount> regions;
+    // Days with play time, oldest first
+    std::vector<PlayDay> days;
+    // Seconds since the epoch; 0 without any session
+    std::int64_t firstPlayed = 0;
+    std::int64_t lastPlayed = 0;
+    // Length of the newest game start
+    std::int64_t lastSessionSeconds = 0;
+    // Free space on the drive of the first channel folder; -1 if unknown
+    std::int64_t diskFreeBytes = -1;
+    // One per game start that measured its performance, oldest first
+    std::vector<SystemSnapshot> systems;
+    // Written by SaveStatisticsReport
+    std::string reportPath;
+    std::string error;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Statistics, busy, loaded, sessions, playSeconds, crashes, disconnects, quantumJumps,
+                                                missionsCompleted, missionsFailed, kills, deaths, ships, regions, days, firstPlayed, lastPlayed,
+                                                lastSessionSeconds, diskFreeBytes, systems, reportPath, error)
+
+// Tile ids the dashboard knows, and the ones shown until the user chooses
+inline const std::vector<std::string> DASHBOARD_TILES = {"playTime", "lastPlayed",  "topShip",      "freeSpace", "sessions",
+                                                         "crashes",  "disconnects", "quantumJumps", "missions",  "killsDeaths"};
+inline const std::vector<std::string> DEFAULT_DASHBOARD_TILES = {"playTime", "lastPlayed", "topShip", "freeSpace"};
+// Two rows of four
+inline constexpr size_t MAX_DASHBOARD_TILES = 8;
+
 struct State
 {
     // All known languages in display order, ENGLISH first
@@ -373,10 +467,13 @@ struct State
     bool setupNeeded = false;
     // "dark" or "light"; empty = like the system
     std::string theme;
+    Statistics statistics;
+    // Tiles of the main window's dashboard, in order, see DASHBOARD_TILES
+    std::vector<std::string> dashboardTiles;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
                                                 handledCommands, whatsNew, caches, diagnostics, backups, programs, failedPrograms, interfaceLanguage,
-                                                setupNeeded, theme)
+                                                setupNeeded, theme, statistics, dashboardTiles)
 
 }  // namespace Protocol

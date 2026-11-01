@@ -19,6 +19,7 @@
 #include "managers/CompanionPrograms.hpp"
 #include "managers/Diagnostics.hpp"
 #include "managers/GameSettings.hpp"
+#include "managers/GameStatistics.hpp"
 #include "managers/ProfileBackup.hpp"
 #include "managers/SelfUpdateManager.hpp"
 #include "managers/UpdateManager.hpp"
@@ -49,6 +50,7 @@ class BackEnd
     Diagnostics diagnostics;
     ProfileBackup profileBackup;
     CompanionPrograms companionPrograms;
+    GameStatistics gameStatistics;
     StateCallback stateCallback;
 
     std::thread languagesJob;
@@ -63,6 +65,7 @@ class BackEnd
     std::thread cacheJob;
     std::thread diagnosticsJob;
     std::thread backupJob;
+    std::thread statisticsJob;
 
     // Declared last: its thread uses all members above
     TaskQueue queue;
@@ -347,6 +350,8 @@ class BackEnd
         if(gameStarted) data.failedPrograms = companionPrograms.start(data.programs);
         if(gameClosed) companionPrograms.stop();
         if(gameClosed) checkGameSettings();
+        // The finished game start counts now
+        if(gameClosed && data.statistics.loaded) handle(Protocol::LoadStatistics{});
         if(gameClosed)
             for(auto& [name, channel] : data.channels) applyGraphicsApi(channel);
         if(gameClosed && data.backgroundChecks) checkChannels();
@@ -468,6 +473,8 @@ class BackEnd
         state.interfaceLanguage = data.interfaceLanguage;
         state.setupNeeded = !data.setupDone;
         state.theme = data.theme;
+        state.statistics = data.statistics;
+        state.dashboardTiles = data.dashboardTiles;
         return state;
     }
 
@@ -499,6 +506,7 @@ class BackEnd
         data.programs = file.programs;
         data.interfaceLanguage = file.interfaceLanguage;
         data.theme = file.theme;
+        data.dashboardTiles = file.dashboardTiles;
         // Settings from before the assistant: whoever set a game folder is set up already
         data.setupDone = file.setupDone || std::any_of(file.channels.begin(), file.channels.end(),
                                                        [] (const auto& channel) { return !channel.second.installPath.empty(); });
@@ -521,6 +529,7 @@ class BackEnd
         file.interfaceLanguage = data.interfaceLanguage;
         file.setupDone = data.setupDone;
         file.theme = data.theme;
+        file.dashboardTiles = data.dashboardTiles;
         return file;
     }
 
@@ -1086,6 +1095,59 @@ class BackEnd
 
     void handle (const Protocol::FinishSetup&) { data.setupDone = true; }
 
+    void handle (const Protocol::LoadStatistics&)
+    {
+        if(data.statistics.busy) return;
+        std::vector<std::filesystem::path> folders;
+        for(const auto& [name, channel] : data.channels)
+            if(!channel.installPath.empty()) folders.push_back(channel.installPath);
+        data.statistics.busy = true;
+        // The running game's Game.log is not a finished session yet
+        startJob(statisticsJob,
+                 [this, folders, logs = GameStatistics::logsOf(folders, gamePlaying())]
+                 {
+                     auto stats = gameStatistics.collect(logs, data.shuttingDown);
+                     std::error_code ec;
+                     if(!folders.empty())
+                         if(auto space = std::filesystem::space(folders.front(), ec); !ec)
+                             stats.diskFreeBytes = static_cast<std::int64_t>(space.available);
+                     queue.post(
+                         [this, stats]
+                         {
+                             data.statistics = stats;
+                             data.statistics.loaded = true;
+                             publish();
+                         });
+                 });
+    }
+
+    void handle (const Protocol::SetDashboardTiles& command)
+    {
+        std::vector<std::string> tiles;
+        for(const auto& tile : command.tiles)
+            if(tiles.size() < Protocol::MAX_DASHBOARD_TILES && std::find(tiles.begin(), tiles.end(), tile) == tiles.end() &&
+               std::find(Protocol::DASHBOARD_TILES.begin(), Protocol::DASHBOARD_TILES.end(), tile) != Protocol::DASHBOARD_TILES.end())
+                tiles.push_back(tile);
+        data.dashboardTiles = tiles;
+    }
+
+    void handle (const Protocol::SaveStatisticsReport& command)
+    {
+        data.statistics.reportPath.clear();
+        data.statistics.error.clear();
+        char stamp[32];
+        std::time_t now = std::time(nullptr);
+        std::strftime(stamp, sizeof(stamp), "%Y%m%d-%H%M%S", std::localtime(&now));
+        std::string kind = command.kind == "system-info" ? "system-info" : "statistics";
+        auto file = Diagnostics::reportFolder() / ("sc-" + kind + "-" + std::string(stamp) + ".html");
+        std::ofstream out(file, std::ios::binary | std::ios::trunc);
+        out << command.html;
+        if(out.flush())
+            data.statistics.reportPath = file.string();
+        else
+            data.statistics.error = "cannot write the report";
+    }
+
     void handle (const Protocol::SetTheme& command)
     {
         if(command.theme.empty() || command.theme == "dark" || command.theme == "light") data.theme = command.theme;
@@ -1129,7 +1191,7 @@ class BackEnd
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
         for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob, &checkTimerJob,
-                         &whatsNewJob, &cacheJob, &diagnosticsJob, &backupJob})
+                         &whatsNewJob, &cacheJob, &diagnosticsJob, &backupJob, &statisticsJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }

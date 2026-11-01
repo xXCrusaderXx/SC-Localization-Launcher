@@ -15,18 +15,29 @@ Each phase is a GitHub [milestone](https://github.com/xXCrusaderXx/SC-Localizati
 | **0.10.0** | Tools | Profile backup (keybindings, `attributes.xml`, characters, `user.cfg`) per channel with restore. Cache cleaner for Linux (game shader cache in the Wine prefix, DXVK/vkd3d, Mesa, NVIDIA). Read-only problem analysis with a report for bug reports. Game settings: frame limits and own lines in `user.cfg`, graphics API (Vulkan or DirectX 11). Programs started together with the game. Moved before Blueprints, which wait for `Game.log` lines of earned blueprints ([#22](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/22)). |
 | **0.11.0** | Interface languages | Interface language selectable in the settings (automatic = system language), applied without a restart. Interface translations for French, Spanish, Italian, Polish, Dutch and Portuguese next to English and German, reviewed by native speakers. |
 | **1.0.0** | Stable | First-start assistant, light/dark theme, user documentation. The Flatpak stays in the project's own signed repository; a Flathub submission is not planned ([#36](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/36)). |
-| **1.1.0** | Blueprints | Spike first: map mission texts to `global.ini` keys and find the `Game.log` lines for earned blueprints. Then: blueprint details in mission descriptions, list of earned blueprints from `Game.log` (also live while playing), import/export. |
-| **1.2.0** | Statistics & dashboard | Play time, ships, quantum jumps, and crashes from `Game.log`, dashboard tiles, HTML export, system information. |
+| **1.1.1** | Statistics & dashboard | Play time, sessions, ships, quantum jumps, missions, kills and crashes from `Game.log`, with an HTML export ([#30](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/30)). Dashboard tiles ([#31](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/31)). System information with the game's CPU and GPU performance index per session, to see what changed after a driver or game update ([#32](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/32)). Streamer mode that hides names and locations ([#139](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/139)). |
+| **1.2.0** | More item values | Values for armour and mining lasers in item names and descriptions, from the Star Citizen Wiki API ([#98](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/98)). |
+| **1.3.0** | Tools & diagnostics | Programs that start with the RSI Launcher ([#140](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/140)). Server reachability and duplicate installations in the problem analysis ([#141](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/141)). Backups with the launcher's settings and a comparison before restoring ([#142](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/142)). Desktop notifications per channel ([#143](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/143)). Start with the system ([#144](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/144)). |
 
-Blueprints and statistics come after 1.0.0; they are extras, not needed for a stable launcher. Later phases are open. Ideas that don't belong to a phase yet are collected below.
+Later phases are open; new releases are added below the last one. (1.1.0 was published by mistake with the code of 1.0.0; the statistics phase shipped as 1.1.1.)
+
+## Pending: waiting for information
+
+Planned, but something must be found out before work can start. These items have no version; they sit in the milestone [Pending – needs information](https://github.com/xXCrusaderXx/SC-Localization-Launcher/milestones). Once the missing information is there, an item gets the next free release. A release never waits for a pending item: if a release item turns out to miss information, it moves here and the release goes ahead without it.
+
+| Feature | Missing |
+| ------- | ------- |
+| Blueprints: details in mission descriptions, list of earned blueprints, import/export ([#22](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/22), [#23](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/23), [#24](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/24)) | `Game.log` lines of an earned blueprint in a current game version ([#22](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/22) asks players for them) |
+| Window mode, resolution, VSync, FOV and upscaling from the launcher ([#120](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/120)) | What the values in `attributes.xml` mean; needs a before/after comparison in the game |
+| More game languages, e.g. French, Italian, Portuguese, Japanese ([#12](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/12)) | Translation projects that publish their files over HTTPS under a licence that allows it |
+| More launch methods: Heroic, Bottles, Steam with Proton ([#145](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/145)) | A test installation per launcher: start command, prefix location, how to see that the game runs |
 
 ## Open ideas
 
-Unscheduled proposals, in no particular order. A maintainer moves an idea into a milestone once it is clear and someone works on it.
+Unscheduled, not planned yet. A maintainer moves an idea into a release or into Pending once it is clear.
 
-- Support for more launch methods besides the LUG Helper and Lutris (e.g. Heroic, Bottles, Steam with Proton).
-- Optional per-channel notifications on the desktop.
-- Window mode, resolution and FOV from the launcher, once their values in `attributes.xml` are confirmed ([#120](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/120)).
+- An in-game overlay (location, ship, mission). Hard on Linux and Wayland.
+- Editing joystick curves and key bindings from the launcher.
 
 Add ideas through a [roadmap proposal](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=roadmap_proposal.yml).
 

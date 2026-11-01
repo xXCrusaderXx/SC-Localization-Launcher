@@ -226,6 +226,92 @@
     </message>
 </context>
 <context>
+    <name>Dashboard</name>
+    <message>
+        <source>%1 h</source>
+        <translation>%1 h</translation>
+    </message>
+    <message>
+        <source>Play time</source>
+        <translation>Tempo di gioco</translation>
+    </message>
+    <message>
+        <source>Last played</source>
+        <translation>Ultima partita</translation>
+    </message>
+    <message>
+        <source>Favourite ship</source>
+        <translation>Nave preferita</translation>
+    </message>
+    <message>
+        <source>Free space</source>
+        <translation>Spazio libero</translation>
+    </message>
+    <message>
+        <source>Game starts</source>
+        <translation>Avvii del gioco</translation>
+    </message>
+    <message>
+        <source>Crashes</source>
+        <translation>Crash</translation>
+    </message>
+    <message>
+        <source>Disconnects</source>
+        <translation>Disconnessioni</translation>
+    </message>
+    <message>
+        <source>Quantum jumps</source>
+        <translation>Salti quantici</translation>
+    </message>
+    <message>
+        <source>Missions completed</source>
+        <translation>Missioni completate</translation>
+    </message>
+    <message>
+        <source>Kills / deaths</source>
+        <translation>Uccisioni / morti</translation>
+    </message>
+    <message>
+        <source>%1 GB</source>
+        <translation>%1 GB</translation>
+    </message>
+    <message>
+        <source>DASHBOARD</source>
+        <translation>DASHBOARD</translation>
+    </message>
+    <message>
+        <source>Customize …</source>
+        <translation>Personalizza …</translation>
+    </message>
+    <message>
+        <source>No tiles chosen.</source>
+        <translation>Nessun riquadro scelto.</translation>
+    </message>
+</context>
+<context>
+    <name>DashboardDialog</name>
+    <message>
+        <source>Customize the dashboard</source>
+        <translation>Personalizza la dashboard</translation>
+    </message>
+    <message>
+        <source>Up to %1 tiles, shown in this order. The main window shows as many rows as fit.</source>
+        <translation>Fino a %1 riquadri, in questo ordine. La finestra principale mostra quante righe ci stanno.</translation>
+    </message>
+    <message>
+        <source>More tiles</source>
+        <translation>Altri riquadri</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Chiudi</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Salva</translation>
+    </message>
+</context>
+<context>
     <name>DiagnosticsDialog</name>
     <message>
         <source>System</source>
@@ -815,6 +901,14 @@
         <translation>Chiede a GitHub se esiste una versione più recente di questo launcher</translation>
     </message>
     <message>
+        <source>Streamer mode</source>
+        <translation>Modalità streamer</translation>
+    </message>
+    <message>
+        <source>Hides your user name and home folder in the paths the launcher shows, while you stream or record</source>
+        <translation>Nasconde il tuo nome utente e la cartella home nei percorsi mostrati mentre trasmetti o registri</translation>
+    </message>
+    <message>
         <source>Keep running in the system tray</source>
         <translation>Resta attivo nell&apos;area di notifica</translation>
     </message>
@@ -883,6 +977,14 @@
         <translation>Programmi …</translation>
     </message>
     <message>
+        <source>Play time, ships, quantum jumps, missions and crashes from the game&apos;s logs</source>
+        <translation>Tempo di gioco, navi, salti quantici, missioni e crash dai log del gioco</translation>
+    </message>
+    <message>
+        <source>Statistics …</source>
+        <translation>Statistiche …</translation>
+    </message>
+    <message>
         <source>HELP</source>
         <translation>AIUTO</translation>
     </message>
@@ -893,6 +995,14 @@
     <message>
         <source>Check installation …</source>
         <translation>Controlla installazione …</translation>
+    </message>
+    <message>
+        <source>Hardware, driver and the game&apos;s performance index per start, for bug reports</source>
+        <translation>Hardware, driver e indice di prestazioni del gioco per avvio, per le segnalazioni di bug</translation>
+    </message>
+    <message>
+        <source>System information …</source>
+        <translation>Informazioni di sistema …</translation>
     </message>
     <message>
         <source>Game folders, translation and the main options, step by step</source>
@@ -1020,6 +1130,263 @@
     <message>
         <source>Install now</source>
         <translation>Installa ora</translation>
+    </message>
+</context>
+<context>
+    <name>StatisticsDialog</name>
+    <message>
+        <source>%1 h</source>
+        <translation>%1 h</translation>
+    </message>
+    <message>
+        <source>Europe</source>
+        <translation>Europa</translation>
+    </message>
+    <message>
+        <source>North America</source>
+        <translation>Nord America</translation>
+    </message>
+    <message>
+        <source>Australia</source>
+        <translation>Australia</translation>
+    </message>
+    <message>
+        <source>Asia</source>
+        <translation>Asia</translation>
+    </message>
+    <message>
+        <source>Play time</source>
+        <translation>Tempo di gioco</translation>
+    </message>
+    <message>
+        <source>Game starts</source>
+        <translation>Avvii del gioco</translation>
+    </message>
+    <message>
+        <source>Crashes</source>
+        <translation>Crash</translation>
+    </message>
+    <message>
+        <source>Disconnects</source>
+        <translation>Disconnessioni</translation>
+    </message>
+    <message>
+        <source>Ships flown</source>
+        <translation>Navi pilotate</translation>
+    </message>
+    <message>
+        <source>Quantum jumps</source>
+        <translation>Salti quantici</translation>
+    </message>
+    <message>
+        <source>Missions completed</source>
+        <translation>Missioni completate</translation>
+    </message>
+    <message>
+        <source>Kills / deaths</source>
+        <translation>Uccisioni / morti</translation>
+    </message>
+    <message>
+        <source>Star Citizen statistics</source>
+        <translation>Statistiche di Star Citizen</translation>
+    </message>
+    <message>
+        <source>%1 to %2, from the game&apos;s own logs.</source>
+        <translation>Dal %1 al %2, dai log del gioco.</translation>
+    </message>
+    <message>
+        <source>Ships</source>
+        <translation>Navi</translation>
+    </message>
+    <message>
+        <source>Ship</source>
+        <translation>Nave</translation>
+    </message>
+    <message>
+        <source>Server regions</source>
+        <translation>Regioni dei server</translation>
+    </message>
+    <message>
+        <source>Play time per day</source>
+        <translation>Tempo di gioco al giorno</translation>
+    </message>
+    <message>
+        <source>Statistics</source>
+        <translation>Statistiche</translation>
+    </message>
+    <message>
+        <source>Reading the game&apos;s logs …</source>
+        <translation>Lettura dei log del gioco …</translation>
+    </message>
+    <message>
+        <source>No game logs found yet. They appear after the first start of Star Citizen.</source>
+        <translation>Nessun log del gioco trovato. Compaiono dopo il primo avvio di Star Citizen.</translation>
+    </message>
+    <message>
+        <source>%1 to %2, from the game&apos;s own logs of all channels. Quantum jumps are logged from game version 4.5 on.</source>
+        <translation>Dal %1 al %2, dai log del gioco di tutti i canali. I salti quantici sono registrati dalla versione 4.5.</translation>
+    </message>
+    <message>
+        <source>Play time per day, last six months</source>
+        <translation>Tempo di gioco al giorno, ultimi sei mesi</translation>
+    </message>
+    <message numerus="yes">
+        <source>%1 – %n game start(s)</source>
+        <translation>
+            <numerusform>%1 – %n avvio</numerusform>
+            <numerusform>%1 – %n avvii</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No ship flown yet</source>
+        <translation>Nessuna nave pilotata</translation>
+    </message>
+    <message>
+        <source>The report could not be saved.</source>
+        <translation>Impossibile salvare il rapporto.</translation>
+    </message>
+    <message>
+        <source>Saved: %1</source>
+        <translation>Salvato: %1</translation>
+    </message>
+    <message>
+        <source>Show in folder</source>
+        <translation>Mostra nella cartella</translation>
+    </message>
+    <message>
+        <source>Save as HTML</source>
+        <translation>Salva come HTML</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Chiudi</translation>
+    </message>
+</context>
+<context>
+    <name>SystemInfoDialog</name>
+    <message>
+        <source>A forecast needs at least three game starts.</source>
+        <translation>Una previsione richiede almeno tre avvii del gioco.</translation>
+    </message>
+    <message>
+        <source>Expected at the next start: CPU %1–%2, GPU %3–%4.</source>
+        <translation>Previsto al prossimo avvio: CPU %1–%2, GPU %3–%4.</translation>
+    </message>
+    <message>
+        <source>CPU</source>
+        <translation>CPU</translation>
+    </message>
+    <message>
+        <source>GPU</source>
+        <translation>GPU</translation>
+    </message>
+    <message>
+        <source>%1 %2 % slower than usual</source>
+        <translation>%1 %2 % più lento del solito</translation>
+    </message>
+    <message>
+        <source>%1 %2 % faster than usual</source>
+        <translation>%1 %2 % più veloce del solito</translation>
+    </message>
+    <message>
+        <source>The graphics driver changed from %1 to %2.</source>
+        <translation>Il driver grafico è passato da %1 a %2.</translation>
+    </message>
+    <message>
+        <source>The game version changed from %1 to %2.</source>
+        <translation>La versione del gioco è passata da %1 a %2.</translation>
+    </message>
+    <message>
+        <source>Last start: %1.</source>
+        <translation>Ultimo avvio: %1.</translation>
+    </message>
+    <message>
+        <source>Processor</source>
+        <translation>Processore</translation>
+    </message>
+    <message>
+        <source>%1 threads</source>
+        <translation>%1 thread</translation>
+    </message>
+    <message>
+        <source>Memory</source>
+        <translation>Memoria</translation>
+    </message>
+    <message>
+        <source>%1 GB</source>
+        <translation>%1 GB</translation>
+    </message>
+    <message>
+        <source>Graphics card</source>
+        <translation>Scheda grafica</translation>
+    </message>
+    <message>
+        <source>Graphics API</source>
+        <translation>API grafica</translation>
+    </message>
+    <message>
+        <source>Driver</source>
+        <translation>Driver</translation>
+    </message>
+    <message>
+        <source>Game version</source>
+        <translation>Versione del gioco</translation>
+    </message>
+    <message>
+        <source>Operating system</source>
+        <translation>Sistema operativo</translation>
+    </message>
+    <message>
+        <source>System information</source>
+        <translation>Informazioni di sistema</translation>
+    </message>
+    <message>
+        <source>Performance index</source>
+        <translation>Indice di prestazioni</translation>
+    </message>
+    <message>
+        <source>The game measures both at every start; higher is faster. CPU and GPU use different scales and can&apos;t be compared with each other.</source>
+        <translation>Il gioco misura entrambi a ogni avvio; più alto è più veloce. CPU e GPU usano scale diverse e non si possono confrontare tra loro.</translation>
+    </message>
+    <message>
+        <source>Date</source>
+        <translation>Data</translation>
+    </message>
+    <message>
+        <source>Reading the game&apos;s logs …</source>
+        <translation>Lettura dei log del gioco …</translation>
+    </message>
+    <message>
+        <source>No game logs found yet. They appear after the first start of Star Citizen.</source>
+        <translation>Nessun log del gioco trovato. Compaiono dopo il primo avvio di Star Citizen.</translation>
+    </message>
+    <message>
+        <source>As the game saw your computer at its last start (%1).</source>
+        <translation>Il tuo computer come lo ha visto il gioco all&apos;ultimo avvio (%1).</translation>
+    </message>
+    <message>
+        <source>Last start: CPU %1, GPU %2.</source>
+        <translation>Ultimo avvio: CPU %1, GPU %2.</translation>
+    </message>
+    <message>
+        <source>The report could not be saved.</source>
+        <translation>Impossibile salvare il rapporto.</translation>
+    </message>
+    <message>
+        <source>Saved: %1</source>
+        <translation>Salvato: %1</translation>
+    </message>
+    <message>
+        <source>Show in folder</source>
+        <translation>Mostra nella cartella</translation>
+    </message>
+    <message>
+        <source>Save as HTML</source>
+        <translation>Salva come HTML</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Chiudi</translation>
     </message>
 </context>
 <context>

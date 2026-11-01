@@ -169,7 +169,7 @@ Popup {
 
                             Text {
                                 Layout.fillWidth: true
-                                text: row.modelData.path
+                                text: Theme.shownPath(row.modelData.path)
                                 elide: Text.ElideMiddle
                                 color: Theme.muted
                                 font.pixelSize: 10

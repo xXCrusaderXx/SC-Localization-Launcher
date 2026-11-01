@@ -59,8 +59,34 @@ ApplicationWindow {
         value: window.appState.theme === "dark" || (window.appState.theme !== "light" && backend.systemDark)
     }
 
+    Binding {
+        target: Theme
+        property: "streamerMode"
+        value: (window.appState.options || {}).streamerMode === true
+    }
+
+    // Constant, but set from here so Theme does not need the backend
+    Binding {
+        target: Theme
+        property: "homeFolder"
+        value: backend.homeFolder
+    }
+
+    Binding {
+        target: Theme
+        property: "userName"
+        value: backend.userName
+    }
+
+    // Numbers and dates in the format of the interface language
+    readonly property var uiLocale: Qt.locale(appState.interfaceLanguage || "")
+
     // Read by the GUI test
     readonly property bool darkTheme: Theme.dark
+
+    function shownPath(path) {
+        return Theme.shownPath(path);
+    }
 
     // First start: nothing set up yet
     readonly property bool setupNeeded: appState.setupNeeded === true
@@ -73,7 +99,11 @@ ApplicationWindow {
         if (hasWhatsNew)
             whatsNewDialog.open();
     }
-    Component.onCompleted: backend.loadWhatsNew()
+    Component.onCompleted: {
+        backend.loadWhatsNew();
+        // For the dashboard; reloaded by the backend after every game start
+        backend.loadStatistics();
+    }
     onClosing: close => {
         if (closesToTray) {
             close.accepted = false;
@@ -235,6 +265,8 @@ ApplicationWindow {
     }
 
     ColumnLayout {
+        id: mainColumn
+
         anchors {
             left: parent.left
             top: header.bottom
@@ -385,7 +417,27 @@ ApplicationWindow {
 
         // Keeps the rows at the top when fewer channels are shown
         Item {
+            id: channelsEnd
+
             Layout.fillHeight: true
+        }
+
+        Dashboard {
+            id: dashboard
+
+            objectName: "dashboard"
+            Layout.fillWidth: true
+            Layout.bottomMargin: 8
+            statistics: window.appState.statistics || ({})
+            tiles: window.appState.dashboardTiles || []
+            numberLocale: window.uiLocale
+            // Title row plus 70 px per row of tiles, in the room the channel rows leave
+            rows: Math.max(0, Math.min(2, Math.floor((mainColumn.height - channelsEnd.y - 34) / 70)))
+            onCustomizeRequested: dashboardDialog.open()
+            onStatisticsRequested: {
+                statisticsDialog.open();
+                backend.loadStatistics();
+            }
         }
     }
 
@@ -590,10 +642,46 @@ ApplicationWindow {
         }
         onGameSettingsRequested: gameSettingsDialog.open()
         onProgramsRequested: programsDialog.open()
+        onStatisticsRequested: {
+            statisticsDialog.open();
+            backend.loadStatistics();
+        }
+        onSystemInfoRequested: {
+            systemInfoDialog.open();
+            backend.loadStatistics();
+        }
         onSetupRequested: {
             settingsPanel.open = false;
             setupAssistant.open();
         }
+    }
+
+    StatisticsDialog {
+        id: statisticsDialog
+
+        numberLocale: window.uiLocale
+        statistics: window.appState.statistics || ({})
+        onSaveRequested: html => backend.saveStatisticsReport(html)
+        onShowReportRequested: path => backend.openReportFolder(path)
+    }
+
+    SystemInfoDialog {
+        id: systemInfoDialog
+
+        statistics: window.appState.statistics || ({})
+        numberLocale: window.uiLocale
+        operatingSystem: backend.operatingSystem()
+        onSaveRequested: html => backend.saveStatisticsReport(html, "system-info")
+        onShowReportRequested: path => backend.openReportFolder(path)
+    }
+
+    DashboardDialog {
+        id: dashboardDialog
+
+        tiles: window.appState.dashboardTiles || []
+        allTiles: dashboard.allTiles
+        labelOf: id => dashboard.labelOf(id)
+        onSaveRequested: tiles => backend.setDashboardTiles(tiles)
     }
 
     SetupAssistant {

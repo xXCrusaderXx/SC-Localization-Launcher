@@ -57,7 +57,7 @@ Solange Star Citizen läuft, werden Übersetzungen nie verändert. Ein wartendes
 - *Größe, Klasse und Grad an Gegenstandsnamen anhängen*, z. B. „Holdstrong (S4 Militär A)“.
 - *Werte in Gegenstandsbeschreibungen einfügen*, z. B. „HP 100.000 · Regen 19.000/s“ bei Schilden.
 
-**Die Sprache des Launchers** stellst du unter Einstellungen → Verhalten → *Sprache des Launchers* ein: *Automatisch (Systemsprache)* oder English, Deutsch, Español, Français, Italiano, Nederlands, Polski, Português. *Darstellung* wählt ein dunkles oder helles Theme oder folgt dem System.
+**Die Sprache des Launchers** stellst du unter Einstellungen → Verhalten → *Sprache des Launchers* ein: *Automatisch (Systemsprache)* oder English, Deutsch, Español, Français, Italiano, Nederlands, Polski, Português. *Darstellung* wählt ein dunkles oder helles Theme oder folgt dem System. Der *Streamer-Modus* blendet deinen Benutzernamen und Home-Ordner in angezeigten Pfaden aus, während du streamst oder aufnimmst.
 
 ## Updates
 
