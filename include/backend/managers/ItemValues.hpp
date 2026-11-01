@@ -23,7 +23,8 @@
 #include "logging/logging.h"
 
 // Adds values from the Star Citizen Wiki API (CC BY-NC-SA 4.0) to a downloaded global.ini: size, class and grade to
-// item names, e.g. "Holdstrong (S4 Military A)", and a line of stats in front of item descriptions, e.g.
+// item names, e.g. "Holdstrong (S4 Military A)", the weight class to armour, e.g. "ADP Core (Heavy)", and a line of
+// stats in front of item descriptions, e.g.
 // "HP 100,000 · Regen 19,000/s". It works by key, so it fits the global.ini of every language: which key belongs to
 // which Wiki item comes from item-mapping.json, built weekly from the English texts (tools/build-item-mapping.py).
 // Building a plan downloads data and blocks, so it runs in a background job.
@@ -63,6 +64,9 @@ class ItemValues
         std::map<std::string, nlohmann::json> items;
         for(const auto& type : SIZED_TYPES) addItems(items, type);
         for(const auto& type : CLASSED_TYPES) addItems(items, type);
+        // Armour only adds to names; its descriptions in the game already list its values
+        if(names)
+            for(const auto& type : ARMOUR_TYPES) addItems(items, type);
         if(shuttingDown || items.empty()) return std::nullopt;
 
         bool german = language.starts_with("de");
@@ -137,11 +141,18 @@ class ItemValues
    private:
     inline static const std::string MAPPING_URL = "https://raw.githubusercontent.com/xXCrusaderXx/SC-Localization-Launcher/main/item-mapping.json";
     // Size only: grade and class say nothing for these
-    inline static const std::vector<std::string> SIZED_TYPES{"WeaponGun", "WeaponPersonal", "Missile", "MissileLauncher", "Turret"};
+    inline static const std::vector<std::string> SIZED_TYPES{"WeaponGun", "WeaponPersonal", "Missile", "MissileLauncher", "Turret", "WeaponMining"};
     // Size, class and grade
     inline static const std::vector<std::string> CLASSED_TYPES{"Shield", "PowerPlant", "Cooler", "QuantumDrive", "Radar"};
     inline static const std::map<std::string, std::string> GERMAN_CLASSES{
         {"Civilian", "Zivil"}, {"Industrial", "Industrie"}, {"Military", "Militär"}, {"Stealth", "Tarnung"}, {"Competition", "Wettkampf"}};
+    // Weight class only
+    inline static const std::vector<std::string> ARMOUR_TYPES{"Char_Armor_Torso",  "Char_Armor_Arms",      "Char_Armor_Legs",
+                                                              "Char_Armor_Helmet", "Char_Armor_Undersuit", "Char_Armor_Backpack"};
+    // Wiki sub type -> English and German weight class; backpacks name the armour they fit
+    inline static const std::map<std::string, std::pair<std::string, std::string>> WEIGHT_CLASSES{
+        {"Light", {"Light", "Leicht"}},      {"Medium", {"Medium", "Mittel"}},      {"Heavy", {"Heavy", "Schwer"}},
+        {"LightArmor", {"Light", "Leicht"}}, {"MediumArmor", {"Medium", "Mittel"}}, {"HeavyArmor", {"Heavy", "Schwer"}}};
 
     // One value of a stats line: "{}" in the label stands for the number
     struct Stat
@@ -172,7 +183,7 @@ class ItemValues
         return stats;
     }
     // Changes when the reducer keeps other fields, so caches from older versions are not used
-    inline static const std::string CACHE_FORMAT = "item-values-2";
+    inline static const std::string CACHE_FORMAT = "item-values-3";
 
     LoggerFramework::LogEx lg;
     const std::atomic<bool>& shuttingDown;
@@ -194,8 +205,9 @@ class ItemValues
         return text;
     }
 
-    static bool isNameKey (const std::string& key) { return lowered(key).find("name") != std::string::npos; }
+    // item-mapping.json holds names and descriptions only, and some name keys have no "name" in them
     static bool isDescriptionKey (const std::string& key) { return lowered(key).find("desc") != std::string::npos; }
+    static bool isNameKey (const std::string& key) { return !isDescriptionKey(key); }
 
     void addItems (std::map<std::string, nlohmann::json>& items, const std::string& type)
     {
@@ -203,7 +215,7 @@ class ItemValues
         auto reduce = [] (const nlohmann::json& item)
         {
             nlohmann::json kept;
-            for(const char* field : {"uuid", "type", "size", "grade", "class"}) kept[field] = item.value(field, nlohmann::json());
+            for(const char* field : {"uuid", "type", "sub_type", "size", "grade", "class"}) kept[field] = item.value(field, nlohmann::json());
             kept["stats"] = nlohmann::json::object();
             if(auto stats = statsTable().find(item.value("type", "")); stats != statsTable().end())
                 for(const auto& stat : stats->second)
@@ -219,6 +231,12 @@ class ItemValues
     static std::string nameSuffix (const nlohmann::json& item, bool german)
     {
         std::string type = item.value("type", "");
+        if(std::find(ARMOUR_TYPES.begin(), ARMOUR_TYPES.end(), type) != ARMOUR_TYPES.end())
+        {
+            auto weight = item["sub_type"].is_string() ? WEIGHT_CLASSES.find(item["sub_type"].get<std::string>()) : WEIGHT_CLASSES.end();
+            if(weight == WEIGHT_CLASSES.end()) return "";
+            return german ? weight->second.second : weight->second.first;
+        }
         if(!item["size"].is_number_integer()) return "";
         std::string suffix = "S" + std::to_string(item["size"].get<int>());
         if(std::find(CLASSED_TYPES.begin(), CLASSED_TYPES.end(), type) == CLASSED_TYPES.end()) return suffix;
