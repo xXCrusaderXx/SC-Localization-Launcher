@@ -57,6 +57,14 @@ jobs:
             echo "::error::Tag v$version already exists."
             exit 1
           fi
+
+          # A changelog section on main shows that dev was merged into main for this release; without it the
+          # release would be built from the previous one.
+          gh api "repos/$GH_REPO/contents/CHANGELOG.md?ref=main" --jq .content | base64 -d > CHANGELOG.md
+          if ! grep -q "^## \[$version\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md on main has no section for $version. Merge the changelog and the release PR (dev -> main) first, then reopen the milestone and close it again."
+            exit 1
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Collect release notes
@@ -77,11 +85,6 @@ jobs:
               index($0, "## [" v "]") == 1 { found = 1; next }
               found && /^## \[/ { exit }
               found && !/^\[[^]]*\]: / { print }' CHANGELOG.md > notes.md
-          if [ -z "$(tr -d '[:space:]' < notes.md)" ]; then
-            echo "::warning::CHANGELOG.md on main has no section for $VERSION; listing the milestone's issues instead."
-            gh issue list --milestone "$TITLE" --state closed --limit 500 \
-              --json number,title --jq '.[] | "- \(.title) (#\(.number))"' > notes.md
-          fi
           key="$(sed -n 2p packaging/minisign.pub 2>/dev/null || true)"
           if [ -z "$key" ]; then
             key="$(gh api "repos/$GH_REPO/contents/packaging/minisign.pub?ref=main" --jq .content | base64 -d | sed -n 2p)"
