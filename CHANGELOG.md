@@ -5,6 +5,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-01
+
+Statistics, a dashboard and system information from the game's own logs. 1.1.0 was published by mistake with the code of 1.0.0; this is the release it was meant to be.
+
+### Added
+
+- Settings → Tools → "Statistics …": play time, game starts, crashes, disconnects, ships flown, quantum jumps, missions, kills and deaths, server regions and a heatmap of play time per day, from `Game.log` of every channel. "Save as HTML" writes the page into the Downloads folder.
+- Dashboard on the main window with tiles such as play time, last played, favourite ship and free space. "Customize …" chooses up to eight tiles and their order.
+- Settings → Help → "System information …": processor, memory, graphics card, API, driver and game version as the game saw them, and the game's CPU and GPU performance index per start, with the range to expect at the next start.
+- Settings → Behaviour → "Streamer mode": hides your user name and home folder in the paths the launcher shows.
+
+### Changed
+
+- Numbers and dates follow the language of the launcher.
+- A milestone release stops when `CHANGELOG.md` on `main` has no section for its version, so a release can no longer be built from the previous code.
+
 ## [1.0.0] - 2026-10-31
 
 The first stable version: a setup assistant, a light theme and a user guide.
@@ -163,7 +179,8 @@ First release as *SC Localization Launcher*.
 - When switching languages, the previous language's folder is removed only after the new download succeeded.
 - Only one launcher runs at a time; starting it again brings the open window to the front instead of running two launchers that write the same settings and game folders.
 
-[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v1.0.0...v1.1.1
 [1.0.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.11.0...v1.0.0
 [0.11.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.9.1...v0.10.0
