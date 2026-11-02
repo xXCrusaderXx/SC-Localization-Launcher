@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-01
+
+More item names carry their values.
+
+### Added
+
+- "Add size, class and grade to item names" now also adds the weight class to armour, e.g. "ADP Core (Heavy)", German "ADP Core (Schwer)", and the size to mining lasers, e.g. "(S1)". Data from the Star Citizen Wiki API. Their descriptions stay as they are, because the game's own descriptions already list their values.
+
 ## [1.1.1] - 2026-11-01
 
 Statistics, a dashboard and system information from the game's own logs. 1.1.0 was published by mistake with the code of 1.0.0; this is the release it was meant to be.
@@ -179,7 +187,8 @@ First release as *SC Localization Launcher*.
 - When switching languages, the previous language's folder is removed only after the new download succeeded.
 - Only one launcher runs at a time; starting it again brings the open window to the front instead of running two launchers that write the same settings and game folders.
 
-[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v1.0.0...v1.1.1
 [1.0.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.11.0...v1.0.0
 [0.11.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.10.0...v0.11.0

@@ -103,9 +103,13 @@ def values(item):
     return (item.get("type"), item.get("sub_type"), item.get("size"), item.get("grade"), item.get("class"))
 
 
+# Name keys without "Name" in them; only these, since other such keys hold short names and labels
+NAME_KEY_PREFIXES = ("item_mining_mininglaser_",)
+
+
 def is_name_key(key):
     lower = key.lower()
-    return lower.startswith("item_") and "name" in lower
+    return lower.startswith("item_") and ("name" in lower or lower.startswith(NAME_KEY_PREFIXES))
 
 
 def desc_key_for(key, lower):
