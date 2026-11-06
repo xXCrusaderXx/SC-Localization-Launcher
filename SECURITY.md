@@ -17,6 +17,8 @@ Relevant topics include:
 
 Please include the affected version or commit, the impact, and the steps to reproduce. A minimal proof of concept helps.
 
+Check an AI tool's analysis yourself before you send it. Reports without a reproducible case are closed.
+
 You will get a first answer within 7 days. Please give us a reasonable amount of time to release a fix before you disclose the issue publicly.
 
 ## Everything else
