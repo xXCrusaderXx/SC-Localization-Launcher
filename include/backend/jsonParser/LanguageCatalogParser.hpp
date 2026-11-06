@@ -26,7 +26,7 @@ class LanguageCatalogParser
    private:
     mutable LoggerFramework::LogEx lg;
 
-    inline static const std::string LANGUAGES_URL = "https://raw.githubusercontent.com/xXCrusaderXx/SC-Localization-Launcher/main/languages.json";
+    inline static const std::string LANGUAGES_URL = "https://github.com/xXCrusaderXx/SC-Localization-Launcher/releases/latest/download/languages.json";
 
     // Some server channel names differ from the installation folder names
     inline static const std::map<std::string, std::string> CHANNEL_ALIASES{{"TECH-PREV", "TECH-PREVIEW"}};

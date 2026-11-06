@@ -2,7 +2,7 @@ name: Item mapping
 
 # Weekly: rebuilds item-mapping.json (global.ini key -> Star Citizen Wiki API item) and, when it changed, opens a PR
 # against main. The PR comes from a throwaway branch and is opened with AUTOMERGE_TOKEN, so CI runs and it merges by
-# itself once green. The launcher reads the file from main, so it reaches users with the merge.
+# itself once green. The launcher reads the file from the latest release, so it reaches users with the next release.
 #
 # The English reference global.ini is only read inside this job (LEGAL.md): it lives in the runner's temp directory,
 # is deleted after the build, and is never cached, uploaded or committed.

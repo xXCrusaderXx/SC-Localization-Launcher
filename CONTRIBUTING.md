@@ -47,7 +47,7 @@ By contributing, you agree that your contribution is licensed under the [GNU Gen
 
 ### Adding a game language
 
-Game languages are listed in [`languages.json`](languages.json) in the repository root. The launcher downloads this file from `main` (with a cached and a built-in copy as fallback). A language merged into `main` therefore reaches users at once, **without a launcher update**.
+Game languages are listed in [`languages.json`](languages.json) in the repository root. Every release publishes this file as a release asset, and the launcher downloads it from the latest release (with a cached and a built-in copy as fallback). A language merged into `main` therefore reaches users with the next release, **without a launcher update**.
 
 ```json
 {
@@ -130,7 +130,7 @@ PRs are squashed: each PR becomes one commit, so `main` is a straight line of to
 
 **Update a branch by rebasing, never by merging `main` into it** (`git fetch && git rebase origin/main`, then `git push --force-with-lease`). Merging `main` into a feature branch adds nothing after the squash and only makes the branch harder to review.
 
-`languages.json` and `item-mapping.json` are read by released launchers from `main`. A change to them reaches users as soon as it is merged, so it must stay valid for every released launcher version.
+Users get only what a release tag contains. Every release publishes `languages.json` and `item-mapping.json` as release assets, and the launcher reads both from the latest release, so they must stay valid for every released launcher version. Launchers up to v1.2.0 read both files from `main` instead, so a change reaches them as soon as it is merged.
 
 ### Urgent fixes
 

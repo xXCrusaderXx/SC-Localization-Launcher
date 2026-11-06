@@ -55,7 +55,7 @@ The launcher never hosts translation texts or game data itself. See [LEGAL.md](L
 ## Proposing changes
 
 - **New feature or change to a phase:** open a [roadmap proposal](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=roadmap_proposal.yml). Proposals are discussed in the issue. Accepted ones get a milestone, or land under [Open ideas](#open-ideas).
-- **New game language:** open a [new language request](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=new_language.yml), or send a PR that edits `languages.json` (see [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-game-language)). The launcher reads `languages.json` from `main`, so a new language reaches users as soon as it is merged; no launcher update is needed.
+- **New game language:** open a [new language request](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=new_language.yml), or send a PR that edits `languages.json` (see [CONTRIBUTING.md](CONTRIBUTING.md#adding-a-game-language)). The launcher reads `languages.json` from the latest release, so a new language reaches users with the next release; no launcher update is needed.
 - This file is updated in the same PR that changes a milestone.
 
 ## Releases

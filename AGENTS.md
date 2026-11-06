@@ -32,7 +32,7 @@ Translation texts belong to their community projects (e.g. [StarCitizen-Deutsch-
 - `include/frontend/BackendBridge.hpp`: the Qt bridge. It exposes `state` to QML and turns QML calls into protocol commands.
 - `qml/`: the Qt Quick UI. `Theme.qml` is a singleton for colours and sizes; register new QML files in `SC_QML_FILES` in `CMakeLists.txt` (the GUI test uses the same list).
 - `packaging/`, `flatpak/`, `misc/`: AppImage, Flatpak, desktop file, and install scripts.
-- `languages.json`: the catalogue of game languages. The launcher loads it from `main`, so a merged change reaches users at once (no launcher update needed); keep it valid JSON and backwards compatible (`"version": 1`).
+- `languages.json`: the catalogue of game languages. Every release publishes it as a release asset and the launcher loads it from the latest release, so a merged change reaches users with the next release (no launcher update needed); keep it valid JSON and backwards compatible (`"version": 1`).
 - `translations/*.ts`: translations of the launcher's own interface. Every user-visible QML string goes through `qsTr()`; the English text is the source.
 - [ROADMAP.md](ROADMAP.md): phases and milestones. Each closed milestone becomes a release. Work on a roadmap item references its issue, and a change to a phase updates ROADMAP.md in the same PR.
 
