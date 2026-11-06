@@ -12,5 +12,6 @@
 - [ ] `git clang-format --diff origin/dev` reports no changes.
 - [ ] The project builds locally.
 - [ ] No Star Citizen assets, translation files, or binaries are included (see [LEGAL.md](../LEGAL.md)).
-- [ ] I reviewed and understand every change, including any made with AI tools. See [CONTRIBUTING.md](../CONTRIBUTING.md).
+- [ ] I reviewed and tested the changes. See [CONTRIBUTING.md](../CONTRIBUTING.md).
+- [ ] If AI tools were used: the commits carry a `Co-Authored-By` trailer for the tool.
 - [ ] The title describes the user-visible change; `CHANGELOG.md` is not edited (it is written at release time).
