@@ -47,7 +47,7 @@ By contributing, you agree that your contribution is licensed under the [GNU Gen
 
 ### Adding a game language
 
-Game languages are listed in [`languages.json`](languages.json) in the repository root. The launcher downloads this file from `main` (with a cached and a built-in copy as fallback). A language merged into `dev` therefore reaches users when `dev` is merged into `main` at the next release point, **without a launcher update**.
+Game languages are listed in [`languages.json`](languages.json) in the repository root. The launcher downloads this file from `main` (with a cached and a built-in copy as fallback). A language merged into `main` therefore reaches users at once, **without a launcher update**.
 
 ```json
 {
@@ -115,38 +115,33 @@ French, Spanish, Italian, Polish, Dutch and Portuguese (Brazil) started as draft
 ## Workflow
 
 1. Open an issue first for larger changes, so the approach can be agreed on before you invest time.
-2. Fork the repository and create a branch from `dev` (`feat/…`, `fix/…`, `docs/…`, `chore/…`).
-3. Keep each PR focused on one topic. Use a [Conventional Commits](https://www.conventionalcommits.org/)-style PR title, for example `fix: detect PTU folder with custom library path`. It becomes the title of the squashed commit on `dev` and the changelog entry.
-4. Open a pull request against `dev` and fill in the template.
+2. Fork the repository and create a branch from `main` (`feat/…`, `fix/…`, `docs/…`, `chore/…`).
+3. Keep each PR focused on one topic. Use a [Conventional Commits](https://www.conventionalcommits.org/)-style PR title of at most 72 characters, for example `fix: detect PTU folder with custom library path`. It becomes the title of the squashed commit on `main` and the changelog entry. Put issue references in the PR description (`Closes #12`) and keep them out of the title; GitHub appends the PR number to the commit itself.
+4. Open a pull request against `main` and fill in the template.
 
 ### Branches
 
 | Branch | Purpose |
 | ------ | ------- |
-| `main` | Released code only. Changes come exclusively from `dev`, merged by a maintainer at a release point. |
-| `dev` | Integration branch and default branch. All feature and fix PRs go here. |
-| `feat/…`, `fix/…`, `docs/…`, `chore/…` | One topic each, branched from `dev`, deleted after the merge. |
-| `hotfix/…` | Urgent fix for the released version, branched from `main` (see [Hotfixes](#hotfixes)). |
+| `main` | Default branch. Every feature and fix PR is merged here once it is reviewed and its checks are green. A release is a tag on `main`. |
+| `feat/…`, `fix/…`, `docs/…`, `chore/…` | One topic each, branched from `main`, deleted after the merge. |
 
-PRs into `dev` are squashed: each PR becomes one commit, so `dev` is a straight line of topics. Its title is the PR title, its message the commit messages of the branch (keep them clear; they end up in that one commit). `dev` → `main` at a release point stays a merge commit, and so does the automatic `Merge main back into dev` PR, which keeps `dev` containing everything from `main`.
+PRs are squashed: each PR becomes one commit, so `main` is a straight line of topics. Its title is the PR title, its message the commit messages of the branch (keep them clear; they end up in that one commit). There is no integration branch.
 
-**Update a branch by rebasing, never by merging `dev` into it** (`git fetch && git rebase origin/dev`, then `git push --force-with-lease`). Merging `dev` into a feature branch adds nothing after the squash and only makes the branch harder to review.
+**Update a branch by rebasing, never by merging `main` into it** (`git fetch && git rebase origin/main`, then `git push --force-with-lease`). Merging `main` into a feature branch adds nothing after the squash and only makes the branch harder to review.
 
-### Hotfixes
+`languages.json` and `item-mapping.json` are read by released launchers from `main`. A change to them reaches users as soon as it is merged, so it must stay valid for every released launcher version.
 
-A hotfix is only for a problem in the **released** version that cannot wait for the next regular release: a crash, a broken download, a wrong install path. Everything else goes through `dev`.
+### Urgent fixes
 
-1. Branch from `main`: `hotfix/<topic>`. Only the fix goes in.
-2. Open a PR against `main`. CI runs as usual; a maintainer merges it (never automatic).
-3. A maintainer runs the `Release` workflow on `main` with the next patch version (e.g. `0.6.1`). No milestone is needed.
-4. The `Back-merge main into dev` workflow then opens a PR `main` → `dev` that merges by itself, so the fix is in `dev` too.
+An urgent fix for the released version (a crash, a broken download, a wrong install path) is an ordinary `fix/…` PR against `main`. After the merge, a maintainer runs the `Release` workflow on `main` with the next patch version (e.g. `1.2.1`). No milestone is needed.
 
 ### How a PR gets merged
 
-A PR can only be merged when all required checks are green (`format`, `build (ubuntu)`, `build (arch)` including the tests, `DCO sign-off`). The branch does not need to be up to date with `dev`; if two PRs that pass on their own break `dev` together, the CI run on `dev` shows it and a small follow-up PR fixes it.
+A PR can only be merged when all required checks are green (`format`, `build (ubuntu)`, `build (arch)` including the tests, `DCO sign-off`). The branch does not need to be up to date with `main`; if two PRs that pass on their own break `main` together, the CI run on `main` shows it and a small follow-up PR fixes it.
 
 - **Contributors' PRs:** a maintainer reviews the change. When it is good, the maintainer merges it, or enables auto-merge so GitHub merges it as soon as the checks are green. Nothing from outside is merged without a maintainer looking at it.
-- **Maintainers' own PRs into `dev`:** auto-merge is enabled automatically. Ticking the sign-off box in the PR description is the maintainer's one action; the PR merges once the checks are green. PRs that change `languages.json` are the exception (see [Adding a game language](#adding-a-game-language)).
+- **Maintainers' own PRs:** auto-merge is enabled automatically. Ticking the sign-off box in the PR description is the maintainer's one action; the PR merges once the checks are green. PRs that change `languages.json` are the exception (see [Adding a game language](#adding-a-game-language)).
 - **Dependabot:** minor and patch updates of GitHub Actions merge automatically once CI is green. Major updates wait for a maintainer.
 
 A PR with a merge conflict needs a rebase by its author.
@@ -161,7 +156,7 @@ Run the same checks as CI before you push:
 
 ```sh
 # Formatting of the lines you changed (.clang-format in the repository root)
-git fetch origin && git clang-format --diff origin/dev
+git fetch origin && git clang-format --diff origin/main
 
 # Build and test (the tests need no internet and never touch your settings)
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DSC_BUILD_TESTS=ON
@@ -173,7 +168,7 @@ Optional: `.githooks/pre-push` stops a push when a commit's author or committer 
 
 Optional: `.githooks/post-merge` cleans up after every `git pull`: local branches whose PR was merged (remote branch gone) are deleted, together with their worktree if it has no changes. Enable it with `git config core.hooksPath .githooks` and `git config fetch.prune true`.
 
-CI checks only the lines your PR changes. To fix them in place, run `git clang-format origin/dev`. Don't reformat code you didn't otherwise touch.
+CI checks only the lines your PR changes. To fix them in place, run `git clang-format origin/main`. Don't reformat code you didn't otherwise touch.
 
 To check the AppImage, run `packaging/appimage/build-in-docker.sh`. It builds in Ubuntu 22.04, exactly like the release pipeline.
 
@@ -189,7 +184,7 @@ To check the AppImage, run `packaging/appimage/build-in-docker.sh`. It builds in
 ## Pull request checklist
 
 - [ ] Signed off (`git commit -s`, or one `Signed-off-by` line in the PR description).
-- [ ] `git clang-format --diff origin/dev` reports no changes.
+- [ ] `git clang-format --diff origin/main` reports no changes.
 - [ ] The project builds with `cmake --build build`, and `ctest --test-dir build` passes.
 - [ ] A bug fix comes with a test that fails without the fix, if the bug can be tested without the game or the internet.
 - [ ] You tested the change by hand. Describe how in the PR.
@@ -200,9 +195,9 @@ To check the AppImage, run `packaging/appimage/build-in-docker.sh`. It builds in
 
 `CHANGELOG.md` is written by a maintainer once per release, from the titles of the merged PRs. Feature PRs don't edit it: with several PRs in flight it was the most frequent merge conflict.
 
-Releases follow the [roadmap](ROADMAP.md): every phase is a milestone named `vX.Y.Z – Name`. At a release point, a PR `dev` → `main` is opened and the maintainer merges it (merge commit, never automatic). When the maintainer then closes the milestone, the `Milestone release` workflow checks that all its issues are closed and runs the `Release` workflow for `X.Y.Z` on `main`. That workflow builds and tests every package and publishes GitHub release `vX.Y.Z`, with the milestone's issues and PRs as release notes. The version comes from the milestone title, so no version-bump commit is needed. Before closing a milestone, work through the [release checklist](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=release.yml).
+Releases follow the [roadmap](ROADMAP.md): every phase is a milestone named `vX.Y.Z – Name`. When the maintainer closes the milestone, the `Milestone release` workflow checks that all its issues are closed and runs the `Release` workflow for `X.Y.Z` on `main`. That workflow builds and tests every package and publishes GitHub release `vX.Y.Z`, with the milestone's issues and PRs as release notes. The version comes from the milestone title, so no version-bump commit is needed. Before closing a milestone, work through the [release checklist](https://github.com/xXCrusaderXx/SC-Localization-Launcher/issues/new?template=release.yml).
 
-For a release outside a milestone, either run the `Release` workflow by hand with a version (without a version it is a dry run that builds and tests everything but publishes nothing), or set `SC_DEFAULT_VERSION` in `CMakeLists.txt` and push a matching tag `vX.Y.Z`. A version with a suffix (`0.6.0-rc.1`) is published as a pre-release.
+For a release outside a milestone, either run the `Release` workflow by hand with a version (without a version it is a dry run that builds and tests everything but publishes nothing), or set `SC_DEFAULT_VERSION` in `CMakeLists.txt` and push a matching tag `vX.Y.Z` on `main`. A version with a suffix (`0.6.0-rc.1`) is published as a pre-release.
 
 ## Conduct
 

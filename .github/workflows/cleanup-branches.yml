@@ -25,7 +25,7 @@ jobs:
     steps:
       - name: Delete the head branch
         run: |
-          if [ "$BRANCH" = "$DEFAULT_BRANCH" ] || [ "$BRANCH" = "dev" ] || [ "$BRANCH" = "main" ]; then
+          if [ "$BRANCH" = "$DEFAULT_BRANCH" ] || [ "$BRANCH" = "main" ]; then
             echo "::notice::$BRANCH is a long-lived branch, kept."
             exit 0
           fi
