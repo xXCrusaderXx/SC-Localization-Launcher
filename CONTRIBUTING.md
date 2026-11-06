@@ -116,7 +116,7 @@ French, Spanish, Italian, Polish, Dutch and Portuguese (Brazil) started as draft
 
 1. Open an issue first for larger changes, so the approach can be agreed on before you invest time.
 2. Fork the repository and create a branch from `main` (`feat/…`, `fix/…`, `docs/…`, `chore/…`).
-3. Keep each PR focused on one topic. Use a [Conventional Commits](https://www.conventionalcommits.org/)-style PR title, for example `fix: detect PTU folder with custom library path`. It becomes the title of the squashed commit on `main` and the changelog entry.
+3. Keep each PR focused on one topic. Use a [Conventional Commits](https://www.conventionalcommits.org/)-style PR title of at most 72 characters, for example `fix: detect PTU folder with custom library path`. It becomes the title of the squashed commit on `main` and the changelog entry. Put issue references in the PR description (`Closes #12`) and keep them out of the title; GitHub appends the PR number to the commit itself.
 4. Open a pull request against `main` and fill in the template.
 
 ### Branches
