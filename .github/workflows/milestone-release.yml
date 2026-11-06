@@ -1,7 +1,7 @@
 name: Milestone release
 
 # Closing a roadmap milestone named "vX.Y.Z – Name" publishes release vX.Y.Z
-# from main (merge dev into main first).
+# from main.
 # The milestone's closed issues and merged PRs become the release notes.
 # See ROADMAP.md.
 on:
@@ -58,11 +58,10 @@ jobs:
             exit 1
           fi
 
-          # A changelog section on main shows that dev was merged into main for this release; without it the
-          # release would be built from the previous one.
+          # The changelog section of this version on main is the release text.
           gh api "repos/$GH_REPO/contents/CHANGELOG.md?ref=main" --jq .content | base64 -d > CHANGELOG.md
           if ! grep -q "^## \[$version\]" CHANGELOG.md; then
-            echo "::error::CHANGELOG.md on main has no section for $version. Merge the changelog and the release PR (dev -> main) first, then reopen the milestone and close it again."
+            echo "::error::CHANGELOG.md on main has no section for $version. Merge the changelog PR first, then reopen the milestone and close it again."
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -78,8 +77,6 @@ jobs:
           VERSION: ${{ steps.check.outputs.version }}
         run: |
           set -euo pipefail
-          # The changelog section of this version on main is the release text;
-          # dev has been merged into main before the milestone is closed.
           gh api "repos/$GH_REPO/contents/CHANGELOG.md?ref=main" --jq .content | base64 -d > CHANGELOG.md
           awk -v v="$VERSION" '
               index($0, "## [" v "]") == 1 { found = 1; next }
@@ -118,8 +115,6 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
       NOTES: ${{ needs.prepare.outputs.notes }}
     steps:
-      # The milestone event runs on the default branch (dev). Releases are built
-      # and tagged from main, so the Release workflow is started on main.
       - name: Run the Release workflow on main
         run: |
           set -euo pipefail

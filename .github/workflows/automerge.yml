@@ -1,10 +1,8 @@
 name: Auto-merge
 
-# Turns on GitHub auto-merge for trusted PRs into dev. GitHub then merges them by
-# itself once the branch ruleset is satisfied (required checks green). Nothing is
-# merged before that. Feature PRs are squashed into one commit, so dev stays a
-# straight line; the automatic back-merge of main keeps a merge commit, otherwise
-# dev would not contain main and every release would conflict.
+# Turns on GitHub auto-merge for trusted PRs into main. GitHub then squash-merges
+# them by itself once the branch ruleset is satisfied (required checks green).
+# Nothing is merged before that.
 #
 # Trusted: PRs opened by the repository owner, members or collaborators, and
 # Dependabot minor/patch updates. Everything else (fork PRs, major Dependabot
@@ -23,8 +21,7 @@ permissions:
 jobs:
   enable-auto-merge:
     name: Enable auto-merge
-    # Only feature PRs into dev; dev -> main is merged by the maintainer at release points.
-    if: ${{ !github.event.pull_request.draft && github.event.pull_request.base.ref == 'dev' }}
+    if: ${{ !github.event.pull_request.draft && github.event.pull_request.base.ref == 'main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -44,7 +41,6 @@ jobs:
       - name: Enable auto-merge for trusted PRs
         env:
           UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           case "$ASSOCIATION" in
             OWNER|MEMBER|COLLABORATOR) trusted=true ;;
@@ -59,11 +55,9 @@ jobs:
             exit 0
           fi
           # languages.json sends users to download URLs: a maintainer merges it by hand.
-          if [ "${HEAD_REF#back-merge/}" = "$HEAD_REF" ] && gh pr view "$PR_URL" --json files -q '.files[].path' | grep -qx 'languages.json'; then
+          if gh pr view "$PR_URL" --json files -q '.files[].path' | grep -qx 'languages.json'; then
             gh pr merge --disable-auto "$PR_URL" || true
             echo "::notice::This PR changes languages.json. A maintainer reviews and merges it by hand."
             exit 0
           fi
-          method=--squash
-          case "$HEAD_REF" in back-merge/*) method=--merge ;; esac
-          gh pr merge --auto "$method" "$PR_URL"
+          gh pr merge --auto --squash "$PR_URL"
