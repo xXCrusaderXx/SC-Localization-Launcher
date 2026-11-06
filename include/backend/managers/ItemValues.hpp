@@ -139,7 +139,8 @@ class ItemValues
     }
 
    private:
-    inline static const std::string MAPPING_URL = "https://raw.githubusercontent.com/xXCrusaderXx/SC-Localization-Launcher/main/item-mapping.json";
+    inline static const std::string MAPPING_URL =
+        "https://github.com/xXCrusaderXx/SC-Localization-Launcher/releases/latest/download/item-mapping.json";
     // Size only: grade and class say nothing for these
     inline static const std::vector<std::string> SIZED_TYPES{"WeaponGun", "WeaponPersonal", "Missile", "MissileLauncher", "Turret", "WeaponMining"};
     // Size, class and grade
@@ -284,7 +285,7 @@ class ItemValues
         return size * nmemb;
     }
 
-    // item-mapping.json from the repository, kept for a day; the cached copy is used when GitHub cannot be reached
+    // item-mapping.json from the latest release, kept for a day; the cached copy is used when GitHub cannot be reached
     std::optional<nlohmann::json> loadMapping ()
     {
         auto file = cacheDir / "item-mapping.json";

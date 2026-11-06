@@ -254,7 +254,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      # For packaging/minisign.pub
+      # For packaging/minisign.pub, languages.json and item-mapping.json
       - name: Checkout
         uses: actions/checkout@v7.0.1
 
@@ -266,6 +266,8 @@ jobs:
       - name: Collect packages
         run: |
           mkdir dist
+          # Released launchers download these two files from the latest release
+          cp languages.json item-mapping.json dist/
           find artifacts -type f \( -name '*.AppImage' -o -name '*.AppImage.zsync' -o -name '*.deb' -o -name '*.rpm' \
             -o -name '*.pkg.tar.zst' -o -name '*.flatpak' \) -exec mv {} dist/ \;
           ls -la dist
