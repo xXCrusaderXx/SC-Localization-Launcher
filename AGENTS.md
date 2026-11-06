@@ -20,7 +20,7 @@ Read [LEGAL.md](LEGAL.md). In particular, never add:
 
 Translation texts belong to their community projects (e.g. [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI)), not to this repository. `languages.json` only links to them:
 
-- Add a language only with HTTPS URLs that the translation's own maintainers publish, and only when its license allows that. Name project, maintainers and license in the PR. Never copy or mirror translation files into the repository.
+- Add a language only with HTTPS URLs that the translation's own maintainers publish, and only when its license allows that. Name project, maintainers and license in the PR, and link the translation maintainers' confirmation. Never copy or mirror translation files into the repository.
 - Do not use servers of other launchers (e.g. `sc-deutsch-launcher.de`) as a data source.
 - External game data (item values, blueprints) comes from the [Star Citizen Wiki API](https://api.star-citizen.wiki) only, with credit. Do not scrape other sites.
 - The full format and rules are in CONTRIBUTING.md, "Adding a game language".
