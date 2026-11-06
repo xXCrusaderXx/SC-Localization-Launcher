@@ -58,6 +58,12 @@ jobs:
             echo "::notice::Not enabling auto-merge (author association $ASSOCIATION). A maintainer reviews and merges this PR."
             exit 0
           fi
+          # languages.json sends users to download URLs: a maintainer merges it by hand.
+          if [ "${HEAD_REF#back-merge/}" = "$HEAD_REF" ] && gh pr view "$PR_URL" --json files -q '.files[].path' | grep -qx 'languages.json'; then
+            gh pr merge --disable-auto "$PR_URL" || true
+            echo "::notice::This PR changes languages.json. A maintainer reviews and merges it by hand."
+            exit 0
+          fi
           method=--squash
           case "$HEAD_REF" in back-merge/*) method=--merge ;; esac
           gh pr merge --auto "$method" "$PR_URL"

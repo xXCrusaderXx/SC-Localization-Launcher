@@ -4,11 +4,11 @@ These rules apply to every AI agent (Claude Code, Codex, Copilot, Cursor, …) t
 
 ## Responsibility
 
-- An agent works on behalf of a human contributor. That human reviews every change, understands it, and answers for it in the PR.
+- An agent works on behalf of a human contributor. That human reviews and tests the changes and answers for them in the PR.
 - **Never add a `Signed-off-by` line yourself, and never tick the sign-off box.** The DCO sign-off is a legal statement only the human can make.
 - Do not open, approve, merge, or close pull requests, push to `main` or `dev`, merge `dev` into `main`, create tags or releases, or change repository settings unless the human explicitly asks for that specific action.
 - Never bypass checks: no `--no-verify`, no disabling CI jobs, no weakening `.github/workflows/` or the DCO check to make a PR pass.
-- Commit messages and PR descriptions name no AI tool: no `Co-Authored-By` trailer for the agent, no "Generated with" line.
+- Add a `Co-Authored-By` trailer that names the agent to every commit you write, for example `Co-Authored-By: Claude <noreply@anthropic.com>`.
 
 ## Legal limits
 
@@ -20,7 +20,7 @@ Read [LEGAL.md](LEGAL.md). In particular, never add:
 
 Translation texts belong to their community projects (e.g. [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI)), not to this repository. `languages.json` only links to them:
 
-- Add a language only with HTTPS URLs that the translation's own maintainers publish, and only when its license allows that. Name project, maintainers and license in the PR. Never copy or mirror translation files into the repository.
+- Add a language only with HTTPS URLs that the translation's own maintainers publish, and only when its license allows that. Name project, maintainers and license in the PR, and link the translation maintainers' confirmation. Never copy or mirror translation files into the repository.
 - Do not use servers of other launchers (e.g. `sc-deutsch-launcher.de`) as a data source.
 - External game data (item values, blueprints) comes from the [Star Citizen Wiki API](https://api.star-citizen.wiki) only, with credit. Do not scrape other sites.
 - The full format and rules are in CONTRIBUTING.md, "Adding a game language".
