@@ -15,7 +15,7 @@
 
 #include "TestSupport.hpp"
 #include "frontend/BackendBridge.hpp"
-#include "logging/logger/custom_logger/custom_logger.h"
+#include "logging/logging.h"
 
 // Clicks through the real QML GUI on top of the real backend, like a user would.
 // The test functions run in order and share one window.
@@ -118,7 +118,7 @@ class GuiTest : public QObject
    private slots:
     void initTestCase ()
     {
-        LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>());
+        LoggerFramework::registerLogger(LoggerFramework::createLogger());
         watchOwnTestPrograms();
         qputenv("SC_LANGUAGES_URL", server.url("/languages.json").toUtf8());
         qputenv("SC_RELEASES_URL", server.url("/releases/latest").toUtf8());

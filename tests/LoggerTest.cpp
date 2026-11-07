@@ -10,7 +10,10 @@
 #include <string>
 #include <vector>
 
-#include "logging/logger/custom_logger/custom_logger.h"
+#include <spdlog/logger.h>
+
+#include "backend/utils/paths.hpp"
+#include "logging/logging.h"
 
 // Owns the log folder below its own XDG_STATE_HOME, which ctest sets for this executable only
 class LoggerTest : public QObject
@@ -73,51 +76,10 @@ class LoggerTest : public QObject
         std::filesystem::remove_all(stateDir, ec);
     }
 
-    void writesTheNameOfEverySeverityLevel_data ()
-    {
-        // An int column: the logger's operator<< template for SeverityLevel also matches QTestData and makes the row ambiguous
-        QTest::addColumn<int>("level");
-        QTest::addColumn<QString>("name");
-        QTest::newRow("Debug") << int(SeverityLevel::Debug) << "DEBUG";
-        QTest::newRow("Info") << int(SeverityLevel::Info) << "INFO";
-        QTest::newRow("Warning") << int(SeverityLevel::Warning) << "WARNING";
-        QTest::newRow("Error") << int(SeverityLevel::Error) << "ERROR";
-        QTest::newRow("Critical") << int(SeverityLevel::Critical) << "CRITICAL";
-        QTest::newRow("Process") << int(SeverityLevel::Process) << "PROCESS";
-        QTest::newRow("Test") << int(SeverityLevel::Test) << "TEST";
-        QTest::newRow("System") << int(SeverityLevel::System) << "SYSTEM";
-    }
-
-    void writesTheNameOfEverySeverityLevel ()
-    {
-        QFETCH(int, level);
-        QFETCH(QString, name);
-        std::ostringstream os;
-        os << static_cast<SeverityLevel>(level);
-        QCOMPARE(QString::fromStdString(os.str()), name);
-    }
-
-    void writesUnknownForAValueOutsideTheEnum ()
-    {
-        std::ostringstream os;
-        os << static_cast<SeverityLevel>(99);
-        QCOMPARE(QString::fromStdString(os.str()), QString("UNKNOWN"));
-    }
-
-    void returnsTheStreamForChaining ()
-    {
-        std::ostringstream os;
-        os << SeverityLevel::Error << "|" << SeverityLevel::Debug;
-        QCOMPARE(QString::fromStdString(os.str()), QString("ERROR|DEBUG"));
-        QVERIFY(&(os << SeverityLevel::Info) == &os);
-    }
-
     void createsTheMissingLogFolderWithoutAFile ()
     {
         std::filesystem::remove_all(stateDir);
-        {
-            LoggerFramework::CustomLogger logger(false);
-        }
+        QVERIFY(LoggerFramework::createLogger(false));
         QVERIFY(std::filesystem::is_directory(logsDir));
         QVERIFY(logFiles().empty());
     }
@@ -131,7 +93,7 @@ class LoggerTest : public QObject
         bool thrown = false;
         try
         {
-            LoggerFramework::CustomLogger logger(false);
+            LoggerFramework::createLogger(false);
         }
         catch(const std::runtime_error& e)
         {
@@ -141,25 +103,26 @@ class LoggerTest : public QObject
         QVERIFY(thrown);
     }
 
-    void firstWriteDeletesTheOldestLogs ()
+    void firstLineCreatesOneFileAndKeepsTheNewestLogs ()
     {
         createOldLogs();
         touch(logsDir / "notes.txt", 100);
         std::filesystem::create_directories(logsDir / "dir.log");
         std::filesystem::last_write_time(logsDir / "dir.log", std::filesystem::file_time_type::clock::now() - std::chrono::hours(24 * 100));
 
-        {
-            LoggerFramework::CustomLogger logger(false);
-            logger.write("LoggerTest", "hello", SeverityLevel::Info);
-        }
+        LoggerFramework::LogEx lg("LoggerTest");
+        LoggerFramework::registerLogger(LoggerFramework::createLogger(false));
+        QCOMPARE(logFiles().size(), size_t(12));
+        LOG_INFO(lg) << "hello " << 42;
+        LOG_ERROR(lg) << "second line";
+        LoggerFramework::registerLogger(nullptr);
 
-        QVERIFY(!std::filesystem::exists(logsDir / "old_00.log"));
-        QVERIFY(!std::filesystem::exists(logsDir / "old_01.log"));
-        for(int i = 3; i < 12; ++i)
+        QCOMPARE(logFiles().size(), size_t(10));
+        for(int i = 0; i < 12; ++i)
         {
             char name[16];
             std::snprintf(name, sizeof(name), "old_%02d.log", i);
-            QVERIFY2(std::filesystem::exists(logsDir / name), name);
+            QVERIFY2(std::filesystem::exists(logsDir / name) == (i >= 3), name);
         }
         QVERIFY(std::filesystem::is_regular_file(logsDir / "notes.txt"));
         QVERIFY(std::filesystem::is_directory(logsDir / "dir.log"));
@@ -170,7 +133,31 @@ class LoggerTest : public QObject
             if(file.filename().string().rfind("debug_", 0) == 0) debugLogs.push_back(file);
         }
         QCOMPARE(debugLogs.size(), size_t(1));
-        QVERIFY(readFile(debugLogs.front()).contains("<INFO>\t[LoggerTest]\t: hello"));
+        const QString content = readFile(debugLogs.front());
+        QVERIFY2(content.contains("<INFO>\t[LoggerTest]\t: hello 42\n"), qPrintable(content));
+        QVERIFY2(content.contains("<ERROR>\t[LoggerTest]\t: second line\n"), qPrintable(content));
+        QCOMPARE(content.count('\n'), 2);
+    }
+
+    void dropsLinesWithoutALoggerAndLogsOnceOneIsRegistered ()
+    {
+        std::filesystem::remove_all(stateDir);
+        // Created before the logger, like a channel in an object built before main() registers it
+        LoggerFramework::LogEx lg("Early");
+        LOG_INFO(lg) << "dropped";
+
+        auto logger = LoggerFramework::createLogger(false);
+        LoggerFramework::registerLogger(logger);
+        LOG_WARNING(lg) << "written";
+        LoggerFramework::registerLogger(nullptr);
+        LOG_INFO(lg) << "dropped too";
+        logger.reset();
+
+        const auto files = logFiles();
+        QCOMPARE(files.size(), size_t(1));
+        const QString content = readFile(files.front());
+        QVERIFY2(content.contains("<WARNING>\t[Early]\t: written\n"), qPrintable(content));
+        QVERIFY(!content.contains("dropped"));
     }
 
     void keepsLogsWhenTheyCannotBeDeleted ()
@@ -180,13 +167,14 @@ class LoggerTest : public QObject
         std::filesystem::permissions(logsDir, std::filesystem::perms::owner_read | std::filesystem::perms::owner_exec,
                                      std::filesystem::perm_options::replace);
 
-        {
-            LoggerFramework::CustomLogger logger(false);
-            logger.write("LoggerTest", "hello", SeverityLevel::Info);
-        }
+        LoggerFramework::LogEx lg("LoggerTest");
+        LoggerFramework::registerLogger(LoggerFramework::createLogger(false));
+        LOG_INFO(lg) << "hello";
+        LOG_INFO(lg) << "again";
+        LoggerFramework::registerLogger(nullptr);
 
+        QCOMPARE(logFiles().size(), size_t(12));
         QVERIFY(std::filesystem::exists(logsDir / "old_00.log"));
-        QVERIFY(std::filesystem::exists(logsDir / "old_01.log"));
     }
 };
 

@@ -266,7 +266,7 @@ class BackendBridge : public QObject
 
     Q_INVOKABLE QUrl fromLocalFile (const QString& path) const { return QUrl::fromLocalFile(path); }
 
-    // Where CustomLogger writes; shown in the settings and opened from error messages
+    // Where the log files are written; shown in the settings and opened from error messages
     QString logFolder () const { return QString::fromStdString((PATHS::LOGPATH_USER / "logs").string()); }
     static QString homeFolder () { return QDir::homePath(); }
     static QString userName () { return qEnvironmentVariable("USER"); }

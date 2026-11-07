@@ -82,6 +82,18 @@ if(NOT nlohmann_json_FOUND OR nlohmann_json_VERSION VERSION_LESS 3.11)
   )
   FetchContent_MakeAvailable(nlohmann_json)
 endif()
+# Ubuntu 24.04 ships 1.12; older distros (Debian 12, Ubuntu 22.04 for the AppImage) get it downloaded and linked statically.
+# The version request keeps an older installed spdlog from defining spdlog::spdlog next to the downloaded one.
+find_package(spdlog 1.12 QUIET)
+if(NOT spdlog_FOUND)
+  message(STATUS "spdlog >= 1.12 not found, downloading it")
+  include(FetchContent)
+  FetchContent_Declare(spdlog
+    URL https://github.com/gabime/spdlog/archive/refs/tags/v1.17.0.tar.gz
+    URL_HASH SHA256=d8862955c6d74e5846b3f580b1605d2428b11d97a410d86e2fb13e857cd3a744
+  )
+  FetchContent_MakeAvailable(spdlog)
+endif()
 find_package(CURL REQUIRED)
 
 # languages.json is downloaded at runtime; this built-in copy is used on a first start without network
@@ -111,7 +123,7 @@ add_executable(${SC_LAUNCHER_BINARY}
   ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/CommandLine.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/include/frontend/SingleInstance.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/logging/logger/custom_logger/custom_logger.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/logging/logging.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/resources/resources.qrc
 )
 
@@ -185,6 +197,7 @@ target_link_libraries(${SC_LAUNCHER_BINARY} PRIVATE
   PkgConfig::SODIUM
   nlohmann_json::nlohmann_json
   CURL::libcurl
+  spdlog::spdlog
 )
 
 target_include_directories(${SC_LAUNCHER_BINARY} PRIVATE
