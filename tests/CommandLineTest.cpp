@@ -52,10 +52,59 @@ class CommandLineTest : public QObject
         resetUserDir();
     }
 
+    void requestsTheCommandLine_data ()
+    {
+        QTest::addColumn<QStringList>("arguments");
+        QTest::addColumn<bool>("expected");
+        const QString program = "sc-localization-launcher";
+        QTest::newRow("no arguments") << QStringList{program} << false;
+        QTest::newRow("program name is not checked") << QStringList{"--check"} << false;
+        QTest::newRow("--check") << QStringList{program, "--check"} << true;
+        QTest::newRow("--update") << QStringList{program, "--update"} << true;
+        QTest::newRow("--version") << QStringList{program, "--version"} << true;
+        QTest::newRow("-v") << QStringList{program, "-v"} << true;
+        QTest::newRow("--help") << QStringList{program, "--help"} << true;
+        QTest::newRow("-h") << QStringList{program, "-h"} << true;
+        QTest::newRow("option after other arguments") << QStringList{program, "--channel", "LIVE", "--update"} << true;
+        QTest::newRow("only a channel") << QStringList{program, "--channel", "LIVE"} << false;
+        QTest::newRow("unknown option") << QStringList{program, "--unknown"} << false;
+        QTest::newRow("longer than an option") << QStringList{program, "--checkx"} << false;
+        QTest::newRow("shorter than an option") << QStringList{program, "--chec"} << false;
+        QTest::newRow("without dashes") << QStringList{program, "check"} << false;
+        QTest::newRow("different case") << QStringList{program, "--Check"} << false;
+    }
+
+    void requestsTheCommandLine ()
+    {
+        QFETCH(QStringList, arguments);
+        QFETCH(bool, expected);
+        std::vector<QByteArray> storage;
+        for(const auto& argument : arguments) storage.push_back(argument.toUtf8());
+        std::vector<char*> argv;
+        for(auto& s : storage) argv.push_back(s.data());
+        argv.push_back(nullptr);
+        QCOMPARE(CommandLine::requested(int(arguments.size()), argv.data()), expected);
+    }
+
     void showsTheVersion ()
     {
         QCOMPARE(run({"--version"}), int(CommandLine::Ok));
         QCOMPARE(output, std::string("SC Localization Launcher 0.8.0\n"));
+    }
+
+    void showsTheHelp ()
+    {
+        for(const QString option : {"--help", "-h"})
+        {
+            QVERIFY2(run({option}) == int(CommandLine::Ok), qPrintable(option));
+            QVERIFY2(errors.empty(), qPrintable(option));
+            // Qt wraps long option descriptions to the terminal width
+            const QString help = QString::fromStdString(output).simplified();
+            for(const char* text : {"Installs and updates community translations for Star Citizen.",
+                                    "Exit codes: 0 = current or updated, 1 = updates available (--check), 2 = error.", "--check",
+                                    "Show which channels need an update, without changing anything.", "--update", "--channel", "--version", "--help"})
+                QVERIFY2(help.contains(QString(text)), qPrintable(option + ": " + text));
+        }
     }
 
     void needsExactlyOneAction ()

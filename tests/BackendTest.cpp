@@ -224,6 +224,27 @@ class BackendTest : public QObject
         return readFile(std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini");
     }
 
+    static constexpr const char* SIGNED_DATA = "0123abcd  SC-Localization-Launcher-9.9.9-x86_64.AppImage\n";
+    static constexpr const char* SIGNED_COMMENT = "sc-localization-launcher v9.9.9";
+
+    // Lines of a .minisig file: untrusted comment, signature, trusted comment, global signature
+    static QList<QByteArray> sigLines (const std::string& signature) { return QByteArray::fromStdString(signature).split('\n'); }
+
+    static QByteArray withLine (const std::string& signature, int index, const QByteArray& line)
+    {
+        auto lines = sigLines(signature);
+        lines[index] = line;
+        return lines.join('\n');
+    }
+
+    static QByteArray decodedLine (const std::string& signature, int index) { return QByteArray::fromBase64(sigLines(signature)[index]); }
+
+    // The signature file with line `index` replaced by the base64 of `bytes`
+    static QByteArray withDecodedLine (const std::string& signature, int index, const QByteArray& bytes)
+    {
+        return withLine(signature, index, bytes.toBase64());
+    }
+
    private slots:
     void initTestCase ()
     {
@@ -895,6 +916,125 @@ class BackendTest : public QObject
         // packaging/minisign.pub is embedded at build time; a broken file would silently disable self-updates
         auto key = Minisign::parsePublicKey(UPDATE_SIGNING_KEY);
         QVERIFY2(key, "packaging/minisign.pub is missing or not a minisign public key");
+    }
+
+    void minisignRejectsInvalidSignature_data ()
+    {
+        QTest::addColumn<QByteArray>("signature");
+        QTest::addColumn<QByteArray>("data");
+        QTest::addColumn<QByteArray>("error");
+
+        const std::string base = releaseKey.sign(SIGNED_DATA, SIGNED_COMMENT);
+        const QByteArray data = SIGNED_DATA;
+        auto changed = [&base] (int index, auto change)
+        {
+            QByteArray bytes = decodedLine(base, index);
+            change(bytes);
+            return withDecodedLine(base, index, bytes);
+        };
+
+        QTest::newRow("empty file") << QByteArray() << data << QByteArray("malformed signature file");
+        QTest::newRow("three lines") << sigLines(base).mid(0, 3).join('\n') << data << QByteArray("malformed signature file");
+        QTest::newRow("no untrusted comment") << withLine(base, 0, "comment: test signature") << data << QByteArray("malformed signature file");
+        QTest::newRow("no trusted comment") << withLine(base, 2, QByteArray("trusted comment:") + SIGNED_COMMENT) << data
+                                            << QByteArray("malformed signature file");
+        QTest::newRow("signature not base64") << withLine(base, 1, "!!!not-base64!!!") << data << QByteArray("malformed signature");
+        QTest::newRow("signature too short") << withDecodedLine(base, 1, decodedLine(base, 1).chopped(1)) << data
+                                             << QByteArray("malformed signature");
+        QTest::newRow("signature too long") << withDecodedLine(base, 1, decodedLine(base, 1) + '\0') << data << QByteArray("malformed signature");
+        QTest::newRow("unknown algorithm") << changed(1, [] (QByteArray& b) { b.replace(0, 2, "XX"); }) << data
+                                           << QByteArray("unknown signature algorithm");
+        QTest::newRow("lower-case algorithm") << changed(1, [] (QByteArray& b) { b.replace(0, 2, "ed"); }) << data
+                                              << QByteArray("unknown signature algorithm");
+        QTest::newRow("tampered data") << QByteArray::fromStdString(base) << data + "x" << QByteArray("signature does not match");
+        QTest::newRow("flipped signature bit") << changed(1, [] (QByteArray& b) { b[10] = static_cast<char>(b[10] ^ 0x01); }) << data
+                                               << QByteArray("signature does not match");
+        QTest::newRow("prehashed relabelled as legacy")
+            << changed(1, [] (QByteArray& b) { b[1] = 'd'; }) << data << QByteArray("signature does not match");
+        // Passes the key ID check, so only the Ed25519 verification can catch it
+        TestSigningKey other;
+        QByteArray otherSignature = decodedLine(other.sign(SIGNED_DATA, SIGNED_COMMENT), 1);
+        otherSignature.replace(2, 8, decodedLine(base, 1).mid(2, 8));
+        QTest::newRow("other key, copied key id") << withDecodedLine(base, 1, otherSignature) << data << QByteArray("signature does not match");
+        QTest::newRow("swapped trusted comment") << withLine(base, 2, "trusted comment: sc-localization-launcher v9.9.10") << data
+                                                 << QByteArray("trusted comment is not signed");
+        QTest::newRow("global signature not base64") << withLine(base, 3, "###") << data << QByteArray("trusted comment is not signed");
+        QTest::newRow("global signature too short")
+            << withDecodedLine(base, 3, decodedLine(base, 3).chopped(1)) << data << QByteArray("trusted comment is not signed");
+        QTest::newRow("flipped global signature bit")
+            << changed(3, [] (QByteArray& b) { b[0] = static_cast<char>(b[0] ^ 0x01); }) << data << QByteArray("trusted comment is not signed");
+        QTest::newRow("missing global signature") << withLine(base, 3, "") << data << QByteArray("malformed signature file");
+    }
+
+    void minisignRejectsInvalidSignature ()
+    {
+        QFETCH(QByteArray, signature);
+        QFETCH(QByteArray, data);
+        QFETCH(QByteArray, error);
+        auto key = Minisign::parsePublicKey(releaseKey.publicKeyFile());
+        QVERIFY(key);
+
+        auto result = Minisign::verify(*key, signature.toStdString(), data.toStdString());
+        QVERIFY(!result.valid);
+        QCOMPARE(QByteArray::fromStdString(result.error), error);
+        QVERIFY(result.trustedComment.empty());
+    }
+
+    void minisignAcceptsSignedData_data ()
+    {
+        QTest::addColumn<QByteArray>("signature");
+        QTest::addColumn<QByteArray>("comment");
+
+        const QByteArray base = QByteArray::fromStdString(releaseKey.sign(SIGNED_DATA, SIGNED_COMMENT));
+        QTest::newRow("prehashed") << base << QByteArray(SIGNED_COMMENT);
+        QTest::newRow("legacy") << QByteArray::fromStdString(releaseKey.sign(SIGNED_DATA, SIGNED_COMMENT, false)) << QByteArray(SIGNED_COMMENT);
+        QTest::newRow("CRLF line endings") << QByteArray(base).replace("\n", "\r\n") << QByteArray(SIGNED_COMMENT);
+        QTest::newRow("empty trusted comment") << QByteArray::fromStdString(releaseKey.sign(SIGNED_DATA, "")) << QByteArray();
+    }
+
+    void minisignAcceptsSignedData ()
+    {
+        QFETCH(QByteArray, signature);
+        QFETCH(QByteArray, comment);
+        auto key = Minisign::parsePublicKey(releaseKey.publicKeyFile());
+        QVERIFY(key);
+
+        auto result = Minisign::verify(*key, signature.toStdString(), SIGNED_DATA);
+        QVERIFY2(result.valid, result.error.c_str());
+        QCOMPARE(QByteArray::fromStdString(result.trustedComment), comment);
+        QVERIFY(result.error.empty());
+    }
+
+    void minisignRejectsMalformedPublicKey_data ()
+    {
+        QTest::addColumn<QByteArray>("publicKey");
+
+        const QByteArray raw = QByteArray::fromBase64(QByteArray::fromStdString(releaseKey.publicKeyFile()).split('\n')[1]);
+        const QByteArray comment = "untrusted comment: test key\n";
+        QByteArray wrongAlgorithm = raw;
+        wrongAlgorithm[1] = 'D';
+
+        QTest::newRow("empty") << QByteArray();
+        QTest::newRow("only comment") << comment;
+        QTest::newRow("not base64") << comment + "!!!\n";
+        QTest::newRow("too short") << comment + raw.chopped(1).toBase64();
+        QTest::newRow("too long") << comment + (raw + '\0').toBase64();
+        QTest::newRow("wrong algorithm") << comment + wrongAlgorithm.toBase64();
+    }
+
+    void minisignRejectsMalformedPublicKey ()
+    {
+        QFETCH(QByteArray, publicKey);
+        QVERIFY(!Minisign::parsePublicKey(publicKey.toStdString()).has_value());
+
+        // The unchanged key file is accepted, so the rows above fail only because of their change
+        const std::string pub = releaseKey.publicKeyFile();
+        const QByteArray raw = QByteArray::fromBase64(QByteArray::fromStdString(pub).split('\n')[1]);
+        QCOMPARE(raw.size(), qsizetype(42));
+        auto key = Minisign::parsePublicKey(pub);
+        QVERIFY(key);
+        QCOMPARE(QByteArray(reinterpret_cast<const char*>(key->keyId.data()), qsizetype(key->keyId.size())), raw.mid(2, 8));
+        QCOMPARE(QByteArray(reinterpret_cast<const char*>(key->key.data()), qsizetype(key->key.size())), raw.mid(10, 32));
     }
 
     void changedTranslationFileIsDamaged ()
