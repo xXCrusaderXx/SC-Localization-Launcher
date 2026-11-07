@@ -245,6 +245,40 @@ class BackendTest : public QObject
         return withLine(signature, index, bytes.toBase64());
     }
 
+    // Serves a languages.json with only these entries
+    void serveCatalogue (const nlohmann::json& languages)
+    {
+        server.setFile("/languages.json", QByteArray::fromStdString(nlohmann::json{{"version", 1}, {"languages", languages}}.dump()));
+    }
+
+    // A valid languages.json entry with one URL on one channel
+    static nlohmann::json catalogueEntry (const std::string& code, const std::string& name, const std::string& folder, const std::string& channelName)
+    {
+        return {{"code", code},
+                {"name", name},
+                {"folder", folder},
+                {"source", {{"channels", {{channelName, nlohmann::json::array({"{base}/de.ini"})}}}}},
+                {"credit", testCredit()}};
+    }
+
+    // The languages of fixtureFiles() that pass the checks
+    static Codes fixtureCodes () { return {"en", "de", "de-full", "fr"}; }
+
+    static Codes bundledCodes ()
+    {
+        auto bundled = nlohmann::json::parse(BUNDLED_LANGUAGES_JSON);
+        Codes codes{"en"};
+        for(const auto& language : bundled["languages"]) codes.push_back(language["code"]);
+        return codes;
+    }
+
+    static void writeRawFile (const std::filesystem::path& path, const std::string& text)
+    {
+        requireTestHome(path);
+        std::filesystem::create_directories(path.parent_path());
+        std::ofstream(path) << text;
+    }
+
    private slots:
     void initTestCase ()
     {
@@ -260,6 +294,9 @@ class BackendTest : public QObject
         qputenv("SC_WIKI_API_URL", server.url("/api/v2/").toUtf8());
         server.setFile("/de.ini", TRANSLATION);
         server.setFile("/releases/latest", fixtureFiles().value("/releases/latest"));
+        server.setFile("/languages.json", fixtureFiles().value("/languages.json"));
+        server.setFile("/channels.json", fixtureFiles().value("/channels.json"));
+        server.failNext("/languages.json", 0, {});
         // No signing key and no AppImage unless a test sets them: the launcher then never installs anything
         qputenv("SC_UPDATE_SIGNING_KEY", "");
         qunsetenv("APPIMAGE");
@@ -308,6 +345,70 @@ class BackendTest : public QObject
         QVERIFY(std::filesystem::exists(PATHS::JSON_FILES::SETTINGS_LEGACY));
     }
 
+    void fallsBackWhenSettingsCannotBeRead_data ()
+    {
+        QTest::addColumn<QByteArray>("content");
+
+        QTest::newRow("not JSON") << QByteArray("{broken");
+        QTest::newRow("cut off") << QByteArray("{\"channels\": {");
+        QTest::newRow("top level is an array") << QByteArray("[1, 2]");
+        QTest::newRow("install path is a number") << QByteArray("{\"channels\": {\"LIVE\": {\"installPath\": 5}}}");
+        QTest::newRow("options are text") << QByteArray("{\"options\": \"yes\"}");
+    }
+
+    void fallsBackWhenSettingsCannotBeRead ()
+    {
+        QFETCH(QByteArray, content);
+        writeRawFile(settingsFilePath(), content.toStdString());
+        QVERIFY(start());
+        auto state = latest();
+
+        QCOMPARE(channel(state, "LIVE").installPath, std::string());
+        QCOMPARE(channel(state, "LIVE").language, Protocol::ENGLISH);
+        QCOMPARE(jsonText(state.options), jsonText(Protocol::Options{}));
+
+        // The broken file is replaced by a valid one
+        QVERIFY(waitForPreviousCommands());
+        auto file = readSettingsFile();
+        QVERIFY(file.is_object());
+        QVERIFY(file.contains("channels"));
+    }
+
+    void brokenSettingsFallBackToTheFormerLauncher ()
+    {
+        writeRawFile(settingsFilePath(), "{broken");
+        writeSettingsFile(legacySettings("/games/LIVE", "deVoll", true), PATHS::JSON_FILES::SETTINGS_LEGACY);
+        QVERIFY(start());
+        auto state = latest();
+
+        QCOMPARE(channel(state, "LIVE").installPath, std::string("/games/LIVE"));
+        QCOMPARE(channel(state, "LIVE").language, std::string("de-full"));
+        QVERIFY(state.options.launchGameAfterUpdate);
+    }
+
+    void keepsTheSettingsWhenTheyCannotBeSaved ()
+    {
+        writeSettingsFile({{"channels", {{"LIVE", {{"installPath", "/games/LIVE"}}}}}});
+        const std::string before = readFile(settingsFilePath());
+        // save() writes settings.json.tmp first; a folder of that name makes the write fail
+        auto tmpFile = settingsFilePath();
+        tmpFile += ".tmp";
+        requireTestHome(tmpFile);
+        std::filesystem::create_directories(tmpFile);
+
+        QTemporaryDir game;
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(readFile(settingsFilePath()), before);
+        QCOMPARE(channel(latest(), "LIVE").installPath, game.path().toStdString());
+
+        // Every command saves, so the next one writes the new path once saving works again
+        std::filesystem::remove(tmpFile);
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(jsonText(readSettingsFile()["channels"]["LIVE"]["installPath"]), jsonText(game.path().toStdString()));
+    }
+
     void offersOnlyWhatTheSourcesProvide ()
     {
         QVERIFY(start());
@@ -334,6 +435,138 @@ class BackendTest : public QObject
         Codes expected{"en"};
         for(const auto& language : bundled["languages"]) expected.push_back(language["code"]);
         QCOMPARE(languageCodes(latest()), expected);
+    }
+
+    // Each row is a JSON merge patch on a valid entry "bad" that offers PTU only
+    void ignoresInvalidCatalogueEntries_data ()
+    {
+        QTest::addColumn<QByteArray>("patch");
+        QTest::addColumn<bool>("accepted");
+
+        QTest::newRow("control") << QByteArray("{}") << true;
+        // No raw string literals in this file: moc reads them as plain strings, and the "//" of a URL inside one hid all test slots from it
+        QTest::newRow("channelList over plain HTTP")
+            << QByteArray("{\"source\": {\"channels\": null, \"channelList\": \"http://example.com/channels.json\", \"server\": \"server1\"}}")
+            << false;
+        QTest::newRow("channelList without server")
+            << QByteArray("{\"source\": {\"channels\": null, \"channelList\": \"{base}/channels.json\"}}") << false;
+        QTest::newRow("channelList with empty server")
+            << QByteArray("{\"source\": {\"channels\": null, \"channelList\": \"{base}/channels.json\", \"server\": \"\"}}") << false;
+        QTest::newRow("folder ..") << QByteArray("{\"folder\": \"..\"}") << false;
+        QTest::newRow("folder with slash") << QByteArray("{\"folder\": \"a/b\"}") << false;
+        QTest::newRow("absolute folder") << QByteArray("{\"folder\": \"/tmp/evil\"}") << false;
+        QTest::newRow("folder with dot") << QByteArray("{\"folder\": \"german.x\"}") << false;
+        QTest::newRow("empty folder") << QByteArray("{\"folder\": \"\"}") << false;
+    }
+
+    void ignoresInvalidCatalogueEntries ()
+    {
+        QFETCH(QByteArray, patch);
+        QFETCH(bool, accepted);
+        auto bad = catalogueEntry("bad", "Bad", "bad_folder", "PTU");
+        bad.merge_patch(nlohmann::json::parse(patch.toStdString()));
+        serveCatalogue(nlohmann::json::array({catalogueEntry("ok", "OK", "ok_folder", "LIVE"), bad}));
+        QVERIFY(start());
+        auto state = latest();
+
+        QCOMPARE(languageCodes(state), (accepted ? Codes{"en", "ok", "bad"} : Codes{"en", "ok"}));
+        QCOMPARE(channel(state, "LIVE").availableLanguages, (Codes{"en", "ok"}));
+        QCOMPARE(channel(state, "PTU").availableLanguages, (accepted ? Codes{"en", "bad"} : Codes{"en"}));
+    }
+
+    void loadsTheCatalogueFromCacheOrBuiltIn_data ()
+    {
+        QTest::addColumn<bool>("primeCache");
+        QTest::addColumn<bool>("corruptCache");
+        // Empty: the server answers 500
+        QTest::addColumn<QByteArray>("served");
+        QTest::addColumn<QByteArray>("from");
+
+        const QByteArray cutOff = "{\"version\": 1, \"languages\": [";
+        QTest::newRow("server error, cached copy") << true << false << QByteArray() << QByteArray("cache");
+        QTest::newRow("invalid JSON served, cached copy") << true << false << cutOff << QByteArray("cache");
+        QTest::newRow("invalid JSON served, no cache") << false << false << cutOff << QByteArray("bundled");
+        QTest::newRow("cache damaged, server error") << true << true << QByteArray() << QByteArray("bundled");
+        QTest::newRow("top level is an array") << false << false << QByteArray("[]") << QByteArray("bundled");
+        QTest::newRow("languages is not a list") << false << false << QByteArray("{\"version\": 1, \"languages\": \"none\"}")
+                                                 << QByteArray("bundled");
+    }
+
+    void loadsTheCatalogueFromCacheOrBuiltIn ()
+    {
+        QFETCH(bool, primeCache);
+        QFETCH(bool, corruptCache);
+        QFETCH(QByteArray, served);
+        QFETCH(QByteArray, from);
+
+        if(primeCache) QVERIFY(start());
+        if(corruptCache)
+        {
+            int corrupted = 0;
+            for(const auto& entry : std::filesystem::directory_iterator(PATHS::CACHE_USER))
+            {
+                if(!entry.is_regular_file()) continue;
+                auto json = nlohmann::json::parse(readFile(entry.path()), nullptr, false);
+                if(!json.is_object() || !json.contains("languages")) continue;
+                writeRawFile(entry.path(), "{broken");
+                ++corrupted;
+            }
+            QVERIFY(corrupted > 0);
+        }
+        if(served.isEmpty())
+            server.failNext("/languages.json", 100, "500 Internal Server Error");
+        else
+            server.setFile("/languages.json", served);
+        QVERIFY(primeCache ? restart() : start());
+
+        QCOMPARE(languageCodes(latest()), from == "cache" ? fixtureCodes() : bundledCodes());
+    }
+
+    void skipsCatalogueEntriesOfTheWrongType_data ()
+    {
+        QTest::addColumn<QByteArray>("patch");
+
+        QTest::newRow("code is a number") << QByteArray("{\"code\": 5}");
+        QTest::newRow("channel URLs are text") << QByteArray("{\"source\": {\"channels\": {\"PTU\": \"{base}/de.ini\"}}}");
+        QTest::newRow("credit is text") << QByteArray("{\"credit\": \"Test\"}");
+    }
+
+    void skipsCatalogueEntriesOfTheWrongType ()
+    {
+        QFETCH(QByteArray, patch);
+        auto bad = catalogueEntry("bad", "Bad", "bad_folder", "PTU");
+        bad.merge_patch(nlohmann::json::parse(patch.toStdString()));
+        serveCatalogue(nlohmann::json::array({catalogueEntry("ok", "OK", "ok_folder", "LIVE"), bad}));
+        QVERIFY(start());
+
+        QCOMPARE(languageCodes(latest()), (Codes{"en", "ok"}));
+    }
+
+    // The bad channel comes first; the LIVE channel after it is valid
+    void survivesMalformedChannelList_data ()
+    {
+        QTest::addColumn<QByteArray>("entry");
+
+        QTest::newRow("description is a number") << QByteArray("{\"active\": 1, \"description\": 5, \"server1\": \"{base}/fr.ini\"}");
+        QTest::newRow("active is text") << QByteArray("{\"active\": \"1\", \"description\": \"PTU\", \"server1\": \"{base}/fr.ini\"}");
+        QTest::newRow("URL is a number") << QByteArray("{\"active\": 1, \"description\": \"PTU\", \"server1\": 5}");
+    }
+
+    void survivesMalformedChannelList ()
+    {
+        QFETCH(QByteArray, entry);
+        nlohmann::json liveChannel = {{"active", 1}, {"description", "LIVE"}, {"server1", "{base}/fr.ini"}};
+        nlohmann::json channels = {{"channels", nlohmann::json::array({nlohmann::json::parse(entry.toStdString()), liveChannel})}};
+        server.setFile("/channels.json", QByteArray::fromStdString(channels.dump()));
+        QVERIFY(start());
+        auto state = latest();
+
+        auto codes = languageCodes(state);
+        QVERIFY(std::find(codes.begin(), codes.end(), "de") != codes.end());
+        QVERIFY(std::find(codes.begin(), codes.end(), "de-full") != codes.end());
+        // Only the bad channel is skipped
+        auto live = channel(state, "LIVE").availableLanguages;
+        QVERIFY(std::find(live.begin(), live.end(), "fr") != live.end());
     }
 
     void rejectsInvalidCommands ()
