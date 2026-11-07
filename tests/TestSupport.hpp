@@ -370,15 +370,22 @@ class TestSigningKey
         return "untrusted comment: test key\n" + base64(bytes) + "\n";
     }
 
-    // Content of a .minisig file for `data`
-    std::string sign (const std::string& data, const std::string& trustedComment) const
+    // Content of a .minisig file for `data`; `prehashed = false` gives the legacy "Ed" format (`minisign -S -l`)
+    std::string sign (const std::string& data, const std::string& trustedComment, bool prehashed = true) const
     {
-        std::array<unsigned char, crypto_generichash_BYTES_MAX> hash{};
-        crypto_generichash(hash.data(), hash.size(), reinterpret_cast<const unsigned char*>(data.data()), data.size(), nullptr, 0);
         std::array<unsigned char, crypto_sign_BYTES> signature{};
-        crypto_sign_detached(signature.data(), nullptr, hash.data(), hash.size(), secretKey.data());
+        if(prehashed)
+        {
+            std::array<unsigned char, crypto_generichash_BYTES_MAX> hash{};
+            crypto_generichash(hash.data(), hash.size(), reinterpret_cast<const unsigned char*>(data.data()), data.size(), nullptr, 0);
+            crypto_sign_detached(signature.data(), nullptr, hash.data(), hash.size(), secretKey.data());
+        }
+        else
+        {
+            crypto_sign_detached(signature.data(), nullptr, reinterpret_cast<const unsigned char*>(data.data()), data.size(), secretKey.data());
+        }
 
-        std::vector<unsigned char> line{'E', 'D'};
+        std::vector<unsigned char> line{'E', prehashed ? static_cast<unsigned char>('D') : static_cast<unsigned char>('d')};
         line.insert(line.end(), keyId.begin(), keyId.end());
         line.insert(line.end(), signature.begin(), signature.end());
 

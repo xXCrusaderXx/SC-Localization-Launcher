@@ -26,6 +26,10 @@ target_link_libraries(WikiApiClientTest PRIVATE sc_test_support)
 add_executable(CommandLineTest CommandLineTest.cpp ${CMAKE_SOURCE_DIR}/include/frontend/SingleInstance.hpp)
 target_link_libraries(CommandLineTest PRIVATE sc_test_support)
 
+# Own executable and HOME, so no global logger of another test writes into the log folder these tests delete
+add_executable(LoggerTest LoggerTest.cpp)
+target_link_libraries(LoggerTest PRIVATE sc_test_support)
+
 add_executable(GuiTest
   GuiTest.cpp
   ${CMAKE_SOURCE_DIR}/include/frontend/BackendBridge.hpp
@@ -55,7 +59,7 @@ if(Qt6LinguistTools_FOUND)
   qt_add_resources(GuiTest gui_test_translations PREFIX /i18n BASE ${CMAKE_CURRENT_BINARY_DIR} FILES ${SC_TEST_QM_FILES})
 endif()
 
-foreach(test BackendTest DirectoryFinderTest SingleInstanceTest CommandLineTest WikiApiClientTest GuiTest)
+foreach(test BackendTest DirectoryFinderTest SingleInstanceTest CommandLineTest WikiApiClientTest LoggerTest GuiTest)
   add_test(NAME ${test} COMMAND ${test})
   # Own HOME and XDG dirs, so the user's settings are never touched. Empty PATH, so the game can never be started,
   # and watched program names of their own, so an RSI Launcher or game running on this machine does not count
