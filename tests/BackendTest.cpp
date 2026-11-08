@@ -630,6 +630,71 @@ class BackendTest : public QObject
         QVERIFY(readFile(gamePath / "user.cfg").find("g_language = german_(germany)") != std::string::npos);
     }
 
+    void failedInstallLeavesTheGameFolderAlone_data ()
+    {
+        QTest::addColumn<QString>("obstacle");
+        QTest::addColumn<bool>("isFolder");
+        QTest::addColumn<bool>("reachesServer");
+        QTest::newRow("data is a file") << "data" << false << false;
+        QTest::newRow("download file name taken") << "data/Localization/german_(germany)/global.ini.download" << true << false;
+        QTest::newRow("global.ini is a folder") << "data/Localization/german_(germany)/global.ini" << true << true;
+    }
+
+    void failedInstallLeavesTheGameFolderAlone ()
+    {
+        QFETCH(QString, obstacle);
+        QFETCH(bool, isFolder);
+        QFETCH(bool, reachesServer);
+        QTemporaryDir game;
+        auto gamePath = std::filesystem::path(game.path().toStdString());
+        auto path = gamePath / obstacle.toStdString();
+        if(isFolder)
+        {
+            std::filesystem::create_directories(path);
+            std::ofstream(path / "keep") << "keep\n";
+        }
+        else
+            std::ofstream(path) << "not a folder\n";
+
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", gamePath.string()});
+        QVERIFY(setLanguage("LIVE", "de"));
+        int before = server.requestCount("GET /de.ini 200");
+        QCOMPARE(runUpdate(), UpdateStatus::Failed);
+        QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::Failed);
+
+        if(isFolder)
+        {
+            QVERIFY(std::filesystem::is_directory(path));
+            QCOMPARE(readFile(path / "keep"), std::string("keep\n"));
+        }
+        else
+            QCOMPARE(readFile(path), std::string("not a folder\n"));
+        auto ini = gamePath / "data/Localization/german_(germany)/global.ini";
+        QVERIFY(!std::filesystem::is_regular_file(ini));
+        QVERIFY(!std::filesystem::is_regular_file(ini.string() + ".download"));
+        // user.cfg does not select a translation that is not there
+        QCOMPARE(readFile(gamePath / "user.cfg").find("g_language"), std::string::npos);
+        // This row has to fail when the download replaces global.ini, not before
+        if(reachesServer) QCOMPARE(server.requestCount("GET /de.ini 200"), before + 1);
+    }
+
+    void blockedDownloadKeepsInstalledTranslation ()
+    {
+        QTemporaryDir game;
+        QVERIFY(installGerman(game));
+        auto gamePath = std::filesystem::path(game.path().toStdString());
+        auto ini = gamePath / "data/Localization/german_(germany)/global.ini";
+        std::filesystem::create_directories(ini.string() + ".download");
+        // A new version, so the update has to download it
+        server.setFile("/de.ini", "test_key=Neuer Testtext\n");
+
+        QCOMPARE(runUpdate(), UpdateStatus::Failed);
+        QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::Failed);
+        QCOMPARE(QByteArray::fromStdString(readFile(ini)), TRANSLATION);
+        QVERIFY(readFile(gamePath / "user.cfg").find("g_language = german_(germany)") != std::string::npos);
+    }
+
     void skipsChoiceNoSourceOffers ()
     {
         QTemporaryDir game;
@@ -1975,11 +2040,72 @@ class BackendTest : public QObject
         QCOMPARE(updateAndStartGame(rsiLauncher), std::optional(GameStart::Failed));
     }
 
+    void waitsWhileTheLugScriptPrepares ()
+    {
+        // For a second sc-launch.sh runs without an RSI Launcher, like Wine setting up its prefix
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir prefix;
+        auto root = std::filesystem::path(prefix.path().toStdString());
+        auto rsiLauncher = lugPrefix(prefix, std::string("echo $$ > pid\nsleep 1\n") + fakeRsiLauncher());
+
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetRsiLauncherPath{rsiLauncher.string()});
+        size_t from = published();
+        backEnd->execute(Protocol::StartGame{});
+        auto running = waitForState([] (const auto& s) { return s.game == GameStart::Running; }, from);
+        QProcess::execute("kill", {QString::fromStdString(readFile(root / "pid")).trimmed()});
+        QVERIFY(running);
+        std::lock_guard lock(mutex);
+        for(size_t i = from; i < *running; ++i) QVERIFY(states[i].game != GameStart::Failed);
+    }
+
     void reportsWhenNothingCanStartTheGame ()
     {
         // No sc-launch.sh, and without PATH no Lutris either
         QTemporaryDir folder;
         QCOMPARE(updateAndStartGame(folder.path().toStdString()), std::optional(GameStart::NoStarter));
+    }
+
+    void startsTheRsiLauncherThroughLutris ()
+    {
+        QTemporaryDir bin;
+        auto binPath = std::filesystem::path(bin.path().toStdString());
+        // An RSI Launcher folder outside a Wine prefix, so there is no sc-launch.sh
+        QTemporaryDir folder;
+        auto lutris = binPath / "lutris";
+        std::ofstream(lutris) << "#!/bin/bash\necho \"$*\" > '" << (binPath / "args").string() << "'\necho $$ > '" << (binPath / "pid").string()
+                              << "'\n"
+                              << fakeRsiLauncher();
+        std::filesystem::permissions(lutris, std::filesystem::perms::owner_all);
+        qputenv("PATH", bin.path().toUtf8() + ":/usr/bin:/bin");
+
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetRsiLauncherPath{folder.path().toStdString()});
+        size_t from = published();
+        backEnd->execute(Protocol::StartGame{});
+        auto running = waitForState([] (const auto& s) { return s.game == GameStart::Running; }, from);
+        QProcess::execute("kill", {QString::fromStdString(readFile(binPath / "pid")).trimmed()});
+        QVERIFY(running);
+        QCOMPARE(readFile(binPath / "args"), std::string("lutris:rungame/star-citizen\n"));
+        std::lock_guard lock(mutex);
+        for(size_t i = from; i < *running; ++i) QVERIFY(states[i].game != GameStart::NoStarter);
+    }
+
+    void reportsWhenTheStarterCannotBeRun ()
+    {
+        // sc-launch.sh is there, but without PATH there is no bash to run it
+        QTemporaryDir prefix;
+        auto rsiLauncher = lugPrefix(prefix, fakeRsiLauncher());
+
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetRsiLauncherPath{rsiLauncher.string()});
+        size_t from = published();
+        backEnd->execute(Protocol::StartGame{});
+        auto done = waitForState([] (const auto& s) { return s.game != GameStart::Starting && s.game != GameStart::Idle; }, from);
+        QVERIFY(done);
+        std::lock_guard lock(mutex);
+        QCOMPARE(states[*done].game, GameStart::Failed);
+        QCOMPARE(states[*done].update, UpdateStatus::Idle);
     }
 
     // LIVE with German chosen but not installed yet, then the option for automatic updates switched on,
@@ -2399,6 +2525,23 @@ class BackendTest : public QObject
         QCOMPARE(installedItemFile(game), std::string(ITEM_TRANSLATION));
         // Still shown as outdated, so the next update tries again
         QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::UpdateAvailable);
+    }
+
+    void installsTheFileAsDownloadedWhenItemValuesCannotBeWritten ()
+    {
+        serveItemData();
+        QTemporaryDir game;
+        // A folder where the item values are written first
+        std::filesystem::create_directories(std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini.items");
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetOption{"itemNameDetails", true});
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        QVERIFY(setLanguage("LIVE", "de"));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QCOMPARE(installedItemFile(game), std::string(ITEM_TRANSLATION));
+        // Still shown as outdated, so the next update tries again
+        QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::UpdateAvailable);
+        QVERIFY(readFile(std::filesystem::path(game.path().toStdString()) / "user.cfg").find("g_language = german_(germany)") != std::string::npos);
     }
 };
 
