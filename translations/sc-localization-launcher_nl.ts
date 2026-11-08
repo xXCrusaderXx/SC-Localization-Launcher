@@ -941,6 +941,18 @@
         <translation>Licentie: %1</translation>
     </message>
     <message>
+        <source>Contributors (%1)</source>
+        <translation>Bijdragers (%1)</translation>
+    </message>
+    <message>
+        <source>Hide the names</source>
+        <translation>Namen verbergen</translation>
+    </message>
+    <message>
+        <source>Show the names</source>
+        <translation>Namen tonen</translation>
+    </message>
+    <message>
         <source>TOOLS</source>
         <translation>HULPMIDDELEN</translation>
     </message>

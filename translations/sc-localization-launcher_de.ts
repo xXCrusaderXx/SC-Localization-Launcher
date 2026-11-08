@@ -909,6 +909,18 @@
         <translation>Beim Schließen des Fensters bleibt der Launcher im Infobereich und prüft weiter</translation>
     </message>
     <message>
+        <source>Contributors (%1)</source>
+        <translation>Mitwirkende (%1)</translation>
+    </message>
+    <message>
+        <source>Hide the names</source>
+        <translation>Namen ausblenden</translation>
+    </message>
+    <message>
+        <source>Show the names</source>
+        <translation>Namen anzeigen</translation>
+    </message>
+    <message>
         <source>TOOLS</source>
         <translation>WERKZEUGE</translation>
     </message>

@@ -10,6 +10,7 @@
 #include "UpdateSigningKey.hpp"
 #include "backend/DirectoryFinder.hpp"
 #include "backend/utils/TaskQueue.hpp"
+#include "backend/utils/TranslationHeader.hpp"
 #include "backend/utils/paths.hpp"
 #include "database/DataBase.hpp"
 #include "jsonParser/LanguageCatalogParser.hpp"
@@ -422,6 +423,33 @@ class BackEnd
                  });
     }
 
+    struct ContributorCache
+    {
+        std::filesystem::file_time_type modified;
+        std::vector<std::string> names;
+    };
+    // Header of each installed file read so far; read again only when the file changes
+    mutable std::map<std::filesystem::path, ContributorCache> contributorCache;
+
+    // Contributors from the header of an installed copy of this translation, the first channel in display order wins
+    std::vector<std::string> contributors (const std::string& code) const
+    {
+        for(const auto& name : Protocol::CHANNEL_NAMES)
+        {
+            auto it = data.channels.find(name);
+            if(it == data.channels.end() || it->second.installPath.empty() || it->second.installed.language != code) continue;
+            auto file = UpdateManager::translationFile(it->second.installPath, it->second.installed.folder);
+            std::error_code ec;
+            auto modified = std::filesystem::last_write_time(file, ec);
+            if(ec) continue;
+            auto cached = contributorCache.find(file);
+            if(cached == contributorCache.end() || cached->second.modified != modified)
+                cached = contributorCache.insert_or_assign(file, ContributorCache{modified, TranslationHeader::contributors(file)}).first;
+            if(!cached->second.names.empty()) return cached->second.names;
+        }
+        return {};
+    }
+
     // Language code -> notice for this channel; a channel's own notice wins over the one for all channels
     std::map<std::string, std::string> notices (const std::string& channel) const
     {
@@ -440,8 +468,9 @@ class BackEnd
     {
         Protocol::State state;
 
-        state.languages.push_back({Protocol::ENGLISH, "English", {}, ""});
-        for(const auto& language : data.languages) state.languages.push_back({language.code, language.name, language.credit, language.folder});
+        state.languages.push_back({Protocol::ENGLISH, "English", {}, "", {}});
+        for(const auto& language : data.languages)
+            state.languages.push_back({language.code, language.name, language.credit, language.folder, contributors(language.code)});
 
         // Known channels in display order, then whatever else the sources list
         std::vector<std::string> names = Protocol::CHANNEL_NAMES;

@@ -942,6 +942,18 @@
         <translation>Licencja: %1</translation>
     </message>
     <message>
+        <source>Contributors (%1)</source>
+        <translation>Współtwórcy (%1)</translation>
+    </message>
+    <message>
+        <source>Hide the names</source>
+        <translation>Ukryj nazwy</translation>
+    </message>
+    <message>
+        <source>Show the names</source>
+        <translation>Pokaż nazwy</translation>
+    </message>
+    <message>
         <source>TOOLS</source>
         <translation>NARZĘDZIA</translation>
     </message>
