@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-## [1.2.0] - 2026-11-08
+## [1.2.0] - 2026-11-09
 
 More item names carry their values, and three new game languages.
 
@@ -14,6 +14,7 @@ More item names carry their values, and three new game languages.
 - "Add size, class and grade to item names" now also adds the weight class to armour, e.g. "ADP Core (Heavy)", German "ADP Core (Schwer)", and the size to mining lasers, e.g. "(S1)". Data from the Star Citizen Wiki API. Their descriptions stay as they are, because the game's own descriptions already list their values.
 - Game languages French, Italian and Portuguese (Brazil) for LIVE and HOTFIX, from [StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization) (MIT). French is made by Cirque Lisoir and the French community ([traduction.circuspes.fr](https://traduction.circuspes.fr)), Italian by xGattoMattox, Portuguese (Brazil) by Nxzzin.
 - Settings → Translations: when an installed translation names its contributors at the top of its file, "Contributors (…)" under its credit lists them. The French translation names more than 300 people there.
+- Settings → Behaviour → "Start with the system": the launcher starts when you log in, straight into the tray when "Keep running in the system tray" is on. Works for the packages, the AppImage and the Flatpak. The option taken over from the old launcher now has an effect.
 
 ### Changed
 
