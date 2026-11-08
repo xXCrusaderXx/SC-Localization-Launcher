@@ -1,5 +1,8 @@
+#include <QDir>
+#include <QFile>
 #include <QProcess>
 #include <QSignalSpy>
+#include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
 #include <sstream>
@@ -147,6 +150,71 @@ class CommandLineTest : public QObject
         // The next run knows the installed version
         QCOMPARE(run({"--check"}), int(CommandLine::Ok));
         QCOMPARE(output, std::string("LIVE: Deutsch, up to date\n"));
+    }
+
+    void reportsAHandInstalledTranslation ()
+    {
+        // Placed by hand or by another tool: the version is unknown, so it counts as an update
+        QTemporaryDir game;
+        configure(game, "de");
+        auto folder = std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)";
+        std::filesystem::create_directories(folder);
+        std::ofstream(folder / "global.ini") << "test_key=Von Hand\n";
+
+        QCOMPARE(run({"--check"}), int(CommandLine::UpdatesAvailable));
+        QCOMPARE(output, std::string("LIVE: Deutsch, update available\n"));
+        QCOMPARE(readFile(folder / "global.ini"), std::string("test_key=Von Hand\n"));
+    }
+
+    void reportsAndRepairsChangedFiles ()
+    {
+        QTemporaryDir game;
+        configure(game, "de");
+        QCOMPARE(run({"--update"}), int(CommandLine::Ok));
+        // e.g. a game update overwrote the translation
+        auto ini = std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini";
+        std::ofstream(ini) << "test_key=Overwritten\n";
+
+        QCOMPARE(run({"--check"}), int(CommandLine::UpdatesAvailable));
+        QCOMPARE(output, std::string("LIVE: Deutsch, files changed, update to repair\n"));
+
+        QCOMPARE(run({"--update"}), int(CommandLine::Ok));
+        QCOMPARE(output, std::string("LIVE: Deutsch, up to date\n"));
+        QCOMPARE(QByteArray::fromStdString(readFile(ini)), TRANSLATION);
+    }
+
+    void showsTheCodeOfALanguageMissingFromTheCatalogue ()
+    {
+        // "nocredit" is dropped from the catalogue, the settings still name it
+        QTemporaryDir game;
+        configure(game, "nocredit");
+        QCOMPARE(run({"--check"}), int(CommandLine::UpdatesAvailable));
+        QCOMPARE(output, std::string("LIVE: nocredit, not installed\n"));
+    }
+
+    void failsWhenNothingCanBeUpdated ()
+    {
+        // The chosen language is not offered, so no update starts, and the channel is still not current
+        QTemporaryDir game;
+        configure(game, "nocredit");
+        QCOMPARE(run({"--update"}), int(CommandLine::Error));
+        QCOMPARE(output, std::string("Nothing to update.\nLIVE: nocredit, not installed\n"));
+        QVERIFY(!std::filesystem::exists(std::filesystem::path(game.path().toStdString()) / "data"));
+    }
+
+    void failsWhenTheLockCannotBeTakenOver ()
+    {
+        // The lock is held, but its holder no longer answers on its socket
+        QTemporaryDir game;
+        configure(game, "de");
+        SingleInstance window(instance);
+        QVERIFY(window.isPrimary());
+        QString runtime = QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+        if(runtime.isEmpty()) runtime = QDir::tempPath();
+        QVERIFY(QFile::remove(runtime + "/" + instance + ".socket"));
+
+        QCOMPARE(run({"--update"}), int(CommandLine::Error));
+        QVERIFY(!std::filesystem::exists(std::filesystem::path(game.path().toStdString()) / "data"));
     }
 
     void reportsAFailedUpdate ()

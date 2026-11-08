@@ -71,6 +71,81 @@ class DirectoryFinderTest : public QObject
         QCOMPARE(result->channelPaths.at("LIVE"), rsi / "StarCitizen/LIVE");
     }
 
+    void skipsAKnownPlaceWithoutTheLauncher ()
+    {
+        auto root = std::filesystem::path(home->path().toStdString());
+        // The LUG Helper folder exists, but its launcher was removed
+        std::filesystem::create_directories(root / "Games/star-citizen/drive_c/Program Files/Roberts Space Industries/RSI Launcher");
+        auto rsi = createInstallation(root / ".wine", {"LIVE"});
+
+        auto result = DirectoryFinder({}).findRsiInstallation(shuttingDown);
+        QVERIFY(result);
+        QCOMPARE(result->rsiLauncherPath, rsi / "RSI Launcher");
+        QCOMPARE(result->channelPaths.at("LIVE"), rsi / "StarCitizen/LIVE");
+    }
+
+    void readsOnlyYmlFilesFromTheLutrisConfigs ()
+    {
+        QTemporaryDir games;
+        auto root = std::filesystem::path(games.path().toStdString());
+        createInstallation(root / "not-a-game-config", {"LIVE"});
+        auto rsi = createInstallation(root / "star-citizen", {"LIVE"});
+
+        // .config is read before .local/share, so the text file would win if it were read
+        auto config = std::filesystem::path(home->path().toStdString()) / ".config/lutris/games";
+        std::filesystem::create_directories(config);
+        std::ofstream(config / "notes.txt") << "prefix: " << (root / "not-a-game-config").string() << "\n";
+        auto share = std::filesystem::path(home->path().toStdString()) / ".local/share/lutris/games";
+        std::filesystem::create_directories(share);
+        std::ofstream(share / "star-citizen.yml") << "game:\n  prefix: " << (root / "star-citizen").string() << "\n";
+
+        auto result = DirectoryFinder({}).findRsiInstallation(shuttingDown);
+        QVERIFY(result);
+        QCOMPARE(result->rsiLauncherPath, rsi / "RSI Launcher");
+    }
+
+    void readsTheLutrisPrefixLeniently ()
+    {
+        QTemporaryDir games;
+        auto root = std::filesystem::path(games.path().toStdString());
+        // A relative prefix would resolve against the working directory; it must be skipped, not looked up there
+        createInstallation(root / "relative/prefix", {"LIVE"});
+        auto rsi = createInstallation(root / "quoted prefix", {"PTU"});
+        const auto workingDirectory = std::filesystem::current_path();
+        std::filesystem::current_path(root);
+
+        // Windows line endings, blank and whitespace-only lines, tab indentation, a double-quoted value
+        auto config = std::filesystem::path(home->path().toStdString()) / ".config/lutris/games";
+        std::filesystem::create_directories(config);
+        std::ofstream(config / "star-citizen.yml") << "\r\n"
+                                                   << "game:\r\n"
+                                                   << "\tprefix: relative/prefix\r\n"
+                                                   << "\n"
+                                                   << "   \t\n"
+                                                   << "wine:\r\n"
+                                                   << "\tprefix:\t\"" << (root / "quoted prefix").string() << "\"  \r\n";
+
+        auto result = DirectoryFinder({}).findRsiInstallation(shuttingDown);
+        std::filesystem::current_path(workingDirectory);
+        QVERIFY(result);
+        QCOMPARE(result->rsiLauncherPath, rsi / "RSI Launcher");
+        QCOMPARE(result->channelPaths.size(), size_t(1));
+        QCOMPARE(result->channelPaths.at("PTU"), rsi / "StarCitizen/PTU");
+    }
+
+    void defaultMountRootsWithoutUser ()
+    {
+        // Without USER only /mnt and /media are mount roots; the installation in HOME is found before any of them matter
+        const QByteArray user = qgetenv("USER");
+        qunsetenv("USER");
+        auto rsi = createInstallation(std::filesystem::path(home->path().toStdString()) / "Games/star-citizen", {"LIVE"});
+
+        auto result = DirectoryFinder().findRsiInstallation(shuttingDown);
+        if(!user.isNull()) qputenv("USER", user);
+        QVERIFY(result);
+        QCOMPARE(result->rsiLauncherPath, rsi / "RSI Launcher");
+    }
+
     void findsAnInstallationOnAMountedDisk ()
     {
         QTemporaryDir mnt;
