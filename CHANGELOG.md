@@ -5,13 +5,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-## [1.2.0] - 2026-11-01
+## [1.2.0] - 2026-11-08
 
-More item names carry their values.
+More item names carry their values, and three new game languages.
 
 ### Added
 
 - "Add size, class and grade to item names" now also adds the weight class to armour, e.g. "ADP Core (Heavy)", German "ADP Core (Schwer)", and the size to mining lasers, e.g. "(S1)". Data from the Star Citizen Wiki API. Their descriptions stay as they are, because the game's own descriptions already list their values.
+- Game languages French, Italian and Portuguese (Brazil) for LIVE and HOTFIX, from [StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization) (MIT). French is made by Cirque Lisoir and the French community ([traduction.circuspes.fr](https://traduction.circuspes.fr)), Italian by xGattoMattox, Portuguese (Brazil) by Nxzzin.
+- Settings → Translations: when an installed translation names its contributors at the top of its file, "Contributors (…)" under its credit lists them. The French translation names more than 300 people there.
+
+### Changed
+
+- The list of game languages and the item mapping come from the latest release instead of the repository's main branch. A new language reaches the launcher with the next release, still without updating the launcher.
+- Exactly the newest 10 log files are kept.
+
+### Fixed
+
+- A channel list with a field of the wrong type no longer ends the launcher at start, and one invalid entry in the list of game languages no longer hides all the others.
 
 ## [1.1.1] - 2026-11-01
 
