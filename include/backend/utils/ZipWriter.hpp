@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include "backend/utils/platform.hpp"
+
 // Writes a ZIP archive of text files without compression ("stored"), enough for a problem report that every
 // unzip tool and file manager opens. Names are UTF-8, sizes below 4 GB.
 class ZipWriter
@@ -60,8 +62,7 @@ class ZipWriter
         : out(path, std::ios::binary | std::ios::trunc)
     {
         std::time_t now = std::time(nullptr);
-        std::tm local{};
-        localtime_r(&now, &local);
+        std::tm local = Platform::localTime(now);
         dosTime = static_cast<uint16_t>(local.tm_hour << 11 | local.tm_min << 5 | local.tm_sec / 2);
         dosDate = static_cast<uint16_t>((local.tm_year - 80) << 9 | (local.tm_mon + 1) << 5 | local.tm_mday);
     }

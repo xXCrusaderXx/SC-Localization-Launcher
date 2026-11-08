@@ -16,6 +16,7 @@
 #include "backend/utils/ZipReader.hpp"
 #include "backend/utils/ZipWriter.hpp"
 #include "backend/utils/paths.hpp"
+#include "backend/utils/platform.hpp"
 #include "logging/logging.h"
 #include "protocol/State.hpp"
 
@@ -54,8 +55,7 @@ class ProfileBackup
         auto now = std::chrono::system_clock::now();
         auto seconds = std::chrono::system_clock::to_time_t(now);
         auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count() % 1000;
-        std::tm local{};
-        localtime_r(&seconds, &local);
+        std::tm local = Platform::localTime(seconds);
         std::ostringstream text;
         text << std::put_time(&local, "%Y%m%d-%H%M%S") << "-" << std::setw(3) << std::setfill('0') << millis;
         return text.str();

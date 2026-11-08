@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "backend/utils/platform.hpp"
 #include "logging/logging.h"
 #include "protocol/State.hpp"
 
@@ -52,7 +53,7 @@ class GameStatistics
             return 0;
         tm.tm_year -= 1900;
         tm.tm_mon -= 1;
-        return timegm(&tm);
+        return Platform::fromUtc(tm);
     }
 
     // "AEGS_Sabre_7465010201" -> "AEGS_Sabre"; entity names end with an instance number

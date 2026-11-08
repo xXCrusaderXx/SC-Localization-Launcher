@@ -129,3 +129,35 @@ jobs:
         if: hashFiles('qml/*.qml') != ''
         continue-on-error: true
         run: /usr/lib/qt6/bin/qmllint -I build qml/*.qml
+
+  # Windows support is being built up (#176): for now the launcher only has to compile and start there.
+  # MSYS2 UCRT64 ships Qt, curl, libsodium and spdlog and builds with the same GCC as Linux.
+  build-windows:
+    name: build (windows)
+    runs-on: windows-2025
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Install dependencies
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          pacboy: >-
+            gcc:p cmake:p ninja:p pkgconf:p curl:p libsodium:p nlohmann-json:p spdlog:p
+            qt6-base:p qt6-declarative:p qt6-tools:p
+
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+      # The command line runs without a window, so it shows that the program and its libraries load
+      - name: Start
+        run: ./build/sc-localization-launcher.exe --help
