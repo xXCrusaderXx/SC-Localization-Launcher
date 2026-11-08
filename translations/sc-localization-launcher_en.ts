@@ -917,6 +917,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Start with the system</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Starts in the tray when you log in</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Opens the launcher when you log in</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>INSTALLATIONS</source>
         <translation type="unfinished"></translation>
     </message>

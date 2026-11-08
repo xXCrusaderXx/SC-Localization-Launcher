@@ -270,6 +270,15 @@ Item {
                         checked: panel.options.closeToTray === true
                         onSwitched: on => backend.setOption("closeToTray", on)
                     }
+
+                    Toggle {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        text: qsTr("Start with the system")
+                        description: panel.trayAvailable && panel.options.closeToTray === true ? qsTr("Starts in the tray when you log in") : qsTr("Opens the launcher when you log in")
+                        checked: panel.options.startWithSystem === true
+                        onSwitched: on => backend.setOption("startWithSystem", on)
+                    }
                 }
 
                 RowLayout {

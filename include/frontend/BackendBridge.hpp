@@ -35,6 +35,8 @@ class BackendBridge : public QObject
     Q_PROPERTY(QString userName READ userName CONSTANT)
     Q_PROPERTY(QVariantList interfaceLanguages READ interfaceLanguages CONSTANT)
     Q_PROPERTY(bool systemDark READ systemDark NOTIFY systemDarkChanged)
+    // Started by the autostart entry at login; the window then may stay in the tray
+    Q_PROPERTY(bool startedAtLogin READ startedAtLogin CONSTANT)
 
    private:
     LoggerFramework::LogEx lg;
@@ -269,6 +271,7 @@ class BackendBridge : public QObject
     // Where the log files are written; shown in the settings and opened from error messages
     QString logFolder () const { return QString::fromStdString((PATHS::LOGPATH_USER / "logs").string()); }
     static QString homeFolder () { return QDir::homePath(); }
+    static bool startedAtLogin () { return QCoreApplication::arguments().contains(QString::fromStdString(Autostart::ARGUMENT)); }
     static QString userName () { return qEnvironmentVariable("USER"); }
     Q_INVOKABLE void openLogFolder () const { QDesktopServices::openUrl(QUrl::fromLocalFile(logFolder())); }
 

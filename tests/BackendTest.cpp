@@ -327,6 +327,74 @@ class BackendTest : public QObject
         QVERIFY(state.update == UpdateStatus::Idle);
     }
 
+    void quotesTheProgramForTheAutostartEntry_data ()
+    {
+        QTest::addColumn<QString>("program");
+        QTest::addColumn<QString>("exec");
+        QTest::newRow("plain") << "/usr/bin/sc-localization-launcher" << "\"/usr/bin/sc-localization-launcher\"";
+        QTest::newRow("space") << "/home/a b/SC.AppImage" << "\"/home/a b/SC.AppImage\"";
+        QTest::newRow("reserved characters") << "/x/\"$`" << "\"/x/\\\\\"\\\\$\\\\`\"";
+        QTest::newRow("backslash") << "/x\\y" << "\"/x\\\\\\\\y\"";
+        QTest::newRow("percent") << "/x/100%" << "\"/x/100%%\"";
+    }
+
+    void quotesTheProgramForTheAutostartEntry ()
+    {
+        QFETCH(QString, program);
+        QFETCH(QString, exec);
+        QCOMPARE(QString::fromStdString(Autostart::quoted(program.toStdString())), exec);
+    }
+
+    void startsWithTheSystemWhenSwitchedOn ()
+    {
+        auto entry = Autostart::entryFile(Autostart::entryFolder());
+        std::filesystem::remove(entry);
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetOption{"startWithSystem", true});
+        QVERIFY(waitForPreviousCommands());
+        QVERIFY(latest().options.startWithSystem);
+        auto program = *Platform::executableFolder() / "sc-localization-launcher";
+        QCOMPARE(readFile(entry), Autostart::entry(Autostart::quoted(program.string())));
+        QVERIFY(readFile(entry).find("Exec=\"" + program.string() + "\" --autostart\n") != std::string::npos);
+
+        backEnd->execute(Protocol::SetOption{"startWithSystem", false});
+        QVERIFY(waitForPreviousCommands());
+        QVERIFY(!std::filesystem::exists(entry));
+    }
+
+    void autostartEntryFollowsAMovedAppImage ()
+    {
+        auto entry = Autostart::entryFile(Autostart::entryFolder());
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetOption{"startWithSystem", true});
+        QVERIFY(waitForPreviousCommands());
+
+        // Next start from another place: the window rewrites the entry
+        QTemporaryDir dir;
+        auto appImage = fakeAppImage(dir);
+        QVERIFY(restart());
+        backEnd->execute(Protocol::StartBackgroundChecks{});
+        QVERIFY(waitForPreviousCommands());
+        QVERIFY(readFile(entry).find("Exec=\"" + appImage.string() + "\" --autostart\n") != std::string::npos);
+        qunsetenv("APPIMAGE");
+        backEnd->execute(Protocol::SetOption{"startWithSystem", false});
+        QVERIFY(waitForPreviousCommands());
+    }
+
+    void reportsWhenTheAutostartEntryCannotBeWritten ()
+    {
+        QTemporaryDir dir;
+        auto folder = std::filesystem::path(dir.path().toStdString()) / "autostart";
+        // A file where the folder should be
+        std::ofstream(folder) << "in the way";
+        LoggerFramework::LogEx lg("AutostartTest");
+        QVERIFY(!Autostart::apply(true, folder, std::string("\"/x\""), lg));
+        QVERIFY(!Autostart::apply(true, std::filesystem::path(dir.path().toStdString()) / "free", std::nullopt, lg));
+        QVERIFY(Autostart::apply(true, std::filesystem::path(dir.path().toStdString()) / "free", std::string("\"/x\""), lg));
+        QVERIFY(Autostart::apply(false, std::filesystem::path(dir.path().toStdString()) / "free", std::nullopt, lg));
+        QVERIFY(!std::filesystem::exists(std::filesystem::path(dir.path().toStdString()) / "free" / (Autostart::APP_ID + ".desktop")));
+    }
+
     void migratesSettingsOfTheFormerLauncher ()
     {
         writeSettingsFile(legacySettings("/games/LIVE", "deVoll", true), PATHS::JSON_FILES::SETTINGS_LEGACY);

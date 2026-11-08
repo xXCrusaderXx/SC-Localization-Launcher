@@ -909,6 +909,18 @@
         <translation>Beim Schließen des Fensters bleibt der Launcher im Infobereich und prüft weiter</translation>
     </message>
     <message>
+        <source>Start with the system</source>
+        <translation>Mit dem System starten</translation>
+    </message>
+    <message>
+        <source>Starts in the tray when you log in</source>
+        <translation>Startet beim Anmelden im Infobereich</translation>
+    </message>
+    <message>
+        <source>Opens the launcher when you log in</source>
+        <translation>Öffnet den Launcher beim Anmelden</translation>
+    </message>
+    <message>
         <source>Contributors (%1)</source>
         <translation>Mitwirkende (%1)</translation>
     </message>

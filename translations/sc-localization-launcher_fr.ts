@@ -917,6 +917,18 @@
         <translation>Fermer la fenêtre laisse le launcher dans la zone de notification, où il continue de vérifier</translation>
     </message>
     <message>
+        <source>Start with the system</source>
+        <translation>Démarrer avec le système</translation>
+    </message>
+    <message>
+        <source>Starts in the tray when you log in</source>
+        <translation>Démarre dans la zone de notification à l&apos;ouverture de session</translation>
+    </message>
+    <message>
+        <source>Opens the launcher when you log in</source>
+        <translation>Ouvre le launcher à l&apos;ouverture de session</translation>
+    </message>
+    <message>
         <source>INSTALLATIONS</source>
         <translation>INSTALLATIONS</translation>
     </message>

@@ -918,6 +918,18 @@
         <translation>Zamknięcie okna zostawia launcher w zasobniku, więc nadal sprawdza aktualizacje</translation>
     </message>
     <message>
+        <source>Start with the system</source>
+        <translation>Uruchamiaj z systemem</translation>
+    </message>
+    <message>
+        <source>Starts in the tray when you log in</source>
+        <translation>Uruchamia się w zasobniku systemowym po zalogowaniu</translation>
+    </message>
+    <message>
+        <source>Opens the launcher when you log in</source>
+        <translation>Otwiera launcher po zalogowaniu</translation>
+    </message>
+    <message>
         <source>INSTALLATIONS</source>
         <translation>INSTALACJE</translation>
     </message>

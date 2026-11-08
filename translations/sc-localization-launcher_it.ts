@@ -917,6 +917,18 @@
         <translation>Chiudendo la finestra il launcher resta nell&apos;area di notifica e continua a controllare</translation>
     </message>
     <message>
+        <source>Start with the system</source>
+        <translation>Avvia con il sistema</translation>
+    </message>
+    <message>
+        <source>Starts in the tray when you log in</source>
+        <translation>Si avvia nell&apos;area di notifica all&apos;accesso</translation>
+    </message>
+    <message>
+        <source>Opens the launcher when you log in</source>
+        <translation>Apre il launcher all&apos;accesso</translation>
+    </message>
+    <message>
         <source>INSTALLATIONS</source>
         <translation>INSTALLAZIONI</translation>
     </message>

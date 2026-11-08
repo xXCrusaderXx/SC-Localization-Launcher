@@ -51,6 +51,8 @@ ApplicationWindow {
     readonly property bool closesToTray: tray.available && appState.options.closeToTray === true
     // Release notes of an update that was not shown yet
     readonly property bool hasWhatsNew: ((appState.whatsNew || {}).notes || "") !== ""
+    // Started at login: set once the first state has decided between window and tray
+    property bool loginShown: false
 
     // The setting "Appearance", or the desktop's colour scheme
     Binding {
@@ -104,6 +106,17 @@ ApplicationWindow {
         // For the dashboard; reloaded by the backend after every game start
         backend.loadStatistics();
     }
+    // The first state carries the settings
+    Connections {
+        target: backend
+        enabled: backend.startedAtLogin && !window.loginShown
+        function onStateChanged() {
+            window.loginShown = true;
+            if (!window.closesToTray)
+                window.showWindow();
+        }
+    }
+
     onClosing: close => {
         if (closesToTray) {
             close.accepted = false;
@@ -129,7 +142,8 @@ ApplicationWindow {
     maximumWidth: width
     minimumHeight: height
     maximumHeight: height
-    visible: true
+    // At login the window waits for the settings: with "Keep running in the system tray" it stays in the tray
+    visible: !backend.startedAtLogin
     flags: Qt.Window | Qt.FramelessWindowHint
     title: "SC Localization Launcher"
     color: Theme.background
