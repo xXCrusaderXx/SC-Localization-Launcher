@@ -8,7 +8,7 @@ A Linux launcher that installs and updates **community translations for Star Cit
 
 Available today: German (standard, complete and Swiss German), French, Italian and Portuguese (Brazil). More languages are being added. Each language is listed in [`languages.json`](languages.json); adding one needs no programming, see [Adding a game language](CONTRIBUTING.md#adding-a-game-language).
 
-What comes next — Windows support, notifications, starting with the system, blueprints and more — is in the [roadmap](ROADMAP.md). It is open for proposals.
+What comes next — Windows support, notifications, blueprints and more — is in the [roadmap](ROADMAP.md). It is open for proposals.
 
 New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)) explains installation, the first start and common problems.
 
@@ -27,6 +27,7 @@ New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)
 - Checks and updates from the command line, e.g. from a `systemd --user` timer, without opening a window.
 - Checks for new translation versions every hour while it is open. With "Update translations automatically" it installs them, and waits until Star Citizen has been closed if the game runs.
 - Shows the overall status as a coloured light in the system tray, with "Update translations" and "Open" in its menu. With "Keep running in the system tray", closing the window leaves the launcher running there. Desktops without a tray (GNOME without the AppIndicator extension) simply don't show it.
+- Starts with the system if you want: with *Start with the system* it opens at login, straight into the tray when *Keep running in the system tray* is on. This works for the packages, the AppImage and the Flatpak.
 - Clears shader caches (Settings → Tools): the game's own cache in the Wine prefix, DXVK/VKD3D, and the Mesa and NVIDIA caches, with the size and the result per entry. Graphics settings are kept, and nothing is deleted while Star Citizen runs.
 - Checks the installation without changing anything (Settings → Help → "Check installation …"): Wine prefix, folders, write permissions, `global.ini` and `user.cfg` per channel, free disk space. "Save report (ZIP)" puts the results, the settings and the launcher's logs into your Downloads folder for a bug report, with your home folder and user name replaced; `Game.log` is not included.
 - Backs up keybindings, profile settings, saved characters and `user.cfg` per channel (Settings → Tools → "Backups …") and restores them after asking once; a restore first backs up what it replaces, and nothing is restored while Star Citizen runs. The newest 10 backups per channel are kept in `~/.local/share/sc-localization-launcher/backups`.
@@ -37,7 +38,7 @@ New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)
 - Streamer mode hides your user name and home folder in the paths the launcher shows.
 - The interface is available in English, German, French, Spanish, Italian, Polish, Dutch and Portuguese, following the system language or the choice in the settings, with a light or dark theme.
 
-Planned, not available yet: Windows, desktop notifications, starting with the system, backups of the launcher's settings; see the [roadmap](ROADMAP.md).
+Planned, not available yet: Windows, desktop notifications, backups of the launcher's settings; see the [roadmap](ROADMAP.md).
 
 The translation texts are maintained by community projects such as [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI). Report wrong or missing texts there, not here.
 

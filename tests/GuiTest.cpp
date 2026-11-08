@@ -306,6 +306,30 @@ class GuiTest : public QObject
         QTRY_VERIFY_WITH_TIMEOUT(!panel->property("visible").toBool(), 10000);
     }
 
+    void startsWithTheSystemFromTheSettings ()
+    {
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        QVERIFY(click("⚙"));
+        QTRY_VERIFY(panel->property("open").toBool());
+        QQuickItem* toggle = nullptr;
+        QTRY_VERIFY((toggle = findButton("Start with the system")));
+        // The offscreen platform has no tray, so the window opens at login
+        QCOMPARE(toggle->property("description").toString(), QString("Opens the launcher when you log in"));
+        auto entry = Autostart::entryFile(Autostart::entryFolder());
+
+        // Below the visible part of the panel, so no mouse click reaches it
+        QVERIFY(QMetaObject::invokeMethod(toggle, "clicked"));
+        QTRY_VERIFY(toggle->property("checked").toBool());
+        QTRY_VERIFY(std::filesystem::exists(entry));
+        QVERIFY(readFile(entry).find(" --autostart\n") != std::string::npos);
+        QVERIFY(QMetaObject::invokeMethod(toggle, "clicked"));
+        QTRY_VERIFY(!toggle->property("checked").toBool());
+        QTRY_VERIFY(!std::filesystem::exists(entry));
+
+        panel->setProperty("open", false);
+        QTRY_VERIFY_WITH_TIMEOUT(!panel->property("visible").toBool(), 10000);
+    }
+
     void runUpdate ()
     {
         QVERIFY(!launchGameOption());

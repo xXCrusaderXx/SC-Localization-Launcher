@@ -16,6 +16,7 @@
 #include "jsonParser/LanguageCatalogParser.hpp"
 #include "jsonParser/SettingsJsonParser.hpp"
 #include "logging/logging.h"
+#include "managers/Autostart.hpp"
 #include "managers/CacheCleaner.hpp"
 #include "managers/CompanionPrograms.hpp"
 #include "managers/Diagnostics.hpp"
@@ -663,6 +664,7 @@ class BackEnd
         }
         options[command.option] = command.value;
         data.options = options.get<Protocol::Options>();
+        if(command.option == "startWithSystem") Autostart::apply(command.value, lg);
         // Switched on: what the last check found is installed right away
         if((command.option == "installNewTranslations" && command.value) || command.option == "itemNameDetails" ||
            command.option == "itemDescriptionStats")
@@ -715,6 +717,8 @@ class BackEnd
     {
         if(data.backgroundChecks) return;
         data.backgroundChecks = true;
+        // Only the window starts at login; written again so the entry follows a moved AppImage
+        if(data.options.startWithSystem) Autostart::apply(true, lg);
         // The first check runs when the languages have loaded; an earlier one has found something to install
         if(!data.checking) updateInBackground();
         startJob(checkTimerJob,

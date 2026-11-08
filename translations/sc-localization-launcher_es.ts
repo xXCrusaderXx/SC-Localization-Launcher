@@ -917,6 +917,18 @@
         <translation>Al cerrar la ventana, el launcher sigue en la bandeja y continúa comprobando</translation>
     </message>
     <message>
+        <source>Start with the system</source>
+        <translation>Iniciar con el sistema</translation>
+    </message>
+    <message>
+        <source>Starts in the tray when you log in</source>
+        <translation>Se inicia en la bandeja del sistema al iniciar sesión</translation>
+    </message>
+    <message>
+        <source>Opens the launcher when you log in</source>
+        <translation>Abre el launcher al iniciar sesión</translation>
+    </message>
+    <message>
         <source>INSTALLATIONS</source>
         <translation>INSTALACIONES</translation>
     </message>

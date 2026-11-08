@@ -917,6 +917,18 @@
         <translation>Fechar a janela mantém o launcher na bandeja, para que ele continue verificando</translation>
     </message>
     <message>
+        <source>Start with the system</source>
+        <translation>Iniciar com o sistema</translation>
+    </message>
+    <message>
+        <source>Starts in the tray when you log in</source>
+        <translation>Inicia na bandeja do sistema ao entrar na sessão</translation>
+    </message>
+    <message>
+        <source>Opens the launcher when you log in</source>
+        <translation>Abre o launcher ao entrar na sessão</translation>
+    </message>
+    <message>
         <source>INSTALLATIONS</source>
         <translation>INSTALAÇÕES</translation>
     </message>

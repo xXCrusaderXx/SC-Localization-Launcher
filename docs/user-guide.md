@@ -65,6 +65,7 @@ The **dashboard** below the rows shows tiles such as play time, last played, fav
 
 - **Translations**: while the launcher is open, it checks every hour. With *Update translations automatically* it installs new versions by itself, and waits for the game to close if it runs.
 - **System tray**: the tray icon shows the same coloured dot; its menu has *Update translations*, *Open* and *Quit*. With *Keep running in the system tray*, closing the window leaves the launcher running there. GNOME needs the AppIndicator extension for a tray.
+- **Start with the system**: opens the launcher when you log in; with *Keep running in the system tray* it starts in the tray instead of opening the window. If you move the AppImage, start it once from the new place so the entry follows it.
 - **Without a window**: `sc-localization-launcher --update` updates from a script or a `systemd --user` timer, see [Command line](../README.md#command-line).
 - **The launcher itself**: *Check for launcher updates on start*, or the ⇩ button in the title bar. Every release is signed and checked before it is installed.
 

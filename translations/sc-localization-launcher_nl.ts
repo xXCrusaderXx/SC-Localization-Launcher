@@ -917,6 +917,18 @@
         <translation>Bij het sluiten van het venster blijft de launcher in het systeemvak en blijft controleren</translation>
     </message>
     <message>
+        <source>Start with the system</source>
+        <translation>Met het systeem starten</translation>
+    </message>
+    <message>
+        <source>Starts in the tray when you log in</source>
+        <translation>Start bij het aanmelden in het systeemvak</translation>
+    </message>
+    <message>
+        <source>Opens the launcher when you log in</source>
+        <translation>Opent de launcher bij het aanmelden</translation>
+    </message>
+    <message>
         <source>INSTALLATIONS</source>
         <translation>INSTALLATIES</translation>
     </message>
