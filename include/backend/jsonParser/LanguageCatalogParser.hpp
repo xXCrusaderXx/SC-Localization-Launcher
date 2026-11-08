@@ -114,14 +114,26 @@ class LanguageCatalogParser
     {
         if(auto json = loadJson(languagesUrl()))
         {
-            try
+            const auto entries = json->is_object() ? json->value("languages", nlohmann::json::array()) : nlohmann::json();
+            if(entries.is_array())
             {
-                return json->get<Database::LanguageCatalog>();
+                // Entries are read one by one, so one invalid entry does not hide the other languages
+                Database::LanguageCatalog catalog;
+                for(size_t i = 0; i < entries.size(); ++i)
+                {
+                    try
+                    {
+                        catalog.languages.push_back(entries[i].get<Database::LanguageDefinition>());
+                    }
+                    catch(const std::exception& e)
+                    {
+                        std::string code = entries[i].is_object() && entries[i].contains("code") ? entries[i].at("code").dump() : "?";
+                        LOG_ERROR(lg) << "loadCatalog() - language " << i << " (code " << code << ") ignored: " << e.what();
+                    }
+                }
+                return catalog;
             }
-            catch(const std::exception& e)
-            {
-                LOG_ERROR(lg) << "loadCatalog() - unexpected languages.json format: " << e.what();
-            }
+            LOG_ERROR(lg) << "loadCatalog() - unexpected languages.json format";
         }
         LOG_DEBUG(lg) << "loadCatalog() - using the built-in languages.json";
         return nlohmann::json::parse(BUNDLED_LANGUAGES_JSON).get<Database::LanguageCatalog>();
@@ -155,7 +167,13 @@ class LanguageCatalogParser
         auto add = [&] (const nlohmann::json& channel, const std::string& fallbackName)
         {
             if(!channel.is_object()) return;
-            std::string name = normalizeChannelName(channel.value("description", fallbackName));
+            auto description = channel.find("description");
+            if(description != channel.end() && !description->is_string())
+            {
+                LOG_ERROR(lg) << "readChannelList() - channel ignored, its description is not text: " << channel.dump();
+                return;
+            }
+            std::string name = normalizeChannelName(description != channel.end() ? description->get<std::string>() : fallbackName);
             if(!name.empty() && !channels.contains(name)) channels[name] = channel;
         };
 
@@ -245,9 +263,17 @@ class LanguageCatalogParser
                 const std::string& server = definition.source.server;
                 for(const auto& [channel, info] : channelLists.at(url))
                 {
-                    if(info.value("active", 0) == 0) continue;
-                    auto urls = allowedUrls({info.value(server, ""), info.value(server + "_fallback", "")});
-                    if(!urls.empty()) language.urls[channel] = urls;
+                    // The channel list comes from another project: a field of the wrong type drops only this channel
+                    try
+                    {
+                        if(info.value("active", 0) == 0) continue;
+                        auto urls = allowedUrls({info.value(server, ""), info.value(server + "_fallback", "")});
+                        if(!urls.empty()) language.urls[channel] = urls;
+                    }
+                    catch(const nlohmann::json::exception& e)
+                    {
+                        LOG_ERROR(lg) << "getLanguages() - channel '" << channel << "' of " << url << " ignored: " << e.what();
+                    }
                 }
             }
             else
