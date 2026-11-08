@@ -994,6 +994,204 @@ class BackendTest : public QObject
         QVERIFY(!update.canInstall);
     }
 
+    void reportsProblemsWithGitHub_data ()
+    {
+        QTest::addColumn<QByteArray>("failure");
+        QTest::addColumn<QByteArray>("answer");
+        QTest::addColumn<std::string>("error");
+        QTest::newRow("forbidden") << QByteArray("403 Forbidden") << QByteArray() << std::string("rate limit");
+        QTest::newRow("too many requests") << QByteArray("429 Too Many Requests") << QByteArray() << std::string("rate limit");
+        QTest::newRow("server error") << QByteArray("500 Internal Server Error") << QByteArray() << std::string("HTTP 500");
+        QTest::newRow("no JSON") << QByteArray() << QByteArray("<html>") << std::string("unexpected answer");
+        QTest::newRow("no object") << QByteArray() << QByteArray("[]") << std::string("unexpected answer");
+        QTest::newRow("tag is no text") << QByteArray() << QByteArray("{\"tag_name\": 9}") << std::string("unexpected answer");
+        QTest::newRow("unreachable") << QByteArray() << QByteArray() << std::string("network error");
+    }
+
+    void reportsProblemsWithGitHub ()
+    {
+        QFETCH(QByteArray, failure);
+        QFETCH(QByteArray, answer);
+        QFETCH(std::string, error);
+        if(!failure.isEmpty())
+            server.failNext("/releases/latest", 1, failure);
+        else if(!answer.isEmpty())
+            server.setFile("/releases/latest", answer);
+        else
+            // Nothing listens on port 1
+            qputenv("SC_RELEASES_URL", "http://127.0.0.1:1/releases/latest");
+        QVERIFY(start());
+
+        auto update = checkAndInstall();
+        QCOMPARE(jsonText(update.status), jsonText(Protocol::SelfUpdateStatus::Error));
+        QCOMPARE(update.error, error);
+        QVERIFY(!update.canInstall);
+    }
+
+    void offersNoInstallFromOtherServers ()
+    {
+        QTemporaryDir dir;
+        fakeAppImage(dir);
+        qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
+        publishAppImageRelease(server, releaseKey, "new version");
+        nlohmann::json release = {{"tag_name", "v9.9.9"},
+                                  {"assets",
+                                   {{{"name", APPIMAGE_ASSET}, {"browser_download_url", "https://example.org/package"}},
+                                    {{"name", "SHA256SUMS"}, {"browser_download_url", "https://example.org/SHA256SUMS"}},
+                                    {{"name", "SHA256SUMS.minisig"}, {"browser_download_url", "https://example.org/SHA256SUMS.minisig"}}}}};
+        server.setFile("/releases/latest", QByteArray::fromStdString(release.dump()));
+        QVERIFY(start());
+
+        auto update = checkAndInstall();
+        QCOMPARE(jsonText(update.status), jsonText(Protocol::SelfUpdateStatus::Available));
+        QVERIFY(!update.canInstall);
+    }
+
+    void keepsTheAppImageWhenTheChecksumsCannotBeDownloaded ()
+    {
+        QTemporaryDir dir;
+        auto appImage = fakeAppImage(dir);
+        qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
+        publishAppImageRelease(server, releaseKey, "new version");
+        server.failNext("/download/SHA256SUMS", 1, "404 Not Found");
+        QVERIFY(start());
+
+        auto update = checkAndInstall();
+        QCOMPARE(jsonText(update.status), jsonText(Protocol::SelfUpdateStatus::Error));
+        QCOMPARE(update.error, std::string("download failed"));
+        QCOMPARE(readFile(appImage), std::string("old version"));
+    }
+
+    void keepsTheAppImageInAReadOnlyFolder ()
+    {
+        if(geteuid() == 0) QSKIP("root can write to read-only folders");
+        QTemporaryDir dir;
+        auto appImage = fakeAppImage(dir);
+        qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
+        publishAppImageRelease(server, releaseKey, "new version");
+        QVERIFY(start());
+        auto folder = appImage.parent_path();
+        std::filesystem::permissions(folder, std::filesystem::perms::owner_read | std::filesystem::perms::owner_exec);
+
+        auto update = checkAndInstall();
+        std::filesystem::permissions(folder, std::filesystem::perms::owner_all);
+        QCOMPARE(jsonText(update.status), jsonText(Protocol::SelfUpdateStatus::Error));
+        QCOMPARE(update.error, std::string("no write permission for the AppImage folder"));
+        QCOMPARE(readFile(appImage), std::string("old version"));
+        QVERIFY(!std::filesystem::exists(appImage.string() + ".new"));
+    }
+
+    void downloadsTheWholeAppImageWhenTheDeltaCannotBeUsed_data ()
+    {
+        QTest::addColumn<std::string>("zsync");
+        QTest::addColumn<bool>("removeAppImage");
+        QTest::newRow("unreadable zsync file") << std::string("not a zsync file") << false;
+        QTest::newRow("installed AppImage gone") << makeZsync(appImageVersions().second) << true;
+    }
+
+    void downloadsTheWholeAppImageWhenTheDeltaCannotBeUsed ()
+    {
+        QFETCH(std::string, zsync);
+        QFETCH(bool, removeAppImage);
+        QTemporaryDir dir;
+        auto appImage = fakeAppImage(dir);
+        auto [oldVersion, newVersion] = appImageVersions();
+        std::ofstream(appImage, std::ios::binary) << oldVersion;
+        qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
+        publishAppImageRelease(server, releaseKey, newVersion, {}, {}, zsync);
+        int fullDownloads = server.requestCount("GET /download/package 200");
+        QVERIFY(start());
+        if(removeAppImage) std::filesystem::remove(appImage);
+
+        auto update = checkAndInstall();
+        QCOMPARE(jsonText(update.status), jsonText(Protocol::SelfUpdateStatus::Installed));
+        QVERIFY(readFile(appImage) == newVersion);
+        QCOMPARE(server.requestCount("GET /download/package 200"), fullDownloads + 1);
+    }
+
+    // A folder that is the whole PATH: only the given package manager claims the launcher
+    static void fakePackageManager (const QTemporaryDir& bin, const std::string& program)
+    {
+        auto path = std::filesystem::path(bin.path().toStdString()) / program;
+        std::ofstream(path) << "#!/bin/sh\nexit 0\n";
+        std::filesystem::permissions(path, std::filesystem::perms::owner_all);
+        qputenv("PATH", bin.path().toUtf8());
+    }
+
+    void detectsTheInstalledPackage_data ()
+    {
+        QTest::addColumn<std::string>("program");
+        QTest::addColumn<std::string>("type");
+        QTest::newRow("dpkg") << std::string("dpkg") << std::string("deb");
+        QTest::newRow("rpm") << std::string("rpm") << std::string("rpm");
+        QTest::newRow("pacman") << std::string("pacman") << std::string("arch");
+    }
+
+    void detectsTheInstalledPackage ()
+    {
+        QFETCH(std::string, program);
+        QFETCH(std::string, type);
+        QTemporaryDir bin;
+        fakePackageManager(bin, program);
+        QVERIFY(start());
+
+        auto update = checkAndInstall();
+        QCOMPARE(update.installType, type);
+        // The release only offers an AppImage
+        QVERIFY(!update.canInstall);
+    }
+
+    void installsThePackageThroughPkexec_data ()
+    {
+        QTest::addColumn<std::string>("pkexec");
+        QTest::addColumn<std::string>("error");
+        QTest::newRow("installed") << std::string("exit 0\n") << std::string();
+        QTest::newRow("password dialog closed") << std::string("exit 126\n") << std::string("cancelled");
+        QTest::newRow("not authorized") << std::string("exit 127\n") << std::string("cancelled");
+        QTest::newRow("package manager failed") << std::string("echo 'conflicting files' >&2\nexit 1\n") << std::string("the package manager failed");
+        QTest::newRow("package manager crashed") << std::string("kill -SEGV $$\n") << std::string("the package manager crashed");
+        QTest::newRow("no pkexec") << std::string() << std::string("pkexec is not available");
+    }
+
+    void installsThePackageThroughPkexec ()
+    {
+        QFETCH(std::string, pkexec);
+        QFETCH(std::string, error);
+        const std::string asset = "sc-localization-launcher-9.9.9-arch-x86_64.pkg.tar.zst";
+        QTemporaryDir bin;
+        auto binPath = std::filesystem::path(bin.path().toStdString());
+        fakePackageManager(bin, "pacman");
+        if(!pkexec.empty())
+        {
+            // Records the command and the package it was given
+            std::ofstream(binPath / "pkexec") << "#!/bin/sh\necho \"$*\" > '" << (binPath / "args").string() << "'\n/bin/cat \"$4\" > '"
+                                              << (binPath / "package").string() << "'\n"
+                                              << pkexec;
+            std::filesystem::permissions(binPath / "pkexec", std::filesystem::perms::owner_all);
+        }
+        qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
+        std::string sums = sha256Hex("new package") + "  " + asset + "\n";
+        publishAppImageRelease(server, releaseKey, "new package", sums);
+        nlohmann::json release = {{"tag_name", "v9.9.9"},
+                                  {"assets",
+                                   {{{"name", asset}, {"browser_download_url", "{base}/download/package"}},
+                                    {{"name", "SHA256SUMS"}, {"browser_download_url", "{base}/download/SHA256SUMS"}},
+                                    {{"name", "SHA256SUMS.minisig"}, {"browser_download_url", "{base}/download/SHA256SUMS.minisig"}}}}};
+        server.setFile("/releases/latest", QByteArray::fromStdString(release.dump()));
+        QVERIFY(start());
+
+        auto update = checkAndInstall();
+        QCOMPARE(update.installType, std::string("arch"));
+        QCOMPARE(update.error, error);
+        QCOMPARE(jsonText(update.status), jsonText(error.empty() ? Protocol::SelfUpdateStatus::Installed : Protocol::SelfUpdateStatus::Error));
+        if(pkexec.empty()) return;
+        auto package = PATHS::CACHE_USER / "launcher-update" / asset;
+        QCOMPARE(readFile(binPath / "args"), "pacman -U --noconfirm " + package.string() + "\n");
+        QCOMPARE(readFile(binPath / "package"), std::string("new package"));
+        // The download is removed afterwards
+        QVERIFY(!std::filesystem::exists(package));
+    }
+
     void md4MatchesTheReference ()
     {
         auto md4 = [] (const std::string& text)
