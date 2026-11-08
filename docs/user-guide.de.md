@@ -65,6 +65,7 @@ Das **Dashboard** unter den Zeilen zeigt Kacheln wie Spielzeit, zuletzt gespielt
 
 - **Übersetzungen**: Solange der Launcher offen ist, prüft er stündlich. Mit *Übersetzungen automatisch aktualisieren* installiert er neue Versionen selbst und wartet, falls das Spiel läuft, bis es beendet ist.
 - **Infobereich**: Das Symbol zeigt denselben farbigen Punkt; sein Menü hat *Übersetzungen aktualisieren*, *Öffnen* und *Beenden*. Mit *Im Infobereich weiterlaufen* läuft der Launcher dort weiter, wenn du das Fenster schließt. GNOME braucht dafür die AppIndicator-Erweiterung.
+- **Mit dem System starten**: öffnet den Launcher beim Anmelden; mit *Im Infobereich weiterlaufen* startet er im Infobereich, ohne das Fenster zu öffnen. Verschiebst du das AppImage, starte es einmal vom neuen Ort, damit der Eintrag mitzieht.
 - **Ohne Fenster**: `sc-localization-launcher --update` aktualisiert aus einem Skript oder einem `systemd --user`-Timer, siehe [Command line](../README.md#command-line).
 - **Der Launcher selbst**: *Beim Start nach Launcher-Updates suchen* oder der ⇩-Button in der Titelleiste. Jedes Release ist signiert und wird vor der Installation geprüft.
 
