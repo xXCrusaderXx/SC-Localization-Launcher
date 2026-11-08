@@ -54,6 +54,60 @@
                 "license": "CC BY-NC-SA 4.0",
                 "licenseUrl": "https://creativecommons.org/licenses/by-nc-sa/4.0/"
             }
+        },
+        {
+            "code": "fr",
+            "name": "Français",
+            "folder": "french_(france)",
+            "source": {
+                "channels": {
+                    "LIVE": ["https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/french_(france)/global.ini"],
+                    "HOTFIX": ["https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/french_(france)/global.ini"]
+                }
+            },
+            "credit": {
+                "project": "StarCitizen-Localization",
+                "authors": "Cirque Lisoir & French community, traduction.circuspes.fr",
+                "url": "https://github.com/Dymerz/StarCitizen-Localization",
+                "license": "MIT",
+                "licenseUrl": "https://github.com/Dymerz/StarCitizen-Localization/blob/main/LICENSE"
+            }
+        },
+        {
+            "code": "it",
+            "name": "Italiano",
+            "folder": "italian_(italy)",
+            "source": {
+                "channels": {
+                    "LIVE": ["https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/italian_(italy)/global.ini"],
+                    "HOTFIX": ["https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/italian_(italy)/global.ini"]
+                }
+            },
+            "credit": {
+                "project": "StarCitizen-Localization",
+                "authors": "xGattoMattox & Community",
+                "url": "https://github.com/Dymerz/StarCitizen-Localization",
+                "license": "MIT",
+                "licenseUrl": "https://github.com/Dymerz/StarCitizen-Localization/blob/main/LICENSE"
+            }
+        },
+        {
+            "code": "pt-br",
+            "name": "Português (Brasil)",
+            "folder": "portuguese_(brazil)",
+            "source": {
+                "channels": {
+                    "LIVE": ["https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/portuguese_(brazil)/global.ini"],
+                    "HOTFIX": ["https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/portuguese_(brazil)/global.ini"]
+                }
+            },
+            "credit": {
+                "project": "StarCitizen-Localization",
+                "authors": "Nxzzin & Community",
+                "url": "https://github.com/Dymerz/StarCitizen-Localization",
+                "license": "MIT",
+                "licenseUrl": "https://github.com/Dymerz/StarCitizen-Localization/blob/main/LICENSE"
+            }
         }
     ]
 }
