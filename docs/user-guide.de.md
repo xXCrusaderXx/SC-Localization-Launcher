@@ -45,9 +45,11 @@ Der große Button unten rechts installiert, was wartet. Ist *Star Citizen danach
 
 Solange Star Citizen läuft, werden Übersetzungen nie verändert. Ein wartendes Update folgt, sobald das Spiel beendet ist.
 
+Das **Dashboard** unter den Zeilen zeigt Kacheln wie Spielzeit, zuletzt gespielt, Lieblingsschiff und freien Speicher, aus den Logs des Spiels. *Anpassen …* wählt bis zu acht Kacheln und ihre Reihenfolge.
+
 ## Sprachen
 
-**Übersetzungen des Spiels** stammen von Community-Projekten wie [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI); Einstellungen → Übersetzungen nennt Projekt und Lizenz. Falsche oder fehlende Texte meldest du dort, nicht beim Launcher.
+**Übersetzungen des Spiels** stammen von Community-Projekten: Deutsch, Deutsch (vollständig) und Schweizerdeutsch von [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI), Französisch, Italienisch und Portugiesisch (Brasilien) von [StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization). Einstellungen → Übersetzungen nennt Projekt, Autoren und Lizenz. Nennt die installierte Datei ihre Mitwirkenden, wie die französische, listet *Mitwirkende (…)* unter dem Credit sie auf. Falsche oder fehlende Texte meldest du dort, nicht beim Launcher.
 
 - Eine Sprache, die eine Quelle für eine Spielversion gerade nicht anbietet, wird angezeigt, lässt sich aber nicht wählen.
 - *Eigene Quelle …* in der Auswahl nimmt die HTTPS-Adresse einer beliebigen `global.ini` und den Sprachordner, in den sie gehört.
@@ -75,7 +77,10 @@ Alle unter Einstellungen → Werkzeuge.
 - **Spieleinstellungen …** pro Spielversion:
   - Bildratenbegrenzung im Spiel und in Menüs sowie eigene `Schlüssel = Wert`-Zeilen, geschrieben in die `user.cfg`. Nach dem nächsten Spielstart zeigt der Launcher, welche davon Star Citizen ignoriert hat („not whitelisted“).
   - die Grafik-API (Vulkan oder DirectX 11), geschrieben in die `GraphicsSettings.json` des Spiels. Sie wird geschrieben, wenn das Spiel nicht läuft, und erneut nach dem ersten Start jeder neuen Spielversion, die mit den Standardwerten des Spiels beginnt.
+- **Statistik …**: Spielzeit, Spielstarts, Abstürze, Verbindungsabbrüche, geflogene Schiffe, Quantensprünge, Missionen, Kills und Tode, Serverregionen und eine Heatmap der Spielzeit pro Tag, gelesen aus der `Game.log` jeder Spielversion. *Als HTML speichern* legt die Seite in deinen Download-Ordner.
 - **Programme …**: eigene Programme oder Skripte, die starten, sobald Star Citizen startet, z. B. ein Head-Tracking-Tool. Jedes lässt sich mit dem Spiel wieder beenden. Anführungszeichen wirken wie in einer Shell; für Variablen oder Pipes ein Skript oder `sh -c '…'` starten. Der Launcher muss dafür offen sein (der Infobereich reicht).
+
+Unter Einstellungen → Hilfe zeigt **Systeminfo …** Prozessor, Arbeitsspeicher, Grafikkarte, API, Treiber und Spielversion, wie das Spiel sie gesehen hat, und den CPU- und GPU-Leistungsindex des Spiels pro Start.
 
 ## Probleme lösen
 
