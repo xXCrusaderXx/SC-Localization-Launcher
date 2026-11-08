@@ -13,6 +13,7 @@
 - [ ] The project builds locally.
 - [ ] A bug fix comes with a test that fails without the fix (if it can be tested without the game or the internet).
 - [ ] No Star Citizen assets, game translation files (`global.ini`), or binaries are included (see [LEGAL.md](../LEGAL.md)).
+- [ ] README.md and the user guides (`docs/user-guide.md`, `docs/user-guide.de.md`) still match the change, or are updated in this PR.
 - [ ] I reviewed and tested the changes. See [CONTRIBUTING.md](../CONTRIBUTING.md).
 - [ ] If AI tools were used: the commits carry a `Co-Authored-By` trailer for the tool.
 - [ ] The title describes the user-visible change; `CHANGELOG.md` is not edited (it is written at release time).
