@@ -6,9 +6,9 @@
 
 A Linux launcher that installs and updates **community translations for Star Citizen**, separately for each game channel (LIVE, PTU, EPTU, HOTFIX, TECH-PREVIEW). It works with installations made by the [LUG Helper](https://github.com/starcitizen-lug/lug-helper), Lutris or any other Wine prefix.
 
-German (standard, complete and Swiss German) is available today. More European languages are being added. Each language is listed in [`languages.json`](languages.json); adding one needs no programming, see [Adding a game language](CONTRIBUTING.md#adding-a-game-language).
+Available today: German (standard, complete and Swiss German), French, Italian and Portuguese (Brazil). More languages are being added. Each language is listed in [`languages.json`](languages.json); adding one needs no programming, see [Adding a game language](CONTRIBUTING.md#adding-a-game-language).
 
-What comes next — item values, blueprints, tray and background updates, backups and more — is in the [roadmap](ROADMAP.md). It is open for proposals.
+What comes next — Windows support, notifications, starting with the system, blueprints and more — is in the [roadmap](ROADMAP.md). It is open for proposals.
 
 New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)) explains installation, the first start and common problems.
 
@@ -18,7 +18,8 @@ New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)
 
 - A setup assistant on the first start finds the game and sets the translation in four steps.
 - Choose the translation for each channel, or switch a channel back to English.
-- Optionally adds size, class and grade to item names and a line of values to item descriptions, from the [Star Citizen Wiki](https://star-citizen.wiki).
+- Optionally adds size, class and grade to item names (the weight class to armour, the size to mining lasers) and a line of values to item descriptions, from the [Star Citizen Wiki](https://star-citizen.wiki).
+- Shows the credit and license of every translation in the settings, and the contributors a translation names in its file.
 - Finds Star Citizen installations automatically, or lets you pick the folder.
 - Downloads the translation safely: a failed download never replaces a working one, and only the language lines in your `user.cfg` are changed.
 - Optionally starts Star Citizen after the update, through the LUG Helper's `sc-launch.sh` or Lutris.
@@ -31,9 +32,12 @@ New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)
 - Backs up keybindings, profile settings, saved characters and `user.cfg` per channel (Settings → Tools → "Backups …") and restores them after asking once; a restore first backs up what it replaces, and nothing is restored while Star Citizen runs. The newest 10 backups per channel are kept in `~/.local/share/sc-localization-launcher/backups`.
 - Sets the frame limit (in game and in menus), your own `key = value` lines and the graphics API (Vulkan or DirectX 11) per channel (Settings → Tools → "Game settings …"). Every other line of `user.cfg` stays byte for byte, the language lines included. After the next game start the launcher reads `Game.log` and shows which of these settings Star Citizen ignored because they are not whitelisted.
 - Starts your own programs or scripts together with the game, and ends them with it if you like (Settings → Tools → "Programs …").
+- Statistics from the game's `Game.log` (Settings → Tools → "Statistics …"): play time, game starts, crashes, ships flown, quantum jumps, missions and more, and a dashboard with chosen tiles on the main window.
+- System information as the game saw it (Settings → Help → "System information …"), with the game's CPU and GPU performance index per start.
+- Streamer mode hides your user name and home folder in the paths the launcher shows.
 - The interface is available in English, German, French, Spanish, Italian, Polish, Dutch and Portuguese, following the system language or the choice in the settings, with a light or dark theme.
 
-Planned, not available yet: statistics and a dashboard, values for armour and mining, starting with the system; see the [roadmap](ROADMAP.md).
+Planned, not available yet: Windows, desktop notifications, starting with the system, backups of the launcher's settings; see the [roadmap](ROADMAP.md).
 
 The translation texts are maintained by community projects such as [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI). Report wrong or missing texts there, not here.
 

@@ -45,9 +45,11 @@ The big button at the bottom right installs what is waiting. With *Start Star Ci
 
 While Star Citizen runs, translations are never changed. A waiting update follows when the game is closed.
 
+The **dashboard** below the rows shows tiles such as play time, last played, favourite ship and free space, from the game's own logs. *Customize …* chooses up to eight tiles and their order.
+
 ## Languages
 
-**Game translations** come from community projects such as [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI); Settings → Translations names the project and the licence of each. Report wrong or missing texts to that project, not to the launcher.
+**Game translations** come from community projects: German, German (full) and Swiss German from [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI), French, Italian and Portuguese (Brazil) from [StarCitizen-Localization](https://github.com/Dymerz/StarCitizen-Localization). Settings → Translations names the project, the authors and the licence of each. If the installed file names its contributors, as the French one does, *Contributors (…)* below the credit lists them. Report wrong or missing texts to that project, not to the launcher.
 
 - A language that a source does not offer for a channel right now is shown but cannot be picked.
 - *Own source …* in the drop-down takes the HTTPS address of any `global.ini` and the language folder it belongs in.
@@ -75,7 +77,10 @@ All under Settings → Tools.
 - **Game settings …** per channel:
   - frame limits in the game and in menus, and your own `key = value` lines, written into `user.cfg`. After the next game start the launcher shows which of them Star Citizen ignored ("not whitelisted").
   - the graphics API (Vulkan or DirectX 11), written into the game's `GraphicsSettings.json`. It is written when the game is not running, and again after the first start of every new game version, which begins with the game's defaults.
+- **Statistics …**: play time, game starts, crashes, disconnects, ships flown, quantum jumps, missions, kills and deaths, server regions and a heatmap of play time per day, read from `Game.log` of every channel. *Save as HTML* writes the page into your Downloads folder.
 - **Programs …**: your own programs or scripts that start when Star Citizen starts, e.g. a head-tracking tool. Each can be ended again when the game quits. Quotes work as in a shell; for variables or pipes, start a script or `sh -c '…'`. The launcher has to be open (the tray is enough).
+
+Under Settings → Help, **System information …** shows the processor, memory, graphics card, API, driver and game version as the game saw them, and the game's CPU and GPU performance index per start.
 
 ## Troubleshooting
 
