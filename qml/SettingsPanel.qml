@@ -397,6 +397,42 @@ Item {
                                     font.pixelSize: 11
                                     onLinkActivated: link => Qt.openUrlExternally(link)
                                 }
+
+                                // Names from the header of the installed file; folded, some projects list hundreds
+                                Button {
+                                    id: contributorsButton
+
+                                    readonly property var names: modelData.contributors || []
+                                    property bool showNames: false
+
+                                    visible: names.length > 0
+                                    flat: true
+                                    padding: 0
+                                    topPadding: 2
+                                    text: qsTr("Contributors (%1)").arg(names.length)
+                                    Accessible.description: showNames ? qsTr("Hide the names") : qsTr("Show the names")
+                                    onClicked: showNames = !showNames
+
+                                    contentItem: Text {
+                                        text: (contributorsButton.showNames ? "▾ " : "▸ ") + contributorsButton.text
+                                        textFormat: Text.PlainText
+                                        color: Theme.accent
+                                        font.pixelSize: 11
+                                        font.underline: contributorsButton.activeFocus
+                                    }
+
+                                    background: null
+                                }
+
+                                Text {
+                                    visible: contributorsButton.visible && contributorsButton.showNames
+                                    width: parent.width
+                                    text: contributorsButton.names.join(", ")
+                                    textFormat: Text.PlainText
+                                    color: Theme.muted
+                                    font.pixelSize: 11
+                                    wrapMode: Text.Wrap
+                                }
                             }
                         }
                     }

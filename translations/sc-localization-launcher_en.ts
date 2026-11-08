@@ -941,6 +941,18 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Contributors (%1)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hide the names</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Show the names</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>TOOLS</source>
         <translation type="unfinished"></translation>
     </message>

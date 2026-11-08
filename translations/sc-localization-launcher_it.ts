@@ -941,6 +941,18 @@
         <translation>Licenza: %1</translation>
     </message>
     <message>
+        <source>Contributors (%1)</source>
+        <translation>Collaboratori (%1)</translation>
+    </message>
+    <message>
+        <source>Hide the names</source>
+        <translation>Nascondi i nomi</translation>
+    </message>
+    <message>
+        <source>Show the names</source>
+        <translation>Mostra i nomi</translation>
+    </message>
+    <message>
         <source>TOOLS</source>
         <translation>STRUMENTI</translation>
     </message>

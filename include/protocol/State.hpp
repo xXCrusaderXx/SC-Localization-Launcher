@@ -49,9 +49,11 @@ struct Language
     Credit credit;
     // Star Citizen localization folder, empty for ENGLISH
     std::string folder;
+    // Names listed in the header of an installed copy of this translation; empty if none is installed or it lists none
+    std::vector<std::string> contributors;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Language, code, name, credit, folder)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Language, code, name, credit, folder, contributors)
 
 enum class UpdateStatus
 {

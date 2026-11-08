@@ -322,6 +322,33 @@ class GuiTest : public QObject
         QVERIFY(QFile::exists(liveDir.filePath("data/Localization/german_(germany)/global.ini")));
     }
 
+    void settingsListTheContributorsOfTheInstalledTranslation ()
+    {
+        // runUpdate() installed German on LIVE; its header now names contributors, as the French project does
+        auto ini = std::filesystem::path(liveDir.path().toStdString()) / "data/Localization/german_(germany)/global.ini";
+        std::string installed = readFile(ini);
+        std::ofstream(ini, std::ios::binary) << "; Mitwirkende : Alice - Bob\r\n" << installed;
+        // The next state reads the changed file
+        bool progress = bridge->state()["options"].toMap()["showUpdateProgress"].toBool();
+        bridge->setOption("showUpdateProgress", !progress);
+
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        QVERIFY(click("⚙"));
+        QTRY_VERIFY(panel->property("open").toBool());
+        // Folded until asked for: some projects list hundreds of names
+        QQuickItem* button = nullptr;
+        QTRY_VERIFY((button = findButton("Contributors (2)")));
+        QVERIFY(!findText("Alice, Bob"));
+        // Below the visible part of the panel, so no mouse click reaches it
+        QVERIFY(QMetaObject::invokeMethod(button, "clicked"));
+        QTRY_VERIFY(findText("Alice, Bob"));
+        panel->setProperty("open", false);
+        QTRY_VERIFY_WITH_TIMEOUT(!panel->property("visible").toBool(), 10000);
+
+        std::ofstream(ini, std::ios::binary) << installed;
+        bridge->setOption("showUpdateProgress", progress);
+    }
+
     void showsWhenTheGameCannotStart ()
     {
         // Everything is up to date after runUpdate(), so the button only starts the game

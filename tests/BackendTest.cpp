@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <sstream>
 
 #include "TestSupport.hpp"
 #include "UpdateSigningKey.hpp"
@@ -628,6 +629,65 @@ class BackendTest : public QObject
         QCOMPARE(QByteArray::fromStdString(readFile(ini)), TRANSLATION);
         QVERIFY(!std::filesystem::exists(ini.string() + ".download"));
         QVERIFY(readFile(gamePath / "user.cfg").find("g_language = german_(germany)") != std::string::npos);
+    }
+
+    void readsContributorsFromTheHeader_data ()
+    {
+        QTest::addColumn<QByteArray>("file");
+        QTest::addColumn<QStringList>("names");
+        QTest::newRow("French project")
+            << QByteArray("\xEF\xBB\xBF; Fichier traduit par la communaut\xC3\xA9 FR\r\n; Contributeurs : Alice - Bob - Jos\xC3\xA9\r\nkey=value\r\n")
+            << QStringList{"Alice", "Bob", "Jos\xC3\xA9"};
+        QTest::newRow("English label") << QByteArray("; contributors: Alice -  Bob  - [P42] Carol\n") << QStringList{"Alice", "Bob", "[P42] Carol"};
+        QTest::newRow("German label") << QByteArray(";Mitwirkende:Alice\n") << QStringList{"Alice"};
+        QTest::newRow("hyphen inside a name") << QByteArray("; Contributors : Jean-Pierre - Anne\n") << QStringList{"Jean-Pierre", "Anne"};
+        QTest::newRow("empty entries") << QByteArray("; Contributors :  - Alice -  - \n") << QStringList{"Alice"};
+        QTest::newRow("no header") << QByteArray("\xEF\xBB\xBFkey=value\n") << QStringList{};
+        QTest::newRow("other comment lines") << QByteArray("; Version : 4.10.2\n; Lien : https://example.org\n") << QStringList{};
+        QTest::newRow("after the header") << QByteArray("; Version : 1\nkey=value\n; Contributors : Alice\n") << QStringList{};
+        QTest::newRow("label in the text") << QByteArray("; Thanks to the contributors: Alice\n") << QStringList{};
+        QTest::newRow("too long name") << QByteArray("; Contributors : " + QByteArray(101, 'x') + " - Bob\n") << QStringList{"Bob"};
+    }
+
+    void readsContributorsFromTheHeader ()
+    {
+        QFETCH(QByteArray, file);
+        QFETCH(QStringList, names);
+        std::istringstream stream(file.toStdString());
+        QStringList read;
+        for(const auto& name : TranslationHeader::contributorsIn(stream)) read << QString::fromStdString(name);
+        QCOMPARE(read, names);
+    }
+
+    void listsTheContributorsOfTheInstalledTranslation ()
+    {
+        auto contributors = [] (const Protocol::State& state)
+        {
+            for(const auto& language : state.languages)
+                if(language.code == "fr") return language.contributors;
+            return std::vector<std::string>{};
+        };
+        QTemporaryDir game;
+        QVERIFY(start());
+        // Nothing installed yet
+        QVERIFY(contributors(latest()).empty());
+
+        server.setFile("/fr.ini", "; Contributeurs : Alice - Bob\n" + TRANSLATION_FR);
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        QVERIFY(setLanguage("LIVE", "fr"));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QCOMPARE(contributors(latest()), (std::vector<std::string>{"Alice", "Bob"}));
+
+        // A new version of the file names others
+        server.setFile("/fr.ini", "; Contributeurs : Alice - Bob - Carol\n" + TRANSLATION_FR);
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QCOMPARE(contributors(latest()), (std::vector<std::string>{"Alice", "Bob", "Carol"}));
+
+        // Back to English: no French file is installed any more
+        QVERIFY(setLanguage("LIVE", Protocol::ENGLISH));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QVERIFY(contributors(latest()).empty());
+        server.setFile("/fr.ini", TRANSLATION_FR);
     }
 
     void failedInstallLeavesTheGameFolderAlone_data ()
