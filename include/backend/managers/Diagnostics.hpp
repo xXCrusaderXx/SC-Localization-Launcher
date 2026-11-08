@@ -1,8 +1,7 @@
 #pragma once
 
-#include <sys/utsname.h>
-#include <unistd.h>
 #include <QStandardPaths>
+#include <QSysInfo>
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -19,6 +18,7 @@
 #include "backend/managers/UpdateManager.hpp"
 #include "backend/utils/ZipWriter.hpp"
 #include "backend/utils/paths.hpp"
+#include "backend/utils/platform.hpp"
 #include "logging/logging.h"
 #include "protocol/State.hpp"
 
@@ -149,11 +149,14 @@ class Diagnostics
     {
         std::vector<Check> checks;
 
-        utsname system{};
-        uname(&system);
+#ifdef _WIN32
+        checks.push_back(
+            check("system", Status::Info, QSysInfo::prettyProductName().toStdString() + " · " + QSysInfo::kernelVersion().toStdString()));
+#else
         checks.push_back(check("system", Status::Info,
-                               readOsRelease() + " · Linux " + system.release + " · " + environment("XDG_CURRENT_DESKTOP") + " (" +
-                                   environment("XDG_SESSION_TYPE") + ")"));
+                               readOsRelease() + " · Linux " + QSysInfo::kernelVersion().toStdString() + " · " + environment("XDG_CURRENT_DESKTOP") +
+                                   " (" + environment("XDG_SESSION_TYPE") + ")"));
+#endif
         checks.push_back(check("launcher", Status::Info, input.version + " · " + input.installType));
         checks.push_back(check("catalogue", input.catalogueLoaded ? Status::Ok : Status::Warning, ""));
 
@@ -188,7 +191,7 @@ class Diagnostics
                 continue;
             }
             checks.push_back(check("folder", Status::Ok, path.string(), channel.name));
-            checks.push_back(check("writable", access(path.c_str(), W_OK) == 0 ? Status::Ok : Status::Error, "", channel.name));
+            checks.push_back(check("writable", Platform::isWritable(path) ? Status::Ok : Status::Error, "", channel.name));
 
             if(channel.folder.empty())
                 checks.push_back(check("translation", Status::Info, "english · " + channel.status, channel.name));
@@ -217,8 +220,7 @@ class Diagnostics
     std::optional<std::filesystem::path> writeReport (const Input& input, const std::vector<Check>& checks, const std::filesystem::path& folder)
     {
         auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-        std::tm local{};
-        localtime_r(&now, &local);
+        std::tm local = Platform::localTime(now);
         std::ostringstream name;
         name << "sc-localization-launcher-report-" << std::put_time(&local, "%Y%m%d-%H%M%S") << ".zip";
 

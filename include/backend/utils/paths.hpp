@@ -1,24 +1,22 @@
 #pragma once
 
-#include <limits.h>
-#include <unistd.h>
 #include <filesystem>
-#include <iostream>
 #include <stdexcept>
 #include <string>
+
+#include "backend/utils/platform.hpp"
 
 namespace PATHS
 {
 inline std::filesystem::path getUserRootPath ()
 {
-    const char* homeDir = std::getenv("HOME");
-    if(homeDir && *homeDir != '\0')
-        return std::filesystem::path(homeDir);
-    else
-    {
-        std::cerr << "HOME environment variable is not gesetzt oder leer!\n";
-        throw std::runtime_error("Umgebungsvariable HOME nicht gesetzt");
-    }
+#ifdef _WIN32
+    auto home = Platform::environmentPath("USERPROFILE");
+#else
+    auto home = Platform::environmentPath("HOME");
+#endif
+    if(home.empty()) throw std::runtime_error("The home folder is not set");
+    return home;
 }
 
 inline std::filesystem::path getExecutablePath ()
@@ -26,33 +24,42 @@ inline std::filesystem::path getExecutablePath ()
     // The AppImage runtime sets APPDIR to the mounted AppDir, which holds resources/ and local/
     const char* appDir = std::getenv("APPDIR");
     if(appDir && *appDir != '\0') return std::filesystem::path(appDir);
-
-    char result[PATH_MAX];
-    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
-    if(count != -1)
-    {
-        // readlink() does not null-terminate
-        return std::filesystem::path(std::string(result, count)).parent_path();
-    }
-    throw std::runtime_error("Kann Pfad zur ausführbaren Datei nicht ermitteln");
+    if(auto folder = Platform::executableFolder()) return *folder;
+    throw std::runtime_error("Cannot find the folder of the program");
 }
 
 // $XDG_<name> if set, otherwise $HOME/<fallback> (XDG Base Directory spec); Flatpak sets these to its sandbox dirs
 inline std::filesystem::path xdgDir (const char* variable, const char* fallback)
 {
-    const char* dir = std::getenv(variable);
-    if(dir && *dir != '\0') return std::filesystem::path(dir);
+    auto dir = Platform::environmentPath(variable);
+    if(!dir.empty()) return dir;
     return getUserRootPath() / fallback;
 }
+
+#ifdef _WIN32
+// %APPDATA% roams with the user's profile, %LOCALAPPDATA% stays on this computer
+inline std::filesystem::path windowsDir (const char* variable, const char* fallback)
+{
+    auto dir = Platform::environmentPath(variable);
+    return dir.empty() ? getUserRootPath() / fallback : dir;
+}
+#endif
 
 inline const std::string APP_DIR_NAME = "sc-localization-launcher";
 
 inline const std::filesystem::path ROOT = getExecutablePath();
+#ifdef _WIN32
+inline const std::filesystem::path CONFIG_USER = windowsDir("APPDATA", "AppData/Roaming") / APP_DIR_NAME;
+inline const std::filesystem::path CACHE_USER = windowsDir("LOCALAPPDATA", "AppData/Local") / APP_DIR_NAME / "cache";
+inline const std::filesystem::path DATA_USER = windowsDir("LOCALAPPDATA", "AppData/Local") / APP_DIR_NAME / "data";
+inline const std::filesystem::path LOGPATH_USER = windowsDir("LOCALAPPDATA", "AppData/Local") / APP_DIR_NAME / "logs";
+#else
 inline const std::filesystem::path CONFIG_USER = xdgDir("XDG_CONFIG_HOME", ".config") / APP_DIR_NAME;
 inline const std::filesystem::path CACHE_USER = xdgDir("XDG_CACHE_HOME", ".cache") / APP_DIR_NAME;
 inline const std::filesystem::path DATA_USER = xdgDir("XDG_DATA_HOME", ".local/share") / APP_DIR_NAME;
-inline const std::filesystem::path LOGPATH = std::filesystem::current_path();
 inline const std::filesystem::path LOGPATH_USER = xdgDir("XDG_STATE_HOME", ".local/state") / APP_DIR_NAME;
+#endif
+inline const std::filesystem::path LOGPATH = std::filesystem::current_path();
 // Used up to the rename to SC Localization Launcher, only read to migrate the settings
 inline const std::filesystem::path LEGACY_ROOT_USER = getUserRootPath() / "SC-Deutsch-Launcher";
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <signal.h>
 #include <QProcess>
 #include <QString>
 #include <QStringList>
@@ -12,6 +11,7 @@
 #include <vector>
 
 #include "backend/managers/UpdateManager.hpp"
+#include "backend/utils/platform.hpp"
 #include "logging/logging.h"
 #include "protocol/State.hpp"
 
@@ -23,27 +23,14 @@ class CompanionPrograms
     struct Started
     {
         int64_t pid = 0;
-        // From /proc/<pid>/stat; a different value means the id now belongs to another process
+        // A different value means the id now belongs to another process
         uint64_t startTime = 0;
     };
 
     LoggerFramework::LogEx lg;
     std::vector<Started> toStop;
 
-    static uint64_t startTimeOf (int64_t pid)
-    {
-        std::ifstream stat("/proc/" + std::to_string(pid) + "/stat");
-        std::string line;
-        if(!std::getline(stat, line)) return 0;
-        // "pid (name) state ppid …"; the name may contain spaces and parentheses, starttime is field 22
-        auto end = line.rfind(')');
-        if(end == std::string::npos) return 0;
-        std::istringstream fields(line.substr(end + 2));
-        std::string field;
-        for(int i = 3; i <= 22 && fields >> field; ++i)
-            if(i == 22) return std::stoull(field);
-        return 0;
-    }
+    static uint64_t startTimeOf (int64_t pid) { return Platform::processStartTime(pid); }
 
    public:
     // Splits like a shell, without expanding anything: blanks separate words, '…' keeps its text as it is, and a
@@ -133,8 +120,7 @@ class CompanionPrograms
         {
             if(started.startTime == 0 || startTimeOf(started.pid) != started.startTime) continue;
             LOG_INFO(lg) << "stop() - pid " << started.pid;
-            // When the program leads its own process group, the children of a script end with it
-            if(::kill(static_cast<pid_t>(-started.pid), SIGTERM) != 0) ::kill(static_cast<pid_t>(started.pid), SIGTERM);
+            Platform::endProcess(started.pid);
         }
         toStop.clear();
     }
