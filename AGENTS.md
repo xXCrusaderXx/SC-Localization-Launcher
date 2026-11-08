@@ -56,6 +56,14 @@ git clang-format --diff origin/main
 
 A change is done only when it builds and the tests pass. Backend behaviour belongs in `tests/BackendTest.cpp`, UI flows in `tests/GuiTest.cpp`. Say so in the PR if you could not run the app or test a code path by hand.
 
+Check the documentation with every change users can notice (a feature, fix, setting, UI text, language, file path or package):
+
+- `README.md`: introduction, feature list, the "Planned" line, installation and data paths.
+- `docs/user-guide.md` and `docs/user-guide.de.md`: both languages, in the same places. Labels in the German guide match `translations/sc-localization-launcher_de.ts`.
+- `CONTRIBUTING.md` and `ROADMAP.md` where the change touches them.
+
+Update what is out of date in the same PR, and name in the PR description which documents you checked and which you changed.
+
 ## Working in a shared checkout
 
 - Changes you did not make belong to the human or another agent. Do not commit, revert, stash, or unstage them. Check `git diff --cached --name-only` before you commit.
