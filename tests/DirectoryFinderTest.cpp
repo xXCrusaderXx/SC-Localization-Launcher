@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "backend/DirectoryFinder.hpp"
-#include "logging/logger/custom_logger/custom_logger.h"
+#include "logging/logging.h"
 
 // Only writes into temporary directories; HOME points to one of them for the duration of a test
 class DirectoryFinderTest : public QObject
@@ -28,7 +28,7 @@ class DirectoryFinderTest : public QObject
     }
 
    private slots:
-    void initTestCase () { LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>()); }
+    void initTestCase () { LoggerFramework::registerLogger(LoggerFramework::createLogger()); }
 
     void init ()
     {

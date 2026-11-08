@@ -6,7 +6,7 @@
 
 #include "TestSupport.hpp"
 #include "frontend/CommandLine.hpp"
-#include "logging/logger/custom_logger/custom_logger.h"
+#include "logging/logging.h"
 
 // Runs the headless mode like a script would and checks its output, exit code and the files it writes
 class CommandLineTest : public QObject
@@ -41,7 +41,7 @@ class CommandLineTest : public QObject
    private slots:
     void initTestCase ()
     {
-        LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>(false));
+        LoggerFramework::registerLogger(LoggerFramework::createLogger(false));
         watchOwnTestPrograms();
     }
 

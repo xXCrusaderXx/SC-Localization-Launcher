@@ -4,7 +4,7 @@
 
 #include "TestSupport.hpp"
 #include "backend/managers/WikiApiClient.hpp"
-#include "logging/logger/custom_logger/custom_logger.h"
+#include "logging/logging.h"
 
 // The Wiki API client against a local server that answers like the API: pages, Last-Modified, 429 and outages
 class WikiApiClientTest : public QObject
@@ -33,7 +33,7 @@ class WikiApiClientTest : public QObject
     static nlohmann::json reduce (const nlohmann::json& item) { return {{"uuid", item["uuid"]}, {"size", item["size"]}}; }
 
    private slots:
-    void initTestCase () { LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>(false)); }
+    void initTestCase () { LoggerFramework::registerLogger(LoggerFramework::createLogger(false)); }
 
     void init ()
     {

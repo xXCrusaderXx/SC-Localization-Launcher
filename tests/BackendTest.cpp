@@ -9,7 +9,7 @@
 #include "TestSupport.hpp"
 #include "UpdateSigningKey.hpp"
 #include "backend/BackEnd.hpp"
-#include "logging/logger/custom_logger/custom_logger.h"
+#include "logging/logging.h"
 
 using Protocol::ChannelStatus;
 using Protocol::GameStart;
@@ -248,7 +248,7 @@ class BackendTest : public QObject
    private slots:
     void initTestCase ()
     {
-        LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>());
+        LoggerFramework::registerLogger(LoggerFramework::createLogger());
         watchOwnTestPrograms();
     }
 

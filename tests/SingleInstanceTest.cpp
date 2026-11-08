@@ -3,8 +3,9 @@
 #include <QTest>
 #include <memory>
 
+#include "backend/utils/paths.hpp"
 #include "frontend/SingleInstance.hpp"
-#include "logging/logger/custom_logger/custom_logger.h"
+#include "logging/logging.h"
 
 class SingleInstanceTest : public QObject
 {
@@ -15,7 +16,7 @@ class SingleInstanceTest : public QObject
     const QString name = QString("sc-localization-launcher-test-%1").arg(QCoreApplication::applicationPid());
 
    private slots:
-    void initTestCase () { LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>()); }
+    void initTestCase () { LoggerFramework::registerLogger(LoggerFramework::createLogger()); }
 
     void secondStartActivatesTheFirst ()
     {
@@ -36,7 +37,7 @@ class SingleInstanceTest : public QObject
         auto before = logFiles();
 
         // Like main(): the logger comes first, then the second start only hands over to the running launcher
-        LoggerFramework::GlobalLogger::registerLogger(std::make_shared<LoggerFramework::CustomLogger>());
+        LoggerFramework::registerLogger(LoggerFramework::createLogger());
         SingleInstance second(name);
         QVERIFY(!second.isPrimary());
         QVERIFY(second.activatePrimary());

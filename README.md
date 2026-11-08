@@ -128,17 +128,17 @@ ExecStart=/usr/bin/flatpak run io.github.xXCrusaderXx.SCLocalizationLauncher --u
 
 ## Building from source
 
-Requirements: CMake 3.16 or newer, a C++20 compiler, Qt 6.4 or newer (Quick/QML), libcurl, libsodium 1.0.18 or newer and nlohmann_json 3.11 or newer (downloaded automatically if missing). The Qt Linguist tools are optional; without them the interface is English only.
+Requirements: CMake 3.16 or newer, a C++20 compiler, Qt 6.4 or newer (Quick/QML), libcurl, libsodium 1.0.18 or newer and nlohmann_json 3.11 or newer and spdlog 1.12 or newer (both downloaded automatically if missing). The Qt Linguist tools are optional; without them the interface is English only.
 
 ```sh
 # Arch Linux
-sudo pacman -S --needed base-devel cmake ninja qt6-declarative qt6-tools curl libsodium nlohmann-json
+sudo pacman -S --needed base-devel cmake ninja qt6-declarative qt6-tools curl libsodium nlohmann-json spdlog
 # Debian / Ubuntu
-sudo apt install build-essential cmake ninja-build pkg-config libgl-dev libcurl4-openssl-dev libsodium-dev nlohmann-json3-dev \
+sudo apt install build-essential cmake ninja-build pkg-config libgl-dev libcurl4-openssl-dev libsodium-dev nlohmann-json3-dev libspdlog-dev \
     qt6-base-dev qt6-declarative-dev qt6-declarative-dev-tools qt6-tools-dev qt6-l10n-tools \
     qml6-module-qtquick-controls qml6-module-qtquick-dialogs qml6-module-qtquick-layouts
 # Fedora
-sudo dnf install gcc-c++ cmake ninja-build libcurl-devel libsodium-devel json-devel \
+sudo dnf install gcc-c++ cmake ninja-build libcurl-devel libsodium-devel json-devel spdlog-devel \
     qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qttools-devel qt6-linguist
 
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
