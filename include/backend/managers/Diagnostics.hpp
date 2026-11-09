@@ -170,6 +170,14 @@ class Diagnostics
             checks.push_back(check("rsiLauncher", exists ? Status::Ok : Status::Error, input.rsiLauncherPath.string()));
             prefix = UpdateManager::findWinePrefix(input.rsiLauncherPath);
         }
+#ifdef _WIN32
+        // No Wine: the launcher starts the RSI Launcher itself
+        if(!input.rsiLauncherPath.empty())
+        {
+            bool found = std::filesystem::is_regular_file(input.rsiLauncherPath / "RSI Launcher.exe", ec);
+            checks.push_back(check("starter", found ? Status::Ok : Status::Error, "RSI Launcher.exe"));
+        }
+#else
         for(const auto& channel : input.channels)
             if(!prefix) prefix = UpdateManager::findWinePrefix(channel.installPath);
         checks.push_back(check("winePrefix", prefix ? Status::Ok : Status::Error, prefix ? prefix->string() : ""));
@@ -181,6 +189,7 @@ class Diagnostics
             checks.push_back(check("starter", Status::Ok, "lutris"));
         else
             checks.push_back(check("starter", std::filesystem::exists("/.flatpak-info") ? Status::Info : Status::Warning, ""));
+#endif
 
         for(const auto& channel : input.channels)
         {

@@ -225,7 +225,7 @@ ApplicationWindow {
                 }
 
                 Text {
-                    text: qsTr("COMMUNITY TRANSLATIONS FOR LINUX")
+                    text: Qt.platform.os === "windows" ? qsTr("COMMUNITY TRANSLATIONS FOR WINDOWS") : qsTr("COMMUNITY TRANSLATIONS FOR LINUX")
                     color: Theme.accent
                     font.pixelSize: 10
                     font.letterSpacing: 2
@@ -517,7 +517,7 @@ ApplicationWindow {
                             if (window.appState.game === "failed")
                                 return qsTr("The RSI Launcher did not start. <a href=\"log\">Open the log</a>");
                             if (window.appState.game === "noStarter")
-                                return qsTr("Cannot start the game: install it with the LUG Helper or Lutris");
+                                return Qt.platform.os === "windows" ? qsTr("Cannot start the game: RSI Launcher.exe is not in the RSI Launcher folder") : qsTr("Cannot start the game: install it with the LUG Helper or Lutris");
                             if (window.pendingUpdates > 0)
                                 return qsTr("%n channel(s) need an update", "", window.pendingUpdates);
                             if (window.gamePlaying)

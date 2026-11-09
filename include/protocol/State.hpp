@@ -224,7 +224,7 @@ struct SelfUpdate
     // Release page with the downloads
     std::string url;
     std::string error;
-    // How this launcher was installed: appimage, deb, rpm, arch, flatpak or source
+    // How this launcher was installed: appimage, deb, rpm, arch, flatpak, windows or source
     std::string installType;
     // A signed package for this installation is in the release, so the launcher can update itself
     bool canInstall = false;

@@ -358,6 +358,10 @@
         <translation>Spielstart</translation>
     </message>
     <message>
+        <source>RSI Launcher.exe is not in the RSI Launcher folder</source>
+        <translation>RSI Launcher.exe fehlt im RSI-Launcher-Ordner</translation>
+    </message>
+    <message>
         <source>Neither the LUG Helper&apos;s sc-launch.sh nor Lutris found</source>
         <translation>Weder sc-launch.sh des LUG Helpers noch Lutris gefunden</translation>
     </message>
@@ -621,6 +625,10 @@
         <translation>COMMUNITY-ÜBERSETZUNGEN FÜR LINUX</translation>
     </message>
     <message>
+        <source>COMMUNITY TRANSLATIONS FOR WINDOWS</source>
+        <translation>COMMUNITY-ÜBERSETZUNGEN FÜR WINDOWS</translation>
+    </message>
+    <message>
         <source>GAME CHANNELS</source>
         <translation>SPIELVERSIONEN</translation>
     </message>
@@ -671,6 +679,10 @@
     <message>
         <source>Cannot start the game: install it with the LUG Helper or Lutris</source>
         <translation>Spiel kann nicht gestartet werden: Installiere es mit dem LUG Helper oder Lutris</translation>
+    </message>
+    <message>
+        <source>Cannot start the game: RSI Launcher.exe is not in the RSI Launcher folder</source>
+        <translation>Spiel kann nicht gestartet werden: RSI Launcher.exe fehlt im RSI-Launcher-Ordner</translation>
     </message>
     <message>
         <source>Star Citizen is running – the update follows when it closes</source>
@@ -859,6 +871,10 @@
     <message>
         <source>Starts through the LUG script or Lutris</source>
         <translation>Startet über das LUG-Skript oder Lutris</translation>
+    </message>
+    <message>
+        <source>Starts the RSI Launcher</source>
+        <translation>Startet den RSI Launcher</translation>
     </message>
     <message>
         <source>Update translations automatically</source>
@@ -1074,6 +1090,10 @@
     <message>
         <source>The launcher looks for the RSI Launcher and the game versions (LIVE, PTU, …) on your drives, including Lutris and LUG Helper installations.</source>
         <translation>Der Launcher sucht den RSI Launcher und die Spielversionen (LIVE, PTU, …) auf deinen Laufwerken, auch in Installationen von Lutris und dem LUG Helper.</translation>
+    </message>
+    <message>
+        <source>The launcher looks for the RSI Launcher and the game versions (LIVE, PTU, …) on your drives.</source>
+        <translation>Der Launcher sucht den RSI Launcher und die Spielversionen (LIVE, PTU, …) auf deinen Laufwerken.</translation>
     </message>
     <message>
         <source>Search automatically</source>

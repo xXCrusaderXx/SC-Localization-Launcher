@@ -52,7 +52,7 @@ inline const std::filesystem::path ROOT = getExecutablePath();
 inline const std::filesystem::path CONFIG_USER = windowsDir("APPDATA", "AppData/Roaming") / APP_DIR_NAME;
 inline const std::filesystem::path CACHE_USER = windowsDir("LOCALAPPDATA", "AppData/Local") / APP_DIR_NAME / "cache";
 inline const std::filesystem::path DATA_USER = windowsDir("LOCALAPPDATA", "AppData/Local") / APP_DIR_NAME / "data";
-inline const std::filesystem::path LOGPATH_USER = windowsDir("LOCALAPPDATA", "AppData/Local") / APP_DIR_NAME / "logs";
+inline const std::filesystem::path LOGPATH_USER = windowsDir("LOCALAPPDATA", "AppData/Local") / APP_DIR_NAME;
 #else
 inline const std::filesystem::path CONFIG_USER = xdgDir("XDG_CONFIG_HOME", ".config") / APP_DIR_NAME;
 inline const std::filesystem::path CACHE_USER = xdgDir("XDG_CACHE_HOME", ".cache") / APP_DIR_NAME;

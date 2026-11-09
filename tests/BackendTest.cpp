@@ -1844,6 +1844,21 @@ class BackendTest : public QObject
         QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Idle; }, published() - 1));
     }
 
+    void recognisesTheGameAmongTheRunningPrograms ()
+    {
+        using Process = UpdateManager::GameProcess;
+        auto game = testGameProgram();
+        auto launcher = testRsiLauncherProgram();
+        QVERIFY(UpdateManager::gameProcessAmong({}) == Process::None);
+        QVERIFY(UpdateManager::gameProcessAmong({"/usr/bin/bash", "explorer.exe", "x" + game}) == Process::None);
+        // Windows lists file names, Wine's command line starts with a Windows path, a native program has a Linux path
+        QVERIFY(UpdateManager::gameProcessAmong({launcher}) == Process::Launcher);
+        QVERIFY(UpdateManager::gameProcessAmong({"C:\\Program Files\\Roberts Space Industries\\RSI Launcher\\" + launcher}) == Process::Launcher);
+        QVERIFY(UpdateManager::gameProcessAmong({"/opt/" + launcher}) == Process::Launcher);
+        // Windows does not care about case; the game counts over the RSI Launcher
+        QVERIFY(UpdateManager::gameProcessAmong({launcher, QString::fromStdString(game).toUpper().toStdString()}) == Process::Game);
+    }
+
     void startsTheGameWithoutUpdate ()
     {
         qputenv("PATH", "/usr/bin:/bin");

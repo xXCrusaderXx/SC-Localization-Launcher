@@ -10,6 +10,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #ifdef _WIN32
 #ifndef NOMINMAX
@@ -20,6 +21,8 @@
 #endif
 #include <io.h>
 #include <windows.h>
+// After windows.h, which it needs
+#include <tlhelp32.h>
 #else
 #include <limits.h>
 #include <signal.h>
@@ -150,4 +153,34 @@ inline void endProcess (int64_t pid)
     if(::kill(static_cast<pid_t>(-pid), SIGTERM) != 0) ::kill(static_cast<pid_t>(pid), SIGTERM);
 #endif
 }
+#ifdef _WIN32
+// File names of the running programs, e.g. "StarCitizen.exe", in UTF-8
+inline std::vector<std::string> runningProgramNames ()
+{
+    std::vector<std::string> names;
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if(snapshot == INVALID_HANDLE_VALUE) return names;
+    PROCESSENTRY32W entry{};
+    entry.dwSize = sizeof(entry);
+    for(bool more = Process32FirstW(snapshot, &entry); more; more = Process32NextW(snapshot, &entry))
+    {
+        auto name = std::filesystem::path(entry.szExeFile).u8string();
+        names.emplace_back(name.begin(), name.end());
+    }
+    CloseHandle(snapshot);
+    return names;
+}
+
+// Root folders of the local disks, e.g. "C:\"; network drives are left out, a search there takes too long
+inline std::vector<std::filesystem::path> localDrives ()
+{
+    std::vector<std::filesystem::path> drives;
+    wchar_t buffer[512];
+    DWORD length = GetLogicalDriveStringsW(512, buffer);
+    if(length == 0 || length > 512) return drives;
+    for(const wchar_t* drive = buffer; *drive; drive += wcslen(drive) + 1)
+        if(GetDriveTypeW(drive) == DRIVE_FIXED) drives.emplace_back(drive);
+    return drives;
+}
+#endif
 }  // namespace Platform

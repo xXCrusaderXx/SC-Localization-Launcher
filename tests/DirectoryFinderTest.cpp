@@ -1,5 +1,6 @@
 #include <QTemporaryDir>
 #include <QTest>
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -154,6 +155,15 @@ class DirectoryFinderTest : public QObject
         auto result = DirectoryFinder({mnt.path().toStdString()}).findRsiInstallation(shuttingDown);
         QVERIFY(result);
         QCOMPARE(result->rsiLauncherPath, rsi / "RSI Launcher");
+    }
+
+    void listsTheWindowsInstallFoldersOfEachDrive ()
+    {
+        auto folders = DirectoryFinder::windowsInstallFolders({"C:/", "D:/"});
+        QCOMPARE(folders.size(), size_t(6));
+        QCOMPARE(folders.front(), std::filesystem::path("C:/Program Files/Roberts Space Industries"));
+        QVERIFY(std::find(folders.begin(), folders.end(), std::filesystem::path("D:/Roberts Space Industries")) != folders.end());
+        QVERIFY(std::find(folders.begin(), folders.end(), std::filesystem::path("D:/Games/Roberts Space Industries")) != folders.end());
     }
 };
 

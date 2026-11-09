@@ -1,7 +1,6 @@
 #pragma once
 
 #include <curl/curl.h>
-#include <strings.h>
 #include <QCryptographicHash>
 #include <QFile>
 #include <QProcess>
@@ -9,6 +8,7 @@
 #include <QStringList>
 #include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -327,24 +327,43 @@ class UpdateManager
     }
 
    public:
-    // What of Star Citizen is running, started by this launcher or not
-    static GameProcess runningGameProcess ()
+    // Which part of Star Citizen is among the programs; each is a file name or a path, Windows or Linux style
+    static GameProcess gameProcessAmong (const std::vector<std::string>& programs)
     {
-        if(inFlatpak()) return runningOnFlatpakHost();
+        auto sameName = [] (const std::string& program, const std::string& name)
+        {
+            auto file = program.substr(program.find_last_of("\\/") + 1);
+            return std::equal(file.begin(), file.end(), name.begin(), name.end(),
+                              [] (unsigned char a, unsigned char b) { return std::tolower(a) == std::tolower(b); });
+        };
         auto launcher = rsiLauncherProgram();
         auto game = gameProgram();
         auto found = GameProcess::None;
+        for(const auto& program : programs)
+        {
+            if(sameName(program, game)) return GameProcess::Game;
+            if(sameName(program, launcher)) found = GameProcess::Launcher;
+        }
+        return found;
+    }
+
+    // What of Star Citizen is running, started by this launcher or not
+    static GameProcess runningGameProcess ()
+    {
+#ifdef _WIN32
+        return gameProcessAmong(Platform::runningProgramNames());
+#else
+        if(inFlatpak()) return runningOnFlatpakHost();
+        std::vector<std::string> programs;
         std::error_code ec;
         for(const auto& entry : std::filesystem::directory_iterator("/proc", ec))
         {
             std::ifstream cmdline(entry.path() / "cmdline");
             std::string program;
-            if(!std::getline(cmdline, program, '\0')) continue;
-            auto name = program.substr(program.find_last_of("\\/") + 1);
-            if(strcasecmp(name.c_str(), game.c_str()) == 0) return GameProcess::Game;
-            if(strcasecmp(name.c_str(), launcher.c_str()) == 0) found = GameProcess::Launcher;
+            if(std::getline(cmdline, program, '\0')) programs.push_back(program);
         }
-        return found;
+        return gameProcessAmong(programs);
+#endif
     }
 
     // One channel to update, prepared by the backend
@@ -484,7 +503,7 @@ class UpdateManager
         return etags;
     }
 
-    // Starts the RSI Launcher through the LUG Helper's script or Lutris and waits until it keeps running
+    // Starts the RSI Launcher (on Linux through the LUG Helper's script or Lutris) and waits until it keeps running
     Protocol::GameStart startGame (const std::filesystem::path& rsiLauncherPath)
     {
         LOG_DEBUG(lg) << "startGame() - START";
@@ -494,6 +513,18 @@ class UpdateManager
         // start over to an instance that is already running and quit right away.
         bool starterOutlivesGame = false;
         std::filesystem::path launchLog;
+#ifdef _WIN32
+        // No Wine: the RSI Launcher is started directly
+        std::filesystem::path program = rsiLauncherPath / "RSI Launcher.exe";
+        std::error_code ec;
+        if(!std::filesystem::is_regular_file(program, ec))
+        {
+            LOG_ERROR(lg) << "startGame() - " << program << " not found";
+            return Protocol::GameStart::NoStarter;
+        }
+        LOG_DEBUG(lg) << "startGame() - " << program;
+        starter = startOnHost(QString::fromStdWString(program.wstring()), {}, QString::fromStdWString(rsiLauncherPath.wstring()));
+#else
         auto prefix = findWinePrefix(rsiLauncherPath);
         if(prefix && std::filesystem::exists(*prefix / "sc-launch.sh"))
         {
@@ -514,9 +545,10 @@ class UpdateManager
             LOG_ERROR(lg) << "startGame() - neither sc-launch.sh nor lutris found (RSI Launcher path: " << rsiLauncherPath << ")";
             return Protocol::GameStart::NoStarter;
         }
+#endif
         if(!starter)
         {
-            LOG_ERROR(lg) << "startGame() - failed to start the LUG script or Lutris";
+            LOG_ERROR(lg) << "startGame() - failed to start the RSI Launcher, the LUG script or Lutris";
             return Protocol::GameStart::Failed;
         }
 
