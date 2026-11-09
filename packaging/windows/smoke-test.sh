@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Unpacks the Windows ZIP into an empty folder and starts it with a PATH that has only Windows itself, so a DLL that
 # the ZIP lacks cannot come from MSYS2. Saves a screenshot of the main window and checks that HTTPS works.
-# Runs in an MSYS2 shell on Windows.
+# Runs in an MSYS2 shell on Windows. Qt writes its messages to the debugger unless QT_FORCE_STDERR_LOGGING is set.
 #
 # Usage: smoke-test.sh <zip> <screenshot.png>
 set -euo pipefail
@@ -44,13 +44,13 @@ if grep -h "download() - .* failed" "$LOGS"/*.log; then
 fi
 
 status=0
-run SC_SCREENSHOT="$SCREENSHOT" QT_DEBUG_PLUGINS=1 "$PROGRAM" || status=$?
+run SC_SCREENSHOT="$SCREENSHOT" QT_DEBUG_PLUGINS=1 QT_FORCE_STDERR_LOGGING=1 "$PROGRAM" || status=$?
 if [ "$status" -ne 0 ]; then
     echo "The window did not start (exit code $status)" >&2
     ls -la "$LOGS" >&2 || true
     tail -n 30 "$(ls -t "$LOGS"/*.log | head -1)" >&2 || true
     echo "Started again with the full environment:" >&2
-    SC_SCREENSHOT="$SCREENSHOT" QT_DEBUG_PLUGINS=1 timeout 120 "$PROGRAM" || echo "exit code $?" >&2
+    SC_SCREENSHOT="$SCREENSHOT" QT_DEBUG_PLUGINS=1 QT_FORCE_STDERR_LOGGING=1 timeout 120 "$PROGRAM" || echo "exit code $?" >&2
     exit 1
 fi
 test -s "$(cygpath -u "$SCREENSHOT")"
