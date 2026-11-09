@@ -259,7 +259,7 @@ class Diagnostics
         std::sort(logs.begin(), logs.end());
         for(size_t i = logs.size() > 3 ? logs.size() - 3 : 0; i < logs.size(); ++i)
         {
-            // "debug_2026-10-24 18:21:37.762.log": colons and spaces trip up unzip tools on other systems
+            // Versions up to 1.2 named them "debug_2026-10-24 18:21:37.762.log"; colons and spaces trip up unzip tools
             std::string name = logs[i].filename().string();
             std::replace(name.begin(), name.end(), ':', '-');
             std::replace(name.begin(), name.end(), ' ', '_');

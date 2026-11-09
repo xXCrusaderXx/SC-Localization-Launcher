@@ -38,7 +38,8 @@ std::filesystem::path newLogFileName ()
     const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
     std::tm tm = Platform::localTime(time);
     std::ostringstream name;
-    name << "debug_" << std::put_time(&tm, "%Y-%m-%d %H:%M:%S") << '.' << std::setfill('0') << std::setw(3) << ms.count() << ".log";
+    // No colons: Windows does not allow them in file names
+    name << "debug_" << std::put_time(&tm, "%Y-%m-%d_%H-%M-%S") << '.' << std::setfill('0') << std::setw(3) << ms.count() << ".log";
     return name.str();
 }
 
