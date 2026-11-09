@@ -34,6 +34,9 @@ while true; do
     echo "$missing" | while read -r dll; do cp "$dll" "$STAGE/"; done
 done
 
+# MSYS2's Qt looks for its plugins and QML modules below share/qt6; windeployqt puts them next to the program
+printf '[Paths]\nPrefix = .\nPlugins = .\nQmlImports = qml\n' > "$STAGE/qt.conf"
+
 cp "$SRC/LICENSE" "$STAGE/LICENSE.txt"
 cp "$SRC/README.md" "$STAGE/README.md"
 
