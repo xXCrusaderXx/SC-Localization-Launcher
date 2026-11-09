@@ -12,6 +12,17 @@ WORK="$(mktemp -d)"
 cd "$WORK"
 unzip -q "$ZIP"
 PROGRAM="$(cygpath -w "$(find "$WORK" -name sc-localization-launcher.exe | head -1)")"
+FOLDER="$(dirname "$(cygpath -u "$PROGRAM")")"
+
+# Every DLL the program and its plugins load must be in the ZIP or come with Windows
+missing=$(find "$FOLDER" -iname '*.exe' -o -iname '*.dll' | while read -r file; do
+    PATH="$FOLDER:/c/Windows/System32:/c/Windows:/usr/bin" ldd "$file" 2>&1 | grep -E "not found|\?\?\?" | sed "s|^|$(basename "$file"): |"
+done || true)
+if [ -n "$missing" ]; then
+    echo "The ZIP lacks DLLs:" >&2
+    echo "$missing" >&2
+    exit 1
+fi
 
 # A fresh profile: no settings, no logs of earlier runs
 PROFILE="$(cygpath -w "$WORK/profile")"
@@ -32,6 +43,11 @@ if grep -h "download() - .* failed" "$LOGS"/*.log; then
     exit 1
 fi
 
-run SC_SCREENSHOT="$SCREENSHOT" "$PROGRAM"
+status=0
+run SC_SCREENSHOT="$SCREENSHOT" QT_DEBUG_PLUGINS=1 "$PROGRAM" || status=$?
+if [ "$status" -ne 0 ]; then
+    echo "The window did not start (exit code $status)" >&2
+    exit 1
+fi
 test -s "$(cygpath -u "$SCREENSHOT")"
 echo "Started from the ZIP and saved $SCREENSHOT"
