@@ -18,8 +18,9 @@ Pick the file for your system on the [releases page](https://github.com/xXCrusad
 - **AppImage**: works on every distribution with glibc 2.35 or newer and updates itself.
 - **Flatpak** (also Steam Deck): updates through `flatpak update` or your software centre.
 - **deb, rpm, Arch package**: installed with your package manager; the launcher offers new versions and installs them with your password.
+- **Windows ZIP** (Windows 10 and 11): unpack it anywhere and start `sc-localization-launcher.exe`. SmartScreen may warn on the first start, because the program is not signed with a code signing certificate: *More info* → *Run anyway*. The launcher shows when a new version is out; unpack the new ZIP over the old folder. The Windows version is new, please report what does not work.
 
-The launcher needs Star Citizen installed with the [LUG Helper](https://github.com/starcitizen-lug/lug-helper), Lutris, or any other Wine prefix. It does not install the game.
+On Linux the launcher needs Star Citizen installed with the [LUG Helper](https://github.com/starcitizen-lug/lug-helper), Lutris, or any other Wine prefix; on Windows the game as the RSI Launcher installs it. The launcher does not install the game.
 
 ## First start
 
@@ -41,7 +42,7 @@ Each game channel with a folder has a row:
 - **↻ Repair** downloads the translation again and rewrites its lines in `user.cfg`, e.g. after a game update replaced the files.
 - **✎** changes the channel's folder.
 
-The big button at the bottom right installs what is waiting. With *Start Star Citizen afterwards* switched on, it then starts the RSI Launcher through the LUG Helper's `sc-launch.sh` or Lutris; if nothing is waiting, it only starts the game.
+The big button at the bottom right installs what is waiting. With *Start Star Citizen afterwards* switched on, it then starts the RSI Launcher (on Linux through the LUG Helper's `sc-launch.sh` or Lutris); if nothing is waiting, it only starts the game.
 
 While Star Citizen runs, translations are never changed. A waiting update follows when the game is closed.
 
@@ -65,7 +66,7 @@ The **dashboard** below the rows shows tiles such as play time, last played, fav
 
 - **Translations**: while the launcher is open, it checks every hour. With *Update translations automatically* it installs new versions by itself, and waits for the game to close if it runs.
 - **System tray**: the tray icon shows the same coloured dot; its menu has *Update translations*, *Open* and *Quit*. With *Keep running in the system tray*, closing the window leaves the launcher running there. GNOME needs the AppIndicator extension for a tray.
-- **Start with the system**: opens the launcher when you log in; with *Keep running in the system tray* it starts in the tray instead of opening the window. If you move the AppImage, start it once from the new place so the entry follows it.
+- **Start with the system**: opens the launcher when you log in; with *Keep running in the system tray* it starts in the tray instead of opening the window. If you move the AppImage or the Windows folder, start it once from the new place so the entry follows it.
 - **Without a window**: `sc-localization-launcher --update` updates from a script or a `systemd --user` timer, see [Command line](../README.md#command-line).
 - **The launcher itself**: *Check for launcher updates on start*, or the ⇩ button in the title bar. Every release is signed and checked before it is installed.
 
@@ -93,6 +94,9 @@ Check that the channel's folder is the one the game runs from (e.g. `…/StarCit
 
 **"Cannot start the game: install it with the LUG Helper or Lutris".**
 The launcher starts the game through the LUG Helper's `sc-launch.sh` next to the Wine prefix or through Lutris. With another setup, start the game yourself; the translation is installed all the same.
+
+**Windows: "Cannot start the game: RSI Launcher.exe is not in the RSI Launcher folder".**
+The RSI Launcher folder in the settings must be the one that contains `RSI Launcher.exe`, usually `C:\Program Files\Roberts Space Industries\RSI Launcher`. Use *Search automatically* again, or choose it yourself.
 
 **"The RSI Launcher did not start".**
 The link in the message opens the log. The end of `sc-launch.log` (LUG Helper) usually says why. Starting the game once through the LUG Helper or Lutris directly often shows the same error more clearly.

@@ -18,8 +18,9 @@ Lade die passende Datei von der [Release-Seite](https://github.com/xXCrusaderXx/
 - **AppImage**: läuft auf jeder Distribution mit glibc 2.35 oder neuer und aktualisiert sich selbst.
 - **Flatpak** (auch Steam Deck): wird über `flatpak update` oder dein Software-Center aktualisiert.
 - **deb, rpm, Arch-Paket**: über deinen Paketmanager installiert; der Launcher bietet neue Versionen an und installiert sie mit deinem Passwort.
+- **Windows-ZIP** (Windows 10 und 11): irgendwohin entpacken und `sc-localization-launcher.exe` starten. SmartScreen warnt beim ersten Start eventuell, weil das Programm nicht mit einem Code-Signing-Zertifikat signiert ist: *Weitere Informationen* → *Trotzdem ausführen*. Der Launcher zeigt an, wenn eine neue Version da ist; entpacke das neue ZIP über den alten Ordner. Die Windows-Version ist neu, bitte melde, was nicht funktioniert.
 
-Star Citizen muss mit dem [LUG Helper](https://github.com/starcitizen-lug/lug-helper), Lutris oder in einem anderen Wine-Prefix installiert sein. Das Spiel selbst installiert der Launcher nicht.
+Unter Linux muss Star Citizen mit dem [LUG Helper](https://github.com/starcitizen-lug/lug-helper), Lutris oder in einem anderen Wine-Prefix installiert sein, unter Windows so, wie der RSI Launcher es installiert. Das Spiel selbst installiert der Launcher nicht.
 
 ## Erster Start
 
@@ -41,7 +42,7 @@ Jede Spielversion mit Ordner hat eine Zeile:
 - **↻ Reparieren** lädt die Übersetzung erneut und schreibt ihre Zeilen in der `user.cfg` neu, z. B. wenn ein Spielupdate die Dateien ersetzt hat.
 - **✎** ändert den Ordner der Spielversion.
 
-Der große Button unten rechts installiert, was wartet. Ist *Star Citizen danach starten* an, startet er anschließend den RSI Launcher über das `sc-launch.sh` des LUG Helpers oder über Lutris; wartet nichts, startet er nur das Spiel.
+Der große Button unten rechts installiert, was wartet. Ist *Star Citizen danach starten* an, startet er anschließend den RSI Launcher (unter Linux über das `sc-launch.sh` des LUG Helpers oder über Lutris); wartet nichts, startet er nur das Spiel.
 
 Solange Star Citizen läuft, werden Übersetzungen nie verändert. Ein wartendes Update folgt, sobald das Spiel beendet ist.
 
@@ -65,7 +66,7 @@ Das **Dashboard** unter den Zeilen zeigt Kacheln wie Spielzeit, zuletzt gespielt
 
 - **Übersetzungen**: Solange der Launcher offen ist, prüft er stündlich. Mit *Übersetzungen automatisch aktualisieren* installiert er neue Versionen selbst und wartet, falls das Spiel läuft, bis es beendet ist.
 - **Infobereich**: Das Symbol zeigt denselben farbigen Punkt; sein Menü hat *Übersetzungen aktualisieren*, *Öffnen* und *Beenden*. Mit *Im Infobereich weiterlaufen* läuft der Launcher dort weiter, wenn du das Fenster schließt. GNOME braucht dafür die AppIndicator-Erweiterung.
-- **Mit dem System starten**: öffnet den Launcher beim Anmelden; mit *Im Infobereich weiterlaufen* startet er im Infobereich, ohne das Fenster zu öffnen. Verschiebst du das AppImage, starte es einmal vom neuen Ort, damit der Eintrag mitzieht.
+- **Mit dem System starten**: öffnet den Launcher beim Anmelden; mit *Im Infobereich weiterlaufen* startet er im Infobereich, ohne das Fenster zu öffnen. Verschiebst du das AppImage oder den Windows-Ordner, starte den Launcher einmal vom neuen Ort, damit der Eintrag mitzieht.
 - **Ohne Fenster**: `sc-localization-launcher --update` aktualisiert aus einem Skript oder einem `systemd --user`-Timer, siehe [Command line](../README.md#command-line).
 - **Der Launcher selbst**: *Beim Start nach Launcher-Updates suchen* oder der ⇩-Button in der Titelleiste. Jedes Release ist signiert und wird vor der Installation geprüft.
 
@@ -93,6 +94,9 @@ Prüfe, ob der Ordner der Spielversion der ist, aus dem das Spiel läuft (z. B. 
 
 **„Spiel kann nicht gestartet werden: Installiere es mit dem LUG Helper oder Lutris“.**
 Der Launcher startet das Spiel über das `sc-launch.sh` des LUG Helpers neben dem Wine-Prefix oder über Lutris. Bei einer anderen Installation startest du das Spiel selbst; die Übersetzung wird trotzdem installiert.
+
+**Windows: „Spiel kann nicht gestartet werden: RSI Launcher.exe fehlt im RSI-Launcher-Ordner“.**
+Der RSI-Launcher-Ordner in den Einstellungen muss der sein, in dem `RSI Launcher.exe` liegt, meist `C:\Program Files\Roberts Space Industries\RSI Launcher`. Klicke noch einmal auf *Automatisch suchen* oder wähle ihn selbst.
 
 **„Der RSI Launcher ist nicht gestartet“.**
 Der Link in der Meldung öffnet das Log. Das Ende von `sc-launch.log` (LUG Helper) sagt meist, warum. Ein Start direkt über den LUG Helper oder Lutris zeigt denselben Fehler oft deutlicher.

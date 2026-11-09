@@ -4,11 +4,11 @@
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/xXCrusaderXx/SC-Localization-Launcher)](https://github.com/xXCrusaderXx/SC-Localization-Launcher/releases)
 
-A Linux launcher that installs and updates **community translations for Star Citizen**, separately for each game channel (LIVE, PTU, EPTU, HOTFIX, TECH-PREVIEW). It works with installations made by the [LUG Helper](https://github.com/starcitizen-lug/lug-helper), Lutris or any other Wine prefix.
+A launcher for Linux and Windows that installs and updates **community translations for Star Citizen**, separately for each game channel (LIVE, PTU, EPTU, HOTFIX, TECH-PREVIEW). On Linux it works with installations made by the [LUG Helper](https://github.com/starcitizen-lug/lug-helper), Lutris or any other Wine prefix; on Windows with the game as the RSI Launcher installs it.
 
 Available today: German (standard, complete and Swiss German), French, Italian and Portuguese (Brazil). More languages are being added. Each language is listed in [`languages.json`](languages.json); adding one needs no programming, see [Adding a game language](CONTRIBUTING.md#adding-a-game-language).
 
-What comes next — Windows support, notifications, blueprints and more — is in the [roadmap](ROADMAP.md). It is open for proposals.
+What comes next — notifications, blueprints and more — is in the [roadmap](ROADMAP.md). It is open for proposals.
 
 New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)) explains installation, the first start and common problems.
 
@@ -22,15 +22,15 @@ New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)
 - Shows the credit and license of every translation in the settings, and the contributors a translation names in its file.
 - Finds Star Citizen installations automatically, or lets you pick the folder.
 - Downloads the translation safely: a failed download never replaces a working one, and only the language lines in your `user.cfg` are changed.
-- Optionally starts Star Citizen after the update, through the LUG Helper's `sc-launch.sh` or Lutris.
+- Optionally starts Star Citizen after the update: on Linux through the LUG Helper's `sc-launch.sh` or Lutris, on Windows through the RSI Launcher.
 - Keeps working offline with the last known channel list.
 - Checks and updates from the command line, e.g. from a `systemd --user` timer, without opening a window.
 - Checks for new translation versions every hour while it is open. With "Update translations automatically" it installs them, and waits until Star Citizen has been closed if the game runs.
 - Shows the overall status as a coloured light in the system tray, with "Update translations" and "Open" in its menu. With "Keep running in the system tray", closing the window leaves the launcher running there. Desktops without a tray (GNOME without the AppIndicator extension) simply don't show it.
-- Starts with the system if you want: with *Start with the system* it opens at login, straight into the tray when *Keep running in the system tray* is on. This works for the packages, the AppImage and the Flatpak.
-- Clears shader caches (Settings → Tools): the game's own cache in the Wine prefix, DXVK/VKD3D, and the Mesa and NVIDIA caches, with the size and the result per entry. Graphics settings are kept, and nothing is deleted while Star Citizen runs.
+- Starts with the system if you want: with *Start with the system* it opens at login, straight into the tray when *Keep running in the system tray* is on. This works for the packages, the AppImage, the Flatpak and on Windows.
+- Clears shader caches (Settings → Tools): the game's own cache (in the Wine prefix, on Windows in `%LOCALAPPDATA%\Star Citizen`), and on Linux DXVK/VKD3D and the Mesa and NVIDIA caches, with the size and the result per entry. Graphics settings are kept, and nothing is deleted while Star Citizen runs.
 - Checks the installation without changing anything (Settings → Help → "Check installation …"): Wine prefix, folders, write permissions, `global.ini` and `user.cfg` per channel, free disk space. "Save report (ZIP)" puts the results, the settings and the launcher's logs into your Downloads folder for a bug report, with your home folder and user name replaced; `Game.log` is not included.
-- Backs up keybindings, profile settings, saved characters and `user.cfg` per channel (Settings → Tools → "Backups …") and restores them after asking once; a restore first backs up what it replaces, and nothing is restored while Star Citizen runs. The newest 10 backups per channel are kept in `~/.local/share/sc-localization-launcher/backups`.
+- Backs up keybindings, profile settings, saved characters and `user.cfg` per channel (Settings → Tools → "Backups …") and restores them after asking once; a restore first backs up what it replaces, and nothing is restored while Star Citizen runs. The newest 10 backups per channel are kept in `~/.local/share/sc-localization-launcher/backups` (Windows: `%LOCALAPPDATA%\sc-localization-launcher\data\backups`).
 - Sets the frame limit (in game and in menus), your own `key = value` lines and the graphics API (Vulkan or DirectX 11) per channel (Settings → Tools → "Game settings …"). Every other line of `user.cfg` stays byte for byte, the language lines included. After the next game start the launcher reads `Game.log` and shows which of these settings Star Citizen ignored because they are not whitelisted.
 - Starts your own programs or scripts together with the game, and ends them with it if you like (Settings → Tools → "Programs …").
 - Statistics from the game's `Game.log` (Settings → Tools → "Statistics …"): play time, game starts, crashes, ships flown, quantum jumps, missions and more, and a dashboard with chosen tiles on the main window.
@@ -38,7 +38,7 @@ New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)
 - Streamer mode hides your user name and home folder in the paths the launcher shows.
 - The interface is available in English, German, French, Spanish, Italian, Polish, Dutch and Portuguese, following the system language or the choice in the settings, with a light or dark theme.
 
-Planned, not available yet: Windows, desktop notifications, backups of the launcher's settings; see the [roadmap](ROADMAP.md).
+Planned, not available yet: desktop notifications, backups of the launcher's settings; see the [roadmap](ROADMAP.md).
 
 The translation texts are maintained by community projects such as [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI). Report wrong or missing texts there, not here.
 
@@ -54,12 +54,15 @@ Download the file for your system from the [releases page](https://github.com/xX
 | Debian 12 or newer | `sc-localization-launcher-*-debian12-x86_64.deb` | `sudo apt install ./sc-localization-launcher-*-debian12-x86_64.deb` |
 | Fedora | `sc-localization-launcher-*-fedora-x86_64.rpm` | `sudo dnf install ./sc-localization-launcher-*-fedora-x86_64.rpm` |
 | Arch Linux, Manjaro, CachyOS | `sc-localization-launcher-*-arch-x86_64.pkg.tar.zst` | `sudo pacman -U ./sc-localization-launcher-*-arch-x86_64.pkg.tar.zst` |
+| Windows 10 and 11 | `SC-Localization-Launcher-*-windows-x86_64.zip` | Unpack the ZIP and start `sc-localization-launcher.exe` |
 
 For openSUSE, Ubuntu 22.04 and other distributions, use the AppImage or the Flatpak. The AppImage brings its own Qt and runs on every distribution with glibc 2.35 or newer.
 
 The Flatpak repository is signed with [`packaging/flatpak-signing-key.asc`](packaging/flatpak-signing-key.asc); the `.flatpakref` carries that key and pulls the KDE runtime from Flathub. Every release also has a single-file bundle (`SC-Localization-Launcher-*-x86_64.flatpak`) for offline installs, which does not update by itself.
 
 The Flatpak can read game folders anywhere (`--filesystem=host`) and starts the game outside the sandbox through `flatpak-spawn --host` (`--talk-name=org.freedesktop.Flatpak`).
+
+The Windows version is new; please report what does not work. The program is not signed with a code signing certificate, so Windows SmartScreen may warn on the first start (*More info* → *Run anyway*); `SHA256SUMS` below proves the file is the one from the release. It does not update itself yet: the launcher shows when a new version is out, and you unpack the new ZIP over the old folder.
 
 ### Verifying a download
 
@@ -79,6 +82,8 @@ The launcher updates its AppImage itself and downloads only the blocks that chan
 | Settings | `~/.config/sc-localization-launcher/settings.json` |
 | Cache (language and channel lists) | `~/.cache/sc-localization-launcher/` |
 | Logs | `~/.local/state/sc-localization-launcher/logs/` |
+
+On Windows the settings are in `%APPDATA%\sc-localization-launcher\`, the cache, data and logs in `%LOCALAPPDATA%\sc-localization-launcher\`.
 
 The `XDG_*_HOME` variables are respected. The Flatpak keeps its data under `~/.var/app/io.github.xXCrusaderXx.SCLocalizationLauncher/`. Settings from the old `~/SC-Deutsch-Launcher` folder are taken over on the first start.
 
@@ -103,7 +108,7 @@ It uses the channels, languages and game folders set in the window. It never sta
 
 While the window is open or Star Citizen runs, the command line changes nothing and exits with 2.
 
-In the Flatpak, call it as `flatpak run io.github.xXCrusaderXx.SCLocalizationLauncher --update`, and for the AppImage as `./SC-Localization-Launcher-*.AppImage --update`.
+In the Flatpak, call it as `flatpak run io.github.xXCrusaderXx.SCLocalizationLauncher --update`, for the AppImage as `./SC-Localization-Launcher-*.AppImage --update`, and on Windows as `sc-localization-launcher.exe --update`.
 
 ### Updating daily with a systemd timer
 
@@ -171,6 +176,8 @@ packaging/native/build-in-docker.sh       # .deb (Ubuntu 24.04, Debian 12) and .
 flatpak-builder --user --install build-flatpak flatpak/io.github.xXCrusaderXx.SCLocalizationLauncher.json
 packaging/flatpak/build-repo.sh . 0.0.0-dev flatpak-out  # repository + bundle as in a release (unsigned without the key)
 ```
+
+The Windows ZIP is built on Windows in an [MSYS2](https://www.msys2.org) UCRT64 shell with the packages listed in `.github/workflows/release.yml`: `packaging/windows/build.sh . 0.0.0-dev`. `packaging/windows/smoke-test.sh` starts it with a PATH that has only Windows itself.
 
 Every release also updates the AUR package `sc-localization-launcher` through [`packaging/aur/publish.sh`](packaging/aur/publish.sh). It needs the secret `AUR_SSH_PRIVATE_KEY` (the SSH key of the AUR account); without it the step is skipped with a warning.
 
