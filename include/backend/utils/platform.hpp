@@ -2,6 +2,8 @@
 
 // The few calls that differ between Linux and Windows. Linux keeps the POSIX and /proc calls it always used.
 
+#include <curl/curl.h>
+
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
@@ -153,6 +155,19 @@ inline void endProcess (int64_t pid)
     if(::kill(static_cast<pid_t>(-pid), SIGTERM) != 0) ::kill(static_cast<pid_t>(pid), SIGTERM);
 #endif
 }
+// Windows has no CA bundle where the MSYS2 build of libcurl looks for one; the system's certificate store is used instead
+inline void useSystemCertificates (CURL* curl)
+{
+#ifdef _WIN32
+    if(!curl) return;
+    curl_easy_setopt(curl, CURLOPT_CAINFO, nullptr);
+    curl_easy_setopt(curl, CURLOPT_CAPATH, nullptr);
+    curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, static_cast<long>(CURLSSLOPT_NATIVE_CA));
+#else
+    (void) curl;
+#endif
+}
+
 #ifdef _WIN32
 // File names of the running programs, e.g. "StarCitizen.exe", in UTF-8
 inline std::vector<std::string> runningProgramNames ()

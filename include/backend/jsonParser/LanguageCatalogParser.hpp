@@ -17,6 +17,7 @@
 #include "BundledLanguages.hpp"
 #include "backend/database/DataBase.hpp"
 #include "backend/utils/paths.hpp"
+#include "backend/utils/platform.hpp"
 #include "logging/logging.h"
 
 // Loads languages.json and the channel lists it refers to, and works out which language
@@ -56,6 +57,7 @@ class LanguageCatalogParser
     std::optional<std::string> download (const std::string& url) const
     {
         CURL* curl = curl_easy_init();
+        Platform::useSystemCertificates(curl);
         if(!curl) return std::nullopt;
 
         std::string data;

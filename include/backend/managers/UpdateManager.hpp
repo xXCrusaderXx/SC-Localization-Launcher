@@ -87,6 +87,7 @@ class UpdateManager
     CURL* createRequest (const std::string& url, std::string& etag, curl_slist*& headers, const std::string& ifNoneMatch)
     {
         CURL* curl = curl_easy_init();
+        Platform::useSystemCertificates(curl);
         if(!curl) return nullptr;
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);

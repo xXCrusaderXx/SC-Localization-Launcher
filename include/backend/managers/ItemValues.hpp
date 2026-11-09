@@ -20,6 +20,7 @@
 #include "backend/jsonParser/LanguageCatalogParser.hpp"
 #include "backend/managers/WikiApiClient.hpp"
 #include "backend/utils/paths.hpp"
+#include "backend/utils/platform.hpp"
 #include "logging/logging.h"
 
 // Adds values from the Star Citizen Wiki API (CC BY-NC-SA 4.0) to a downloaded global.ini: size, class and grade to
@@ -320,6 +321,7 @@ class ItemValues
     {
         if(!LanguageCatalogParser::isAllowedUrl(url)) return std::nullopt;
         CURL* curl = curl_easy_init();
+        Platform::useSystemCertificates(curl);
         if(!curl) return std::nullopt;
         std::string data;
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
