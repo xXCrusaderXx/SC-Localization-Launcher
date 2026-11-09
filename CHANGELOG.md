@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-09
+
+The launcher runs on Windows.
+
+### Added
+
+- Windows 10 and 11: every release has `SC-Localization-Launcher-<version>-windows-x86_64.zip`. Unpack it and start `sc-localization-launcher.exe`; to update, unpack the new ZIP over the old folder. The program has no code signing certificate, so Windows SmartScreen may warn at the first start. The Windows build is new and has not yet been tested on a PC with Star Citizen installed; please report what does not work.
+- On Windows the launcher finds the RSI Launcher and the game library on the local drives, sees when the RSI Launcher or the game runs, and starts the game through `RSI Launcher.exe`. The cache cleaner finds the game's shader caches in `%LOCALAPPDATA%\Star Citizen`, and the problem analysis checks for `RSI Launcher.exe` instead of a Wine prefix.
+
+### Changed
+
+- Log files are named like `debug_2026-11-09_10-54-26.929.log`, without colons, on every system. Older log files are still cleaned up in the right order.
+
 ## [1.2.0] - 2026-11-09
 
 More item names carry their values, and three new game languages.
@@ -199,7 +212,8 @@ First release as *SC Localization Launcher*.
 - When switching languages, the previous language's folder is removed only after the new download succeeded.
 - Only one launcher runs at a time; starting it again brings the open window to the front instead of running two launchers that write the same settings and game folders.
 
-[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v1.0.0...v1.1.1
 [1.0.0]: https://github.com/xXCrusaderXx/SC-Localization-Launcher/compare/v0.11.0...v1.0.0
