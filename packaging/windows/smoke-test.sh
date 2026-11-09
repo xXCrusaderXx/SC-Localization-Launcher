@@ -47,6 +47,10 @@ status=0
 run SC_SCREENSHOT="$SCREENSHOT" QT_DEBUG_PLUGINS=1 "$PROGRAM" || status=$?
 if [ "$status" -ne 0 ]; then
     echo "The window did not start (exit code $status)" >&2
+    ls -la "$LOGS" >&2 || true
+    tail -n 30 "$(ls -t "$LOGS"/*.log | head -1)" >&2 || true
+    echo "Started again with the full environment:" >&2
+    SC_SCREENSHOT="$SCREENSHOT" QT_DEBUG_PLUGINS=1 timeout 120 "$PROGRAM" || echo "exit code $?" >&2
     exit 1
 fi
 test -s "$(cygpath -u "$SCREENSHOT")"

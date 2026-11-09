@@ -163,6 +163,8 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: screenshot-windows
-          path: screenshot-windows.png
+          name: windows
+          path: |
+            screenshot-windows.png
+            build-windows/*.zip
           if-no-files-found: ignore
