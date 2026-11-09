@@ -115,7 +115,7 @@ struct ReleaseAssets
 // How this launcher was installed, found by SelfUpdateManager::detectInstallation()
 struct Installation
 {
-    // appimage, deb, rpm, arch, flatpak or source
+    // appimage, deb, rpm, arch, flatpak, windows or source
     std::string type = "source";
     // Release asset for this installation, e.g. "ubuntu24.04" for the matching .deb
     std::string variant;

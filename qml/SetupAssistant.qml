@@ -113,7 +113,7 @@ Popup {
                 }
 
                 Body {
-                    text: qsTr("The launcher looks for the RSI Launcher and the game versions (LIVE, PTU, …) on your drives, including Lutris and LUG Helper installations.")
+                    text: Qt.platform.os === "windows" ? qsTr("The launcher looks for the RSI Launcher and the game versions (LIVE, PTU, …) on your drives.") : qsTr("The launcher looks for the RSI Launcher and the game versions (LIVE, PTU, …) on your drives, including Lutris and LUG Helper installations.")
                 }
 
                 RowLayout {

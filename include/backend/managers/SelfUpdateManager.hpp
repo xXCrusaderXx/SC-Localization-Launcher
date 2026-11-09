@@ -487,6 +487,11 @@ class SelfUpdateManager
     static Installation detectInstallation ()
     {
         Installation installation;
+#ifdef _WIN32
+        // Updated by hand from the release page for now
+        installation.type = "windows";
+        return installation;
+#endif
         if(const char* appImage = std::getenv("APPIMAGE"); appImage && *appImage)
         {
             installation.type = "appimage";

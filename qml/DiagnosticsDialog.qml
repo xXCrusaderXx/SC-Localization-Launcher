@@ -33,6 +33,8 @@ Popup {
         case "starter":
             if (check.status === "info")
                 return qsTr("Game start: looked up outside the Flatpak when starting");
+            if (Qt.platform.os === "windows")
+                return ok ? qsTr("Game start") : qsTr("RSI Launcher.exe is not in the RSI Launcher folder");
             return ok ? qsTr("Game start") : qsTr("Neither the LUG Helper's sc-launch.sh nor Lutris found");
         case "folder":
             return ok ? qsTr("Game folder") : qsTr("Game folder is missing");

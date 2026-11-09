@@ -358,6 +358,10 @@
         <translation>Spelstart</translation>
     </message>
     <message>
+        <source>RSI Launcher.exe is not in the RSI Launcher folder</source>
+        <translation>RSI Launcher.exe staat niet in de RSI Launcher-map</translation>
+    </message>
+    <message>
         <source>Neither the LUG Helper&apos;s sc-launch.sh nor Lutris found</source>
         <translation>Noch sc-launch.sh van de LUG Helper noch Lutris gevonden</translation>
     </message>
@@ -621,6 +625,10 @@
         <translation>COMMUNITYVERTALINGEN VOOR LINUX</translation>
     </message>
     <message>
+        <source>COMMUNITY TRANSLATIONS FOR WINDOWS</source>
+        <translation>COMMUNITYVERTALINGEN VOOR WINDOWS</translation>
+    </message>
+    <message>
         <source>GAME CHANNELS</source>
         <translation>SPELKANALEN</translation>
     </message>
@@ -675,6 +683,10 @@
     <message>
         <source>Cannot start the game: install it with the LUG Helper or Lutris</source>
         <translation>Kan het spel niet starten: installeer het met de LUG Helper of Lutris</translation>
+    </message>
+    <message>
+        <source>Cannot start the game: RSI Launcher.exe is not in the RSI Launcher folder</source>
+        <translation>Kan het spel niet starten: RSI Launcher.exe staat niet in de RSI Launcher-map</translation>
     </message>
     <message numerus="yes">
         <source>%n channel(s) need an update</source>
@@ -867,6 +879,10 @@
     <message>
         <source>Starts through the LUG script or Lutris</source>
         <translation>Start via het LUG-script of Lutris</translation>
+    </message>
+    <message>
+        <source>Starts the RSI Launcher</source>
+        <translation>Start de RSI Launcher</translation>
     </message>
     <message>
         <source>Update translations automatically</source>
@@ -1074,6 +1090,10 @@
     <message>
         <source>The launcher looks for the RSI Launcher and the game versions (LIVE, PTU, …) on your drives, including Lutris and LUG Helper installations.</source>
         <translation>De launcher zoekt de RSI Launcher en de spelversies (LIVE, PTU, …) op je schijven, ook in installaties van Lutris en de LUG Helper.</translation>
+    </message>
+    <message>
+        <source>The launcher looks for the RSI Launcher and the game versions (LIVE, PTU, …) on your drives.</source>
+        <translation>De launcher zoekt de RSI Launcher en de spelversies (LIVE, PTU, …) op je schijven.</translation>
     </message>
     <message>
         <source>Search automatically</source>

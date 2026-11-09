@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "backend/utils/paths.hpp"
+#include "backend/utils/platform.hpp"
 #include "logging/logging.h"
 #include "protocol/State.hpp"
 
@@ -97,15 +98,22 @@ class CacheCleaner
                              const std::atomic<bool>& stop) const
     {
         std::vector<Entry> entries;
+        auto addGameCaches = [&] (const std::filesystem::path& appDataLocal)
+        {
+            for(const auto& local : subdirectories(appDataLocal))
+            {
+                if(lower(local.filename().string()) != "star citizen") continue;
+                for(const auto& version : subdirectories(local))
+                    for(const char* cache : {"shaders", "vulkanshadercache"}) add(entries, "game", version / cache, stop);
+            }
+        };
+#ifdef _WIN32
+        // No Wine prefix: the game writes to the user's own AppData
+        if(auto local = Platform::environmentPath("LOCALAPPDATA"); !local.empty()) addGameCaches(local);
+#endif
         for(const auto& prefix : prefixes)
         {
-            for(const auto& user : subdirectories(prefix / "drive_c/users"))
-                for(const auto& local : subdirectories(user / "AppData/Local"))
-                {
-                    if(lower(local.filename().string()) != "star citizen") continue;
-                    for(const auto& version : subdirectories(local))
-                        for(const char* cache : {"shaders", "vulkanshadercache"}) add(entries, "game", version / cache, stop);
-                }
+            for(const auto& user : subdirectories(prefix / "drive_c/users")) addGameCaches(user / "AppData/Local");
             for(const char* cache : {"mesa_shader_cache", "mesa_shader_cache_db", "radv_builtin_shaders", "GLCache", "nvidia/GLCache"})
                 add(entries, "prefix", prefix / cache, stop);
         }
@@ -121,9 +129,11 @@ class CacheCleaner
                 }
             }
 
+#ifndef _WIN32
         auto cache = userCacheDir();
         for(const char* dir : {"mesa_shader_cache", "mesa_shader_cache_db", "nvidia/GLCache"}) add(entries, "user", cache / dir, stop);
         add(entries, "user", PATHS::getUserRootPath() / ".nv/GLCache", stop);
+#endif
         return entries;
     }
 

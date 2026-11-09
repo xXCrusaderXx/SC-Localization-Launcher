@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "backend/utils/platform.hpp"
 #include "logging/logging.h"
 #include "protocol/State.hpp"
 
@@ -30,8 +31,12 @@ class DirectoryFinder
     mutable LoggerFramework::LogEx lg;
     std::vector<std::filesystem::path> mountRoots;
 
+    // On Windows the local drives
     static std::vector<std::filesystem::path> defaultMountRoots ()
     {
+#ifdef _WIN32
+        return Platform::localDrives();
+#else
         std::vector<std::filesystem::path> roots{"/mnt", "/media"};
         if(const char* user = std::getenv("USER"); user && *user)
         {
@@ -39,6 +44,7 @@ class DirectoryFinder
             roots.push_back(std::filesystem::path("/media") / user);
         }
         return roots;
+#endif
     }
 
     std::string rootTarget = "/Roberts Space Industries/RSI Launcher";
@@ -50,6 +56,21 @@ class DirectoryFinder
                            [&] (const std::string& exe) { return std::filesystem::is_regular_file(path / exe); });
     }
 
+    void readChannels (const std::filesystem::path& library, Result& result) const
+    {
+        for(const auto& channel : Protocol::CHANNEL_NAMES)
+        {
+            std::filesystem::path channelPath = library / channel;
+            LOG_DEBUG(lg) << "[check] " << channelPath;
+            std::error_code ec;
+            if(std::filesystem::exists(channelPath, ec))
+            {
+                LOG_DEBUG(lg) << "[set] " << channel << " → " << channelPath;
+                result.channelPaths[channel] = channelPath;
+            }
+        }
+    }
+
     // The channel folders live next to the launcher: .../Roberts Space Industries/StarCitizen/<channel>
     Result readInstallation (const std::filesystem::path& launcherPath) const
     {
@@ -57,22 +78,26 @@ class DirectoryFinder
         if(!hasLauncherExecutable(launcherPath)) return result;
 
         result.rsiLauncherPath = launcherPath;
-        for(const auto& channel : Protocol::CHANNEL_NAMES)
+        readChannels(launcherPath.parent_path() / "StarCitizen", result);
+#ifdef _WIN32
+        // On Windows the game library may be on another drive than the RSI Launcher
+        for(const auto& folder : windowsInstallFolders(mountRoots))
         {
-            std::filesystem::path channelPath = launcherPath.parent_path() / "StarCitizen" / channel;
-            LOG_DEBUG(lg) << "[check] " << channelPath;
-            if(std::filesystem::exists(channelPath))
-            {
-                LOG_DEBUG(lg) << "[set] " << channel << " → " << channelPath;
-                result.channelPaths[channel] = channelPath;
-            }
+            if(!result.channelPaths.empty()) break;
+            readChannels(folder / "StarCitizen", result);
         }
+#endif
         return result;
     }
 
     std::optional<Result> searchPath (const std::string& basePath, const std::atomic<bool>& foundFlag, const std::atomic<bool>& shuttingDown) const
     {
+#ifdef _WIN32
+        auto base = std::filesystem::path(basePath).generic_string();
+        std::set<std::string> ignorePaths = {base + "Windows", base + "$Recycle.Bin", base + "System Volume Information"};
+#else
         std::set<std::string> ignorePaths = {"/proc", "/sys", "/run", "/dev", "/tmp", "/var"};
+#endif
         size_t counter = 0;
 
         try
@@ -84,7 +109,7 @@ class DirectoryFinder
 
                 if(!entry.is_directory()) continue;
 
-                std::string path = entry.path().string();
+                std::string path = entry.path().generic_string();
 
                 if(std::any_of(ignorePaths.begin(), ignorePaths.end(), [&] (const std::string& ignore) { return path.starts_with(ignore); }))
                     continue;
@@ -160,7 +185,17 @@ class DirectoryFinder
     }
 
    public:
-    // mountRoots: where other disks are mounted; the tests pass their own
+    // Where the RSI Launcher installs "Roberts Space Industries" on Windows, on each of the drives
+    static std::vector<std::filesystem::path> windowsInstallFolders (const std::vector<std::filesystem::path>& drives)
+    {
+        std::vector<std::filesystem::path> folders;
+        for(const auto& drive : drives)
+            for(const char* folder : {"Program Files/Roberts Space Industries", "Roberts Space Industries", "Games/Roberts Space Industries"})
+                folders.push_back(drive / folder);
+        return folders;
+    }
+
+    // mountRoots: where other disks are mounted (on Windows the drives); the tests pass their own
     explicit DirectoryFinder (std::vector<std::filesystem::path> mountRoots = defaultMountRoots())
         : lg("DirectoryFinder")
         , mountRoots(std::move(mountRoots))
@@ -176,6 +211,18 @@ class DirectoryFinder
         LOG_DEBUG(lg) << "findRsiInstallation() - target: " << rootTarget;
 
         // The usual places take milliseconds, the full scan below can take minutes on large disks
+#ifdef _WIN32
+        for(const auto& folder : windowsInstallFolders(mountRoots))
+        {
+            std::error_code ec;
+            auto path = folder / "RSI Launcher";
+            if(!std::filesystem::is_directory(path, ec) || !hasLauncherExecutable(path)) continue;
+            LOG_DEBUG(lg) << "[FOUND] at a known place: " << path;
+            return readInstallation(path);
+        }
+        std::vector<std::string> rootPaths;
+        for(const auto& drive : mountRoots) rootPaths.push_back(drive.string());
+#else
         if(const char* home = std::getenv("HOME"); home && *home)
         {
             for(const auto& path : knownLauncherPaths(home, mountRoots))
@@ -188,6 +235,7 @@ class DirectoryFinder
         }
 
         std::vector<std::string> rootPaths = {"/home", "/opt", "/usr", "/mnt", "/media"};
+#endif
         std::vector<std::future<std::optional<Result>>> tasks;
         std::atomic<bool> foundFlag{false};
 
@@ -212,9 +260,9 @@ class DirectoryFinder
         }
 
         if(found)
-            LOG_DEBUG(lg) << "[DONE] Pfad gefunden.";
+            LOG_DEBUG(lg) << "[DONE] installation found";
         else
-            LOG_DEBUG(lg) << "[RESULT] Kein Pfad mit '" << rootTarget << "' gefunden.";
+            LOG_DEBUG(lg) << "[RESULT] no path with '" << rootTarget << "' found";
         return found;
     }
 };

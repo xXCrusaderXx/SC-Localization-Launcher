@@ -211,7 +211,7 @@ Item {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
                         text: qsTr("Start Star Citizen after the update")
-                        description: qsTr("Starts through the LUG script or Lutris")
+                        description: Qt.platform.os === "windows" ? qsTr("Starts the RSI Launcher") : qsTr("Starts through the LUG script or Lutris")
                         checked: panel.options.launchGameAfterUpdate === true
                         onSwitched: on => backend.setOption("launchGameAfterUpdate", on)
                     }

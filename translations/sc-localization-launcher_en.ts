@@ -358,6 +358,10 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>RSI Launcher.exe is not in the RSI Launcher folder</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Neither the LUG Helper&apos;s sc-launch.sh nor Lutris found</source>
         <translation type="unfinished"></translation>
     </message>
@@ -664,6 +668,10 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>COMMUNITY TRANSLATIONS FOR WINDOWS</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Starting the RSI Launcher …</source>
         <translation type="unfinished"></translation>
     </message>
@@ -681,6 +689,10 @@
     </message>
     <message>
         <source>Cannot start the game: install it with the LUG Helper or Lutris</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cannot start the game: RSI Launcher.exe is not in the RSI Launcher folder</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -866,6 +878,10 @@
     </message>
     <message>
         <source>Starts through the LUG script or Lutris</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Starts the RSI Launcher</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -1073,6 +1089,10 @@
     </message>
     <message>
         <source>The launcher looks for the RSI Launcher and the game versions (LIVE, PTU, …) on your drives, including Lutris and LUG Helper installations.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The launcher looks for the RSI Launcher and the game versions (LIVE, PTU, …) on your drives.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
