@@ -18,6 +18,7 @@
 
 #include "backend/jsonParser/LanguageCatalogParser.hpp"
 #include "backend/utils/paths.hpp"
+#include "backend/utils/platform.hpp"
 #include "logging/logging.h"
 
 // Game data (items, blueprints, missions) from the Star Citizen Wiki API, the only source the launcher uses for it.
@@ -275,6 +276,7 @@ class WikiApiClient
             return response;
         }
         CURL* curl = curl_easy_init();
+        Platform::useSystemCertificates(curl);
         if(!curl)
         {
             response.error = "curl not available";

@@ -108,6 +108,50 @@ jobs:
           name: appimage
           path: dist/*
 
+  windows:
+    name: Windows
+    needs: version
+    runs-on: windows-2025
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Install dependencies
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: zip unzip
+          pacboy: >-
+            gcc:p cmake:p ninja:p pkgconf:p curl:p libsodium:p nlohmann-json:p spdlog:p
+            qt6-base:p qt6-declarative:p qt6-tools:p
+
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Build
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: bash packaging/windows/build.sh "$PWD" "$VERSION"
+
+      - name: Start from the ZIP
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: bash packaging/windows/smoke-test.sh "build-windows/SC-Localization-Launcher-$VERSION-windows-x86_64.zip" screenshot-windows.png
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: build-windows/*.zip
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: screenshot-windows
+          path: screenshot-windows.png
+          if-no-files-found: ignore
+
   # Built per distro: Ubuntu 24.04 packages depend on the t64 libraries Debian 12 does not have.
   native:
     name: ${{ matrix.name }}
@@ -250,7 +294,7 @@ jobs:
   # Runs in dry runs too, so a secret that does not match packaging/minisign.pub shows up before a real release
   sign:
     name: checksums and signature
-    needs: [version, test, flatpak]
+    needs: [version, test, flatpak, windows]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -269,7 +313,7 @@ jobs:
           # Released launchers download these two files from the latest release
           cp languages.json item-mapping.json dist/
           find artifacts -type f \( -name '*.AppImage' -o -name '*.AppImage.zsync' -o -name '*.deb' -o -name '*.rpm' \
-            -o -name '*.pkg.tar.zst' -o -name '*.flatpak' \) -exec mv {} dist/ \;
+            -o -name '*.pkg.tar.zst' -o -name '*.flatpak' -o -name '*-windows-x86_64.zip' \) -exec mv {} dist/ \;
           ls -la dist
 
       - name: Install minisign

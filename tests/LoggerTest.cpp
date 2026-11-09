@@ -133,6 +133,9 @@ class LoggerTest : public QObject
             if(file.filename().string().rfind("debug_", 0) == 0) debugLogs.push_back(file);
         }
         QCOMPARE(debugLogs.size(), size_t(1));
+        // A name Windows accepts, e.g. debug_2026-11-09_10-54-26.929.log
+        const std::string name = debugLogs.front().filename().string();
+        QVERIFY2(name.find_first_of(": ") == std::string::npos, name.c_str());
         const QString content = readFile(debugLogs.front());
         QVERIFY2(content.contains("<INFO>\t[LoggerTest]\t: hello 42\n"), qPrintable(content));
         QVERIFY2(content.contains("<ERROR>\t[LoggerTest]\t: second line\n"), qPrintable(content));

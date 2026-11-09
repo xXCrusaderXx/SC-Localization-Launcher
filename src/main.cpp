@@ -7,6 +7,10 @@
 
 #include <iostream>
 
+#ifdef _WIN32
+#include <curl/curl.h>
+#endif
+
 #include "frontend/BackendBridge.hpp"
 #include "frontend/CommandLine.hpp"
 #include "frontend/SingleInstance.hpp"
@@ -14,6 +18,11 @@
 
 int main (int argc, char *argv[])
 {
+#ifdef _WIN32
+    // Windows' own TLS checks against the system's certificates; OpenSSL would look for a CA bundle the ZIP does not have.
+    // Must come before the first curl call.
+    curl_global_sslset(CURLSSLBACKEND_SCHANNEL, nullptr, nullptr);
+#endif
     // --check, --update, --version: no window and no display needed, e.g. for a systemd timer
     if(CommandLine::requested(argc, argv))
     {

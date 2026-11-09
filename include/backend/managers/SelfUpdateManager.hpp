@@ -23,6 +23,7 @@
 #include "backend/utils/Minisign.hpp"
 #include "backend/utils/Zsync.hpp"
 #include "backend/utils/paths.hpp"
+#include "backend/utils/platform.hpp"
 #include "logging/logging.h"
 #include "protocol/State.hpp"
 
@@ -108,6 +109,7 @@ class SelfUpdateManager
                    const ProgressCallback* progress = nullptr)
     {
         CURL* curl = curl_easy_init();
+        Platform::useSystemCertificates(curl);
         if(!curl) return 0;
 
         Transfer transfer{&shuttingDown, progress};
@@ -250,6 +252,7 @@ class SelfUpdateManager
 
         std::fstream file(package, std::ios::binary | std::ios::in | std::ios::out);
         CURL* curl = curl_easy_init();
+        Platform::useSystemCertificates(curl);
         if(!file.is_open() || !curl)
         {
             if(curl) curl_easy_cleanup(curl);
