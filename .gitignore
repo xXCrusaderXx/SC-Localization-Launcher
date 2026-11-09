@@ -18,6 +18,7 @@ release/
 # Build tools are downloaded by CMake (misc/download.cmake)
 misc/*.appimage
 build-appimage/
+build-windows/
 .flatpak-builder/
 build-flatpak/
 repo-flatpak/

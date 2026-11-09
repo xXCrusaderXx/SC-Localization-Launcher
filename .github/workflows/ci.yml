@@ -145,6 +145,7 @@ jobs:
         with:
           msystem: UCRT64
           update: true
+          install: zip unzip
           pacboy: >-
             gcc:p cmake:p ninja:p pkgconf:p curl:p libsodium:p nlohmann-json:p spdlog:p
             qt6-base:p qt6-declarative:p qt6-tools:p
@@ -152,12 +153,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7.0.1
 
-      - name: Configure
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+      # The same ZIP as a release, started on this Windows without MSYS2 in its PATH
+      - name: Build the ZIP
+        run: bash packaging/windows/build.sh "$PWD" 0.0.0-ci
 
-      - name: Build
-        run: cmake --build build
+      - name: Start from the ZIP
+        run: bash packaging/windows/smoke-test.sh build-windows/SC-Localization-Launcher-0.0.0-ci-windows-x86_64.zip screenshot-windows.png
 
-      # The command line runs without a window, so it shows that the program and its libraries load
-      - name: Start
-        run: ./build/sc-localization-launcher.exe --help
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: screenshot-windows
+          path: screenshot-windows.png
+          if-no-files-found: ignore
