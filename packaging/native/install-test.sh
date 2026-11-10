@@ -17,7 +17,8 @@ elif command -v dnf >/dev/null; then
 elif command -v zypper >/dev/null; then
     zypper --non-interactive --no-gpg-checks install "$PACKAGE" xvfb-run dejavu-fonts >/dev/null
 elif command -v pacman >/dev/null; then
-    pacman -Sy --noconfirm >/dev/null
+    # Arch does not support partial upgrades: the package is built against the current repositories.
+    pacman -Syu --noconfirm >/dev/null
     pacman -U --noconfirm "$PACKAGE" >/dev/null
     pacman -S --noconfirm --needed xorg-server-xvfb xorg-xauth ttf-dejavu >/dev/null
 fi
