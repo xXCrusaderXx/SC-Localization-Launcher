@@ -186,6 +186,10 @@
         <translation>Update beschikbaar voor %1</translation>
     </message>
     <message>
+        <source>Translation for game version %1, the game is %2: new texts stay in English</source>
+        <translation>Vertaling voor spelversie %1, het spel is %2: nieuwe teksten blijven Engels</translation>
+    </message>
+    <message>
         <source>Choose folder</source>
         <translation>Map kiezen</translation>
     </message>

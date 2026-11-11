@@ -186,6 +186,10 @@
         <translation>Dostępna aktualizacja: %1</translation>
     </message>
     <message>
+        <source>Translation for game version %1, the game is %2: new texts stay in English</source>
+        <translation>Tłumaczenie dla wersji gry %1, gra ma wersję %2: nowe teksty pozostają po angielsku</translation>
+    </message>
+    <message>
         <source>Choose folder</source>
         <translation>Wybierz folder</translation>
     </message>

@@ -186,10 +186,17 @@ struct Channel
     std::string settingsError;
     // gameSettings.graphicsApi is not written yet: the game runs, or this game version has not been started yet
     bool graphicsApiWaiting = false;
+    // Game version of the channel's files, e.g. "4.10.2"; empty if unknown
+    std::string gameVersion;
+    // Game version the installed translation states it was made for, e.g. "4.10" or "4.10.2"; empty if it names none
+    std::string translationVersion;
+    // translationVersion is older than gameVersion: texts new in this game version show up in English
+    bool translationOutdated = false;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status, notices, custom, gameSettings,
-                                                settingsChecked, ignoredSettings, settingsError, graphicsApiWaiting)
+                                                settingsChecked, ignoredSettings, settingsError, graphicsApiWaiting, gameVersion, translationVersion,
+                                                translationOutdated)
 
 // Updates of the launcher itself, from the GitHub releases of the project
 enum class SelfUpdateStatus

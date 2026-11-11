@@ -9,6 +9,7 @@
 
 #include "UpdateSigningKey.hpp"
 #include "backend/DirectoryFinder.hpp"
+#include "backend/utils/GameVersion.hpp"
 #include "backend/utils/TaskQueue.hpp"
 #include "backend/utils/TranslationHeader.hpp"
 #include "backend/utils/paths.hpp"
@@ -451,6 +452,36 @@ class BackEnd
         return {};
     }
 
+    struct VersionCache
+    {
+        std::filesystem::file_time_type modified;
+        std::string version;
+    };
+    // Game version read from each manifest or installed translation so far; read again only when the file changes
+    mutable std::map<std::filesystem::path, VersionCache> versionCache;
+
+    std::string cachedVersion (const std::filesystem::path& file, std::string (*read)(const std::filesystem::path&)) const
+    {
+        std::error_code ec;
+        auto modified = std::filesystem::last_write_time(file, ec);
+        if(ec) return {};
+        auto cached = versionCache.find(file);
+        if(cached == versionCache.end() || cached->second.modified != modified)
+            cached = versionCache.insert_or_assign(file, VersionCache{modified, read(file)}).first;
+        return cached->second.version;
+    }
+
+    // The channel's game version and the one its installed translation was made for
+    std::pair<std::string, std::string> versions (const Database::ChannelData& channel) const
+    {
+        if(channel.installPath.empty()) return {};
+        std::string game = cachedVersion(channel.installPath / "build_manifest.id",
+                                         [] (const std::filesystem::path& file) { return GameVersion::ofGame(file.parent_path()); });
+        if(channel.language == Protocol::ENGLISH || channel.installed.folder.empty()) return {game, {}};
+        auto file = UpdateManager::translationFile(channel.installPath, channel.installed.folder);
+        return {game, cachedVersion(file, GameVersion::ofTranslation)};
+    }
+
     // Language code -> notice for this channel; a channel's own notice wins over the one for all channels
     std::map<std::string, std::string> notices (const std::string& channel) const
     {
@@ -481,9 +512,11 @@ class BackEnd
         for(const auto& name : names)
         {
             const auto& channel = data.channels.at(name);
+            auto [gameVersion, translationVersion] = versions(channel);
             state.channels.push_back({name, channel.installPath.string(), channel.language, availableLanguages(name), channelStatus(name, channel),
                                       notices(name), channel.custom, channel.gameSettings, channel.settingsChecked, channel.ignoredSettings,
-                                      channel.settingsError, channel.graphicsApiWaiting});
+                                      channel.settingsError, channel.graphicsApiWaiting, gameVersion, translationVersion,
+                                      GameVersion::older(translationVersion, gameVersion)});
         }
 
         state.rsiLauncherPath = data.rsiLauncherPath.string();

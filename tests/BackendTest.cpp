@@ -758,6 +758,121 @@ class BackendTest : public QObject
         server.setFile("/fr.ini", TRANSLATION_FR);
     }
 
+    void readsTheGameVersionOfATranslation_data ()
+    {
+        QTest::addColumn<QByteArray>("file");
+        QTest::addColumn<QString>("version");
+        QTest::newRow("German project") << QByteArray(
+                                               "\xEF\xBB\xBF"
+                                               "Frontend_PU_Version=Star Citizen Alpha 4.10.2 LIVE\\nDeutsche Hybrid-\xC3\x9C"
+                                               "bersetzung\\nStand: 27.10.2026\r\nkey=value\r\n")
+                                        << "4.10.2";
+        QTest::newRow("French header wins") << QByteArray(
+                                                   "\xEF\xBB\xBF; Fichier traduit par la communaut\xC3\xA9 FR\r\n; Version : "
+                                                   "4.10.2-1.16-20261016\r\nFrontend_PU_Version=Alpha 4.10 : Si\xC3\xA8ge\r\n")
+                                            << "4.10.2";
+        QTest::newRow("only major and minor") << QByteArray("a=b\nFrontend_PU_Version=Alpha 4.10: Il Ritorno di Siege of Orison\nz=y\n") << "4.10";
+        QTest::newRow("first version in the text") << QByteArray("Frontend_PU_Version=Alpha 4.10.2: Cerco de Orison | PT-BR v4.10.3\n") << "4.10.2";
+        QTest::newRow("key with suffix") << QByteArray("Frontend_PU_Version,P=Alpha 4.9.1\n") << "4.9.1";
+        QTest::newRow("no version") << QByteArray("; Contributors : Alice\nkey=value\nFrontend_PU_Version=Star Citizen\n") << "";
+        QTest::newRow("no key") << QByteArray("key=value\n") << "";
+        QTest::newRow("version comment after the header") << QByteArray("key=value\n; Version : 4.10.2\n") << "";
+        QTest::newRow("similar key") << QByteArray("Frontend_PU_Version_Short=4.10.2\n") << "";
+    }
+
+    void readsTheGameVersionOfATranslation ()
+    {
+        QFETCH(QByteArray, file);
+        QFETCH(QString, version);
+        std::istringstream stream(file.toStdString());
+        QCOMPARE(QString::fromStdString(GameVersion::ofTranslationIn(stream)), version);
+    }
+
+    void comparesGameVersions_data ()
+    {
+        QTest::addColumn<QString>("translation");
+        QTest::addColumn<QString>("game");
+        QTest::addColumn<bool>("older");
+        QTest::newRow("same") << "4.10.2" << "4.10.2" << false;
+        QTest::newRow("patch behind") << "4.10.1" << "4.10.2" << true;
+        QTest::newRow("minor behind") << "4.10.2" << "4.11.0" << true;
+        QTest::newRow("minor as number") << "4.9.1" << "4.10.0" << true;
+        QTest::newRow("major behind") << "3.24.3" << "4.0.0" << true;
+        QTest::newRow("translation ahead") << "4.11.0" << "4.10.2" << false;
+        QTest::newRow("translation names only the minor") << "4.10" << "4.10.2" << false;
+        QTest::newRow("translation names only an older minor") << "4.9" << "4.10.2" << true;
+        QTest::newRow("game names only the minor") << "4.10.1" << "4.10" << false;
+        QTest::newRow("translation unknown") << "" << "4.10.2" << false;
+        QTest::newRow("game unknown") << "4.10.2" << "" << false;
+    }
+
+    void comparesGameVersions ()
+    {
+        QFETCH(QString, translation);
+        QFETCH(QString, game);
+        QFETCH(bool, older);
+        QCOMPARE(GameVersion::older(translation.toStdString(), game.toStdString()), older);
+    }
+
+    void readsTheGameVersionFromTheManifest_data ()
+    {
+        QTest::addColumn<QByteArray>("manifest");
+        QTest::addColumn<QString>("version");
+        QTest::newRow("game files")
+            << QByteArray("{\"Data\": {\"Branch\": \"sc-alpha-4.10.2\", \"RequestedP4ChangeNum\": \"12913470\", \"Version\": \"4.10.197.2878\"}}")
+            << "4.10.2";
+        QTest::newRow("branch without patch") << QByteArray("{\"Data\": {\"Branch\": \"sc-alpha-4.11\"}}") << "4.11";
+        QTest::newRow("no branch") << QByteArray("{\"Data\": {\"Version\": \"4.10.197.2878\"}}") << "";
+        QTest::newRow("branch is no text") << QByteArray("{\"Data\": {\"Branch\": 4}}") << "";
+        QTest::newRow("no object") << QByteArray("[\"sc-alpha-4.10.2\"]") << "";
+        QTest::newRow("no JSON") << QByteArray("sc-alpha-4.10.2") << "";
+    }
+
+    void readsTheGameVersionFromTheManifest ()
+    {
+        QFETCH(QByteArray, manifest);
+        QFETCH(QString, version);
+        QTemporaryDir game;
+        std::ofstream(std::filesystem::path(game.path().toStdString()) / "build_manifest.id") << manifest.toStdString();
+        QCOMPARE(QString::fromStdString(GameVersion::ofGame(game.path().toStdString())), version);
+        QVERIFY(GameVersion::ofGame(std::filesystem::path(game.path().toStdString()) / "missing").empty());
+    }
+
+    void warnsWhenTheTranslationIsOlderThanTheGame ()
+    {
+        QTemporaryDir game;
+        std::filesystem::path gamePath = game.path().toStdString();
+        auto manifest = [&] (const std::string& branch)
+        { std::ofstream(gamePath / "build_manifest.id") << "{\"Data\": {\"Branch\": \"" << branch << "\"}}"; };
+        manifest("sc-alpha-4.10.2");
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", gamePath.string()});
+        QVERIFY(waitForState([&] (const Protocol::State& state) { return channel(state, "LIVE").gameVersion == "4.10.2"; }));
+        // English: no translation, nothing to compare
+        QVERIFY(channel(latest(), "LIVE").translationVersion.empty());
+        QVERIFY(!channel(latest(), "LIVE").translationOutdated);
+
+        server.setFile("/fr.ini", "; Version : 4.10.2-1.16\n" + TRANSLATION_FR);
+        QVERIFY(setLanguage("LIVE", "fr"));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QCOMPARE(channel(latest(), "LIVE").translationVersion, std::string("4.10.2"));
+        QVERIFY(!channel(latest(), "LIVE").translationOutdated);
+
+        // A game patch: the translation is still the one for 4.10.2
+        manifest("sc-alpha-4.11.0");
+        // Any command is answered by a new state
+        backEnd->execute(Protocol::SetTheme{"dark"});
+        QVERIFY(waitForState([&] (const Protocol::State& state) { return channel(state, "LIVE").translationOutdated; }));
+        QCOMPARE(channel(latest(), "LIVE").gameVersion, std::string("4.11.0"));
+
+        // The project publishes a translation for the new version
+        server.setFile("/fr.ini", "; Version : 4.11.0-1.0\n" + TRANSLATION_FR);
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QCOMPARE(channel(latest(), "LIVE").translationVersion, std::string("4.11.0"));
+        QVERIFY(!channel(latest(), "LIVE").translationOutdated);
+        server.setFile("/fr.ini", TRANSLATION_FR);
+    }
+
     void failedInstallLeavesTheGameFolderAlone_data ()
     {
         QTest::addColumn<QString>("obstacle");
