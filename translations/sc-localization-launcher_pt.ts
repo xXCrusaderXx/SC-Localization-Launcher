@@ -95,6 +95,22 @@
         <translation>Cache do driver gráfico de todos os programas</translation>
     </message>
     <message>
+        <source>Game files %1</source>
+        <translation>Arquivos do jogo %1</translation>
+    </message>
+    <message>
+        <source>Wine prefix without the game files</source>
+        <translation>Prefixo do Wine sem os arquivos do jogo</translation>
+    </message>
+    <message>
+        <source>Shader caches listed below</source>
+        <translation>Caches de shaders listados abaixo</translation>
+    </message>
+    <message>
+        <source>Free on this drive</source>
+        <translation>Livre nesta unidade</translation>
+    </message>
+    <message>
         <source>Deleted</source>
         <translation>Excluído</translation>
     </message>
@@ -111,8 +127,8 @@
         <translation>Star Citizen está em execução</translation>
     </message>
     <message>
-        <source>Clear shader caches</source>
-        <translation>Limpar caches de shaders</translation>
+        <source>Disk space and shader caches</source>
+        <translation>Espaço em disco e caches de shaders</translation>
     </message>
     <message>
         <source>Close Star Citizen first; the game uses these caches while it runs.</source>
@@ -989,12 +1005,16 @@
         <translation>FERRAMENTAS</translation>
     </message>
     <message>
-        <source>Shader caches of the game and the graphics driver; clearing them helps against stutter after updates</source>
-        <translation>Caches de shaders do jogo e do driver gráfico; limpá-los ajuda contra travadas após atualizações</translation>
+        <source>How much space the game and the shader caches take; clearing the caches helps against stutter after updates</source>
+        <translation>Quanto espaço o jogo e os caches de shaders ocupam; limpar os caches ajuda contra travamentos após atualizações</translation>
     </message>
     <message>
-        <source>Clear caches …</source>
-        <translation>Limpar caches …</translation>
+        <source>How much space the game, the Wine prefix and the shader caches take; clearing the caches helps against stutter after updates</source>
+        <translation>Quanto espaço o jogo, o prefixo do Wine e os caches de shaders ocupam; limpar os caches ajuda contra travamentos após atualizações</translation>
+    </message>
+    <message>
+        <source>Disk space and caches …</source>
+        <translation>Espaço em disco e caches …</translation>
     </message>
     <message>
         <source>Keybindings, profile settings, characters and user.cfg per channel</source>

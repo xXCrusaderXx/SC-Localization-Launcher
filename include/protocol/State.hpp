@@ -284,6 +284,19 @@ struct CacheEntry
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CacheEntry, kind, path, bytes, result)
 
+// What takes the space on the game's drives, see CacheCleaner::usage
+struct DiskUsage
+{
+    // channel (a channel's folder), prefix (a Wine prefix without the channel folders in it) or free (free space on a drive)
+    std::string kind;
+    // The channel's name for kind channel
+    std::string name;
+    std::string path;
+    std::uint64_t bytes = 0;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DiskUsage, kind, name, path, bytes)
+
 struct Caches
 {
     // Scanning or deleting
@@ -291,9 +304,11 @@ struct Caches
     // A scan finished, so entries is the current list
     bool scanned = false;
     std::vector<CacheEntry> entries;
+    // Of the last scan or deletion
+    std::vector<DiskUsage> usage;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Caches, busy, scanned, entries)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Caches, busy, scanned, entries, usage)
 
 enum class CheckStatus
 {

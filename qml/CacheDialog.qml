@@ -2,11 +2,12 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
-// Lists the shader caches of the game and the graphics drivers and deletes the chosen ones
+// Shows what takes the space on the game's drives, lists the shader caches of the game and the graphics drivers and
+// deletes the chosen ones
 Popup {
     id: dialog
 
-    // Protocol::Caches: { busy, scanned, entries: [{ kind, path, bytes, result }] }
+    // Protocol::Caches: { busy, scanned, entries: [{ kind, path, bytes, result }], usage: [{ kind, name, path, bytes }] }
     property var caches: ({})
     // StarCitizen.exe runs; the backend refuses to delete then
     property bool gamePlaying: false
@@ -14,6 +15,19 @@ Popup {
     signal clearRequested(var paths)
 
     readonly property var entries: caches.entries || []
+    // Channels and Wine prefixes first, then the caches still there, then the free space of each drive
+    readonly property var usage: {
+        const list = (caches.usage || []).filter(u => u.kind !== "free");
+        const cacheBytes = entries.filter(e => e.result !== "deleted").reduce((sum, e) => sum + e.bytes, 0);
+        if (entries.length > 0)
+            list.push({
+                kind: "caches",
+                name: "",
+                path: "",
+                bytes: cacheBytes
+            });
+        return list.concat((caches.usage || []).filter(u => u.kind === "free"));
+    }
     readonly property bool busy: caches.busy === true
     // path -> chosen; the caches shared by all programs are left out unless picked
     property var chosen: ({})
@@ -38,6 +52,19 @@ Popup {
             return qsTr("Graphics driver cache in the Wine prefix");
         default:
             return qsTr("Graphics driver cache of all programs");
+        }
+    }
+
+    function usageText(item) {
+        switch (item.kind) {
+        case "channel":
+            return qsTr("Game files %1").arg(item.name);
+        case "prefix":
+            return qsTr("Wine prefix without the game files");
+        case "caches":
+            return qsTr("Shader caches listed below");
+        default:
+            return qsTr("Free on this drive");
         }
     }
 
@@ -66,7 +93,7 @@ Popup {
     x: Math.round((parent.width - width) / 2)
     y: Math.round((parent.height - height) / 2)
     width: 640
-    height: Math.min(implicitHeight, 480)
+    height: Math.min(implicitHeight, 600)
     modal: true
     padding: 24
 
@@ -98,7 +125,7 @@ Popup {
 
             Text {
                 Layout.fillWidth: true
-                text: qsTr("Clear shader caches")
+                text: qsTr("Disk space and shader caches")
                 color: Theme.text
                 font.pixelSize: 18
                 font.bold: true
@@ -108,6 +135,53 @@ Popup {
                 glyph: "✕"
                 onClicked: dialog.close()
             }
+        }
+
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 4
+            visible: dialog.usage.length > 0
+
+            Repeater {
+                model: dialog.usage
+
+                delegate: RowLayout {
+                    id: usageRow
+
+                    required property var modelData
+
+                    Layout.fillWidth: true
+                    spacing: 10
+
+                    Text {
+                        text: dialog.usageText(usageRow.modelData)
+                        color: usageRow.modelData.kind === "free" ? Theme.muted : Theme.text
+                        font.pixelSize: 12
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: Theme.shownPath(usageRow.modelData.path)
+                        elide: Text.ElideMiddle
+                        color: Theme.muted
+                        font.pixelSize: 10
+                    }
+
+                    Text {
+                        text: dialog.formatSize(usageRow.modelData.bytes)
+                        color: usageRow.modelData.kind === "free" ? Theme.muted : Theme.text
+                        font.pixelSize: 12
+                        font.bold: usageRow.modelData.kind !== "free"
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 1
+            color: Theme.border
+            visible: dialog.usage.length > 0
         }
 
         Text {

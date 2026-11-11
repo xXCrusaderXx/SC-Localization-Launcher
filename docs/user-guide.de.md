@@ -75,7 +75,7 @@ Das **Dashboard** unter den Zeilen zeigt Kacheln wie Spielzeit, zuletzt gespielt
 
 Alle unter Einstellungen → Werkzeuge.
 
-- **Caches leeren …**: entfernt die Shader-Caches des Spiels, von DXVK/VKD3D, Mesa und NVIDIA. Hilft gegen Ruckler nach einem Spiel- oder Treiberupdate; der erste Start danach dauert länger. Grafikeinstellungen bleiben. Nicht, solange Star Citizen läuft.
+- **Speicherplatz und Caches …**: zeigt, wie viel Platz die Spieldateien jeder Spielversion, der Wine-Prefix (ohne die Spieldateien) und die Shader-Caches belegen und wie viel auf jedem Laufwerk frei ist. Darunter entfernt es die Shader-Caches des Spiels, von DXVK/VKD3D, Mesa und NVIDIA. Hilft gegen Ruckler nach einem Spiel- oder Treiberupdate; der erste Start danach dauert länger. Grafikeinstellungen bleiben. Nicht, solange Star Citizen läuft.
 - **Sicherungen …**: Tastenbelegung, Profileinstellungen, gespeicherte Charaktere und `user.cfg` pro Spielversion. Eine Wiederherstellung sichert zuerst, was sie ersetzt; solange Star Citizen läuft, wird sie abgelehnt. Die neuesten 10 Sicherungen pro Spielversion bleiben erhalten.
 - **Spieleinstellungen …** pro Spielversion:
   - Bildratenbegrenzung im Spiel und in Menüs sowie eigene `Schlüssel = Wert`-Zeilen, geschrieben in die `user.cfg`. Nach dem nächsten Spielstart zeigt der Launcher, welche davon Star Citizen ignoriert hat („not whitelisted“).

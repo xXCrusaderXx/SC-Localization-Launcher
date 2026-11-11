@@ -555,6 +555,10 @@ class GuiTest : public QObject
         QVERIFY(dialog);
         QTRY_VERIFY(dialog->property("opened").toBool());
         QTRY_VERIFY(findText("DXVK/VKD3D cache"));
+        // Above the caches: what LIVE, the caches and the free space take
+        QVERIFY(findText("Game files LIVE"));
+        QVERIFY(findText("Shader caches listed below"));
+        QVERIFY(findText("Free on this drive"));
         QTRY_VERIFY(findButton("Delete 1 KB"));
         QVERIFY(clickButton("Delete 1 KB"));
         QTRY_VERIFY(!QFile::exists(cache));

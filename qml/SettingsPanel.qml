@@ -460,14 +460,14 @@ Item {
 
                     Text {
                         Layout.fillWidth: true
-                        text: qsTr("Shader caches of the game and the graphics driver; clearing them helps against stutter after updates")
+                        text: Qt.platform.os === "windows" ? qsTr("How much space the game and the shader caches take; clearing the caches helps against stutter after updates") : qsTr("How much space the game, the Wine prefix and the shader caches take; clearing the caches helps against stutter after updates")
                         wrapMode: Text.Wrap
                         color: Theme.muted
                         font.pixelSize: 11
                     }
 
                     DialogButton {
-                        text: qsTr("Clear caches …")
+                        text: qsTr("Disk space and caches …")
                         enabled: !panel.locked
                         onClicked: panel.cacheCleanerRequested()
                     }
