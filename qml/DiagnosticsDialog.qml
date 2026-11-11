@@ -50,8 +50,30 @@ Popup {
             return ok ? qsTr("user.cfg selects the translation") : qsTr("user.cfg does not select the translation");
         case "diskSpace":
             return ok ? qsTr("Free disk space") : qsTr("Little free disk space");
+        case "mapCount":
+            return ok ? qsTr("Memory map limit (vm.max_map_count)") : qsTr("Memory map limit (vm.max_map_count) too low: Star Citizen needs 16777216");
+        case "openFiles":
+            return ok ? qsTr("Open-file limit") : qsTr("Open-file limit too low for Wine's esync and fsync: 524288 recommended");
+        case "gameMode":
+            return ok ? qsTr("GameMode installed") : qsTr("GameMode not installed (optional)");
+        case "cpuGovernor":
+            return qsTr("CPU governor");
         default:
             return check.id;
+        }
+    }
+
+    // How to fix a warning; the launcher itself never changes the system
+    function hintText(check) {
+        if (check.status !== "warning")
+            return "";
+        switch (check.id) {
+        case "mapCount":
+            return qsTr("To set it permanently, run in a terminal:") + "\necho 'vm.max_map_count = 16777216' | sudo tee /etc/sysctl.d/99-starcitizen.conf && sudo sysctl --system";
+        case "openFiles":
+            return qsTr("Set DefaultLimitNOFILE=524288 in /etc/systemd/system.conf and /etc/systemd/user.conf, then restart the computer.");
+        default:
+            return "";
         }
     }
 
@@ -169,6 +191,20 @@ Popup {
                                 text: row.modelData.detail
                                 elide: Text.ElideMiddle
                                 color: Theme.muted
+                                font.pixelSize: 10
+                            }
+
+                            // Selectable, so the command can be copied
+                            TextEdit {
+                                Layout.fillWidth: true
+                                visible: text !== ""
+                                text: dialog.hintText(row.modelData)
+                                readOnly: true
+                                selectByMouse: true
+                                wrapMode: TextEdit.Wrap
+                                textFormat: TextEdit.PlainText
+                                color: Theme.text
+                                selectionColor: Theme.accent
                                 font.pixelSize: 10
                             }
                         }

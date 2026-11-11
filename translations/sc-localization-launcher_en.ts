@@ -434,6 +434,42 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Memory map limit (vm.max_map_count)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Memory map limit (vm.max_map_count) too low: Star Citizen needs 16777216</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open-file limit</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open-file limit too low for Wine&apos;s esync and fsync: 524288 recommended</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GameMode installed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GameMode not installed (optional)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>CPU governor</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>To set it permanently, run in a terminal:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Set DefaultLimitNOFILE=524288 in /etc/systemd/system.conf and /etc/systemd/user.conf, then restart the computer.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Check the installation</source>
         <translation type="unfinished"></translation>
     </message>

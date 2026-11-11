@@ -434,6 +434,42 @@
         <translation>Wenig freier Speicherplatz</translation>
     </message>
     <message>
+        <source>Memory map limit (vm.max_map_count)</source>
+        <translation>Speicherzuordnungs-Limit (vm.max_map_count)</translation>
+    </message>
+    <message>
+        <source>Memory map limit (vm.max_map_count) too low: Star Citizen needs 16777216</source>
+        <translation>Speicherzuordnungs-Limit (vm.max_map_count) zu niedrig: Star Citizen braucht 16777216</translation>
+    </message>
+    <message>
+        <source>Open-file limit</source>
+        <translation>Limit offener Dateien</translation>
+    </message>
+    <message>
+        <source>Open-file limit too low for Wine&apos;s esync and fsync: 524288 recommended</source>
+        <translation>Limit offener Dateien zu niedrig für esync und fsync von Wine: 524288 empfohlen</translation>
+    </message>
+    <message>
+        <source>GameMode installed</source>
+        <translation>GameMode installiert</translation>
+    </message>
+    <message>
+        <source>GameMode not installed (optional)</source>
+        <translation>GameMode nicht installiert (optional)</translation>
+    </message>
+    <message>
+        <source>CPU governor</source>
+        <translation>CPU-Governor</translation>
+    </message>
+    <message>
+        <source>To set it permanently, run in a terminal:</source>
+        <translation>Zum dauerhaften Setzen im Terminal ausführen:</translation>
+    </message>
+    <message>
+        <source>Set DefaultLimitNOFILE=524288 in /etc/systemd/system.conf and /etc/systemd/user.conf, then restart the computer.</source>
+        <translation>DefaultLimitNOFILE=524288 in /etc/systemd/system.conf und /etc/systemd/user.conf setzen, dann den Rechner neu starten.</translation>
+    </message>
+    <message>
         <source>Check the installation</source>
         <translation>Installation prüfen</translation>
     </message>

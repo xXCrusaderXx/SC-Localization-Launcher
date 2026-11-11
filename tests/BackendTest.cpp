@@ -2221,12 +2221,63 @@ class BackendTest : public QObject
         // A temporary folder has no drive_c above it
         QCOMPARE(statusOf(result, "winePrefix"), std::string("error"));
         QCOMPARE(statusOf(result, "folder", "PTU"), std::string("missing"));
+#ifndef _WIN32
+        // Read from the machine running the test; whatever it has, the checks are there
+        QVERIFY(statusOf(result, "openFiles") != "missing");
+#endif
 
         auto gamePath = std::filesystem::path(game.path().toStdString());
         std::ofstream(gamePath / "user.cfg") << "r_DisplayInfo = 2\n";
         QCOMPARE(statusOf(runDiagnostics(false), "userCfg", "LIVE"), std::string("error"));
         // Read only: the check repaired nothing
         QCOMPARE(readFile(gamePath / "user.cfg"), std::string("r_DisplayInfo = 2\n"));
+    }
+
+    void checksTheLinuxSystemLimits_data ()
+    {
+        QTest::addColumn<QByteArray>("mapCount");
+        QTest::addColumn<QByteArray>("governor");
+        QTest::addColumn<qulonglong>("openFiles");
+        QTest::addColumn<int>("gameMode");
+        QTest::addColumn<QStringList>("expected");
+        // gameMode: -1 = cannot be looked up (Flatpak), 0 = not installed, 1 = installed
+        QTest::newRow("as the LUG Helper wants it")
+            << QByteArray("16777216\n") << QByteArray("performance\n") << qulonglong(524288) << 1
+            << QStringList{"mapCount ok 16777216", "openFiles ok 524288", "gameMode ok ", "cpuGovernor info performance"};
+        QTest::newRow("distribution defaults") << QByteArray("1048576\n") << QByteArray("powersave\n") << qulonglong(4096) << 0
+                                               << QStringList{"mapCount warning 1048576", "openFiles warning 4096", "gameMode info ",
+                                                              "cpuGovernor info powersave"};
+        QTest::newRow("Flatpak, no cpufreq") << QByteArray("2147483642") << QByteArray() << qulonglong(UINT64_MAX) << -1
+                                             << QStringList{"mapCount ok 2147483642", "openFiles ok unlimited"};
+        QTest::newRow("unreadable map count") << QByteArray() << QByteArray() << qulonglong(0) << -1 << QStringList{"openFiles warning 0"};
+        QTest::newRow("map count is no number") << QByteArray("lots") << QByteArray() << qulonglong(524288) << -1
+                                                << QStringList{"openFiles ok 524288"};
+        QTest::newRow("huge map count") << QByteArray("99999999999999999999999") << QByteArray() << qulonglong(524288) << -1
+                                        << QStringList{"mapCount ok 99999999999999999999999", "openFiles ok 524288"};
+    }
+
+    void checksTheLinuxSystemLimits ()
+    {
+        QFETCH(QByteArray, mapCount);
+        QFETCH(QByteArray, governor);
+        QFETCH(qulonglong, openFiles);
+        QFETCH(int, gameMode);
+        QFETCH(QStringList, expected);
+        QTemporaryDir rootDir;
+        std::filesystem::path root = rootDir.path().toStdString();
+        auto write = [] (const std::filesystem::path& file, const QByteArray& text)
+        {
+            if(text.isEmpty()) return;
+            std::filesystem::create_directories(file.parent_path());
+            std::ofstream(file) << text.toStdString();
+        };
+        write(root / "proc/sys/vm/max_map_count", mapCount);
+        write(root / "sys/devices/system/cpu/cpu0/cpufreq/scaling_governor", governor);
+
+        QStringList found;
+        for(const auto& check : Diagnostics::systemChecks(root, openFiles, gameMode < 0 ? std::nullopt : std::optional<bool>(gameMode == 1)))
+            found << QString::fromStdString(check.id + " " + nlohmann::json(check.status).get<std::string>() + " " + check.detail);
+        QCOMPARE(found, expected);
     }
 
     void savesAnAnonymizedReport ()

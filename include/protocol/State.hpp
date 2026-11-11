@@ -324,8 +324,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(CheckStatus,
 // One result of RunDiagnostics, see Diagnostics. The UI words it by id; detail holds paths (home shown as ~) or values.
 struct DiagnosticCheck
 {
-    // system, launcher, catalogue, rsiLauncher, winePrefix, starter; per channel: folder, writable, translation,
-    // userCfg, diskSpace
+    // system, launcher, catalogue, rsiLauncher, winePrefix, starter, mapCount, openFiles, gameMode, cpuGovernor;
+    // per channel: folder, writable, translation, userCfg, diskSpace
     std::string id;
     // Empty unless the check belongs to a game channel
     std::string channel;
