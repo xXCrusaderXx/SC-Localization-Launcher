@@ -373,6 +373,44 @@ class GuiTest : public QObject
         bridge->setOption("showUpdateProgress", progress);
     }
 
+    void warnsWhenTheTranslationIsOlderThanTheGame ()
+    {
+        auto liveRow = [&] () -> QQuickItem*
+        {
+            std::function<QQuickItem*(QQuickItem*)> walk = [&] (QQuickItem* item) -> QQuickItem*
+            {
+                if(QString(item->metaObject()->className()).startsWith("ChannelRow") &&
+                   item->property("channel").toMap()["name"].toString() == "LIVE")
+                    return item;
+                for(auto* child : item->childItems())
+                    if(auto* found = walk(child)) return found;
+                return nullptr;
+            };
+            return walk(window->contentItem());
+        };
+        QQuickItem* row = liveRow();
+        QVERIFY(row);
+        QVERIFY(!row->property("outdated").toBool());
+
+        // runUpdate() installed German on LIVE; now it names its game version, and a game patch brought 4.11.0
+        auto live = std::filesystem::path(liveDir.path().toStdString());
+        auto ini = live / "data/Localization/german_(germany)/global.ini";
+        std::string installed = readFile(ini);
+        std::ofstream(ini, std::ios::binary) << "Frontend_PU_Version=Star Citizen Alpha 4.10.2 LIVE\r\n" << installed;
+        std::ofstream(live / "build_manifest.id") << "{\"Data\": {\"Branch\": \"sc-alpha-4.11.0\"}}";
+        // The next state reads the changed files
+        bool progress = bridge->state()["options"].toMap()["showUpdateProgress"].toBool();
+        bridge->setOption("showUpdateProgress", !progress);
+        QTRY_VERIFY(row->property("outdated").toBool());
+        // The test catalogue gives German on LIVE a notice of its own, which the row shows first
+        QVERIFY(findText("Wird vorbereitet"));
+
+        std::ofstream(ini, std::ios::binary) << installed;
+        std::filesystem::remove(live / "build_manifest.id");
+        bridge->setOption("showUpdateProgress", progress);
+        QTRY_VERIFY(!row->property("outdated").toBool());
+    }
+
     void showsWhenTheGameCannotStart ()
     {
         // Everything is up to date after runUpdate(), so the button only starts the game

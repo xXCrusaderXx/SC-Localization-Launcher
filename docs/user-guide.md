@@ -38,6 +38,7 @@ You can open the assistant again under Settings → Help → *Setup assistant �
 Each game channel with a folder has a row:
 
 - The **dot** shows the state: green = up to date, amber = an update is waiting, red = the files were changed or the last update failed.
+- After a game patch the line can read *Translation for game version 4.10.2, the game is 4.11.0: new texts stay in English*. The translation is up to date, but its project has not caught up with the patch yet; texts that are new in the game stay English until it does. The warning goes away with the next translation update for the new version. It needs a translation that names its game version in its file, and a translation project's own notice is shown instead when it has one.
 - The **drop-down** chooses the translation for this channel. *English* removes the translation again.
 - **↻ Repair** downloads the translation again and rewrites its lines in `user.cfg`, e.g. after a game update replaced the files.
 - **✎** changes the channel's folder.

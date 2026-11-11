@@ -186,6 +186,10 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Translation for game version %1, the game is %2: new texts stay in English</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Choose folder</source>
         <translation type="unfinished"></translation>
     </message>

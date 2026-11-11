@@ -5,7 +5,7 @@ import QtQuick.Layouts
 Rectangle {
     id: row
 
-    // Protocol::Channel: { name, installPath, language, availableLanguages, status, notices, custom }
+    // Protocol::Channel: { name, installPath, language, availableLanguages, status, notices, custom, gameVersion, translationVersion, translationOutdated }
     property var channel: ({})
     // Protocol::State.languages: [{ code, name, credit }]
     property var languages: []
@@ -23,6 +23,8 @@ Rectangle {
     readonly property bool broken: channel.status === "damaged" || channel.status === "failed"
     // Notice of the translation project for the chosen language on this channel
     readonly property string notice: (channel.notices || {})[channel.language] || ""
+    // Up to date, but made for an earlier game version than the channel's files
+    readonly property bool outdated: channel.status === "installed" && channel.translationOutdated === true
     readonly property string choiceName: {
         for (const option of options)
             if (option.code === channel.language)
@@ -120,9 +122,11 @@ Rectangle {
                         return qsTr("%1 is not installed yet").arg(row.choiceName);
                     if (row.channel.status === "updateAvailable")
                         return row.channel.language === "en" ? qsTr("The translation is removed with the next update") : qsTr("Update available for %1").arg(row.choiceName);
+                    if (row.outdated)
+                        return qsTr("Translation for game version %1, the game is %2: new texts stay in English").arg(row.channel.translationVersion).arg(row.channel.gameVersion);
                     return Theme.shownPath(row.channel.installPath);
                 }
-                color: row.broken ? Theme.danger : row.pathSet && (!row.choiceAvailable || row.notice !== "" || row.channel.status !== "installed") ? Theme.warning : Theme.muted
+                color: row.broken ? Theme.danger : row.pathSet && (!row.choiceAvailable || row.notice !== "" || row.channel.status !== "installed" || row.outdated) ? Theme.warning : Theme.muted
                 // Notices and language names come from the internet
                 textFormat: Text.PlainText
                 font.pixelSize: 11

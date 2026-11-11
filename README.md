@@ -23,6 +23,7 @@ New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)
 - Finds Star Citizen installations automatically, or lets you pick the folder.
 - Downloads the translation safely: a failed download never replaces a working one, and only the language lines in your `user.cfg` are changed.
 - Optionally starts Star Citizen after the update: on Linux through the LUG Helper's `sc-launch.sh` or Lutris, on Windows through the RSI Launcher.
+- Warns when a game patch is newer than the game version the installed translation was made for, so you know why new texts are in English. This works for translations that name their game version in the file; the German, French, Italian and Portuguese ones do.
 - Keeps working offline with the last known channel list.
 - Checks and updates from the command line, e.g. from a `systemd --user` timer, without opening a window.
 - Checks for new translation versions every hour while it is open. With "Update translations automatically" it installs them, and waits until Star Citizen has been closed if the game runs.

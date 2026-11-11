@@ -38,6 +38,7 @@ Unter Einstellungen → Hilfe → *Einrichtungsassistent …* öffnest du ihn je
 Jede Spielversion mit Ordner hat eine Zeile:
 
 - Der **Punkt** zeigt den Zustand: grün = aktuell, gelb = ein Update wartet, rot = die Dateien wurden verändert oder das letzte Update ist fehlgeschlagen.
+- Nach einem Spielpatch kann in der Zeile *Übersetzung für Spielversion 4.10.2, das Spiel ist 4.11.0: neue Texte bleiben Englisch* stehen. Die Übersetzung ist aktuell, ihr Projekt hat den Patch aber noch nicht nachgezogen; Texte, die im Spiel neu sind, bleiben bis dahin Englisch. Die Warnung verschwindet mit dem nächsten Übersetzungsupdate für die neue Version. Dafür muss die Übersetzung ihre Spielversion in der Datei nennen, und hat das Übersetzungsprojekt einen eigenen Hinweis, steht dieser stattdessen da.
 - Die **Auswahl** legt die Übersetzung dieser Spielversion fest. *English* entfernt die Übersetzung wieder.
 - **↻ Reparieren** lädt die Übersetzung erneut und schreibt ihre Zeilen in der `user.cfg` neu, z. B. wenn ein Spielupdate die Dateien ersetzt hat.
 - **✎** ändert den Ordner der Spielversion.
