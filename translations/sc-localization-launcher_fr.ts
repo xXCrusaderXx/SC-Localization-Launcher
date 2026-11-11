@@ -434,6 +434,42 @@
         <translation>Peu d&apos;espace disque libre</translation>
     </message>
     <message>
+        <source>Memory map limit (vm.max_map_count)</source>
+        <translation>Limite de mappages mémoire (vm.max_map_count)</translation>
+    </message>
+    <message>
+        <source>Memory map limit (vm.max_map_count) too low: Star Citizen needs 16777216</source>
+        <translation>Limite de mappages mémoire (vm.max_map_count) trop basse : Star Citizen a besoin de 16777216</translation>
+    </message>
+    <message>
+        <source>Open-file limit</source>
+        <translation>Limite de fichiers ouverts</translation>
+    </message>
+    <message>
+        <source>Open-file limit too low for Wine&apos;s esync and fsync: 524288 recommended</source>
+        <translation>Limite de fichiers ouverts trop basse pour esync et fsync de Wine : 524288 recommandé</translation>
+    </message>
+    <message>
+        <source>GameMode installed</source>
+        <translation>GameMode installé</translation>
+    </message>
+    <message>
+        <source>GameMode not installed (optional)</source>
+        <translation>GameMode non installé (facultatif)</translation>
+    </message>
+    <message>
+        <source>CPU governor</source>
+        <translation>Gouverneur CPU</translation>
+    </message>
+    <message>
+        <source>To set it permanently, run in a terminal:</source>
+        <translation>Pour la définir de façon permanente, exécutez dans un terminal :</translation>
+    </message>
+    <message>
+        <source>Set DefaultLimitNOFILE=524288 in /etc/systemd/system.conf and /etc/systemd/user.conf, then restart the computer.</source>
+        <translation>Définissez DefaultLimitNOFILE=524288 dans /etc/systemd/system.conf et /etc/systemd/user.conf, puis redémarrez l&apos;ordinateur.</translation>
+    </message>
+    <message>
         <source>Check the installation</source>
         <translation>Vérifier l&apos;installation</translation>
     </message>
@@ -1006,11 +1042,11 @@
     </message>
     <message>
         <source>How much space the game and the shader caches take; clearing the caches helps against stutter after updates</source>
-        <translation>L'espace occupé par le jeu et les caches de shaders ; vider les caches aide contre les saccades après les mises à jour</translation>
+        <translation>L&apos;espace occupé par le jeu et les caches de shaders ; vider les caches aide contre les saccades après les mises à jour</translation>
     </message>
     <message>
         <source>How much space the game, the Wine prefix and the shader caches take; clearing the caches helps against stutter after updates</source>
-        <translation>L'espace occupé par le jeu, le préfixe Wine et les caches de shaders ; vider les caches aide contre les saccades après les mises à jour</translation>
+        <translation>L&apos;espace occupé par le jeu, le préfixe Wine et les caches de shaders ; vider les caches aide contre les saccades après les mises à jour</translation>
     </message>
     <message>
         <source>Disk space and caches …</source>

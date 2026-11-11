@@ -3,7 +3,9 @@
 #include <QStandardPaths>
 #include <QSysInfo>
 #include <algorithm>
+#include <cctype>
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -21,6 +23,10 @@
 #include "backend/utils/platform.hpp"
 #include "logging/logging.h"
 #include "protocol/State.hpp"
+
+#ifndef _WIN32
+#include <sys/resource.h>
+#endif
 
 // Read-only checks of the installation for a problem report. Nothing here changes a file outside the report itself.
 // Everything that leaves the machine (check details, settings, logs) has the home folder and the user name replaced.
@@ -57,6 +63,10 @@ class Diagnostics
     LoggerFramework::LogEx lg;
     std::filesystem::path home;
     std::string user;
+
+    // The values the LUG Helper checks before an installation; lower ones make the game crash or stutter
+    static constexpr uint64_t MIN_MAP_COUNT = 16777216;
+    static constexpr uint64_t MIN_OPEN_FILES = 524288;
 
     // 2 GB: a translation needs little, but a full disk also breaks game updates and shader caches
     static constexpr uintmax_t LOW_SPACE = 2ull * 1024 * 1024 * 1024;
@@ -112,6 +122,38 @@ class Diagnostics
     }
 
    public:
+    // Linux settings that often break Star Citizen, read below `root` ("/" outside tests). They only report: the launcher
+    // changes nothing on the system. openFiles is the hard limit of open files, which Wine's esync and fsync raise the soft one to.
+    // gameMode: nullopt when it cannot be looked up, as in the Flatpak.
+    static std::vector<Check> systemChecks (const std::filesystem::path& root, uint64_t openFiles, std::optional<bool> gameMode)
+    {
+        std::vector<Check> checks;
+        auto firstLine = [&root] (const char* file)
+        {
+            std::ifstream in(root / file);
+            std::string line;
+            std::getline(in, line);
+            while(!line.empty() && std::isspace(static_cast<unsigned char>(line.back()))) line.pop_back();
+            return line;
+        };
+
+        std::string mapCount = firstLine("proc/sys/vm/max_map_count");
+        if(!mapCount.empty() && std::all_of(mapCount.begin(), mapCount.end(), [] (unsigned char c) { return std::isdigit(c); }))
+        {
+            bool enough = mapCount.size() > 18 || std::stoull(mapCount) >= MIN_MAP_COUNT;
+            checks.push_back({"mapCount", "", enough ? Status::Ok : Status::Warning, mapCount});
+        }
+
+        checks.push_back({"openFiles", "", openFiles >= MIN_OPEN_FILES ? Status::Ok : Status::Warning,
+                          openFiles == UINT64_MAX ? "unlimited" : std::to_string(openFiles)});
+
+        if(gameMode) checks.push_back({"gameMode", "", *gameMode ? Status::Ok : Status::Info, ""});
+
+        if(std::string governor = firstLine("sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"); !governor.empty())
+            checks.push_back({"cpuGovernor", "", Status::Info, governor});
+        return checks;
+    }
+
     Diagnostics ()
         : lg("Diagnostics")
         , home(PATHS::getUserRootPath())
@@ -189,6 +231,14 @@ class Diagnostics
             checks.push_back(check("starter", Status::Ok, "lutris"));
         else
             checks.push_back(check("starter", std::filesystem::exists("/.flatpak-info") ? Status::Info : Status::Warning, ""));
+
+        // The Flatpak sees the host's kernel settings and limits, but not its programs
+        rlimit limit{};
+        uint64_t openFiles =
+            getrlimit(RLIMIT_NOFILE, &limit) == 0 ? (limit.rlim_max == RLIM_INFINITY ? UINT64_MAX : static_cast<uint64_t>(limit.rlim_max)) : 0;
+        std::optional<bool> gameMode;
+        if(!std::filesystem::exists("/.flatpak-info", ec)) gameMode = !QStandardPaths::findExecutable("gamemoderun").isEmpty();
+        for(auto& system : systemChecks("/", openFiles, gameMode)) checks.push_back(std::move(system));
 #endif
 
         for(const auto& channel : input.channels)

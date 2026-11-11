@@ -102,6 +102,9 @@ The RSI Launcher folder in the settings must be the one that contains `RSI Launc
 **"The RSI Launcher did not start".**
 The link in the message opens the log. The end of `sc-launch.log` (LUG Helper) usually says why. Starting the game once through the LUG Helper or Lutris directly often shows the same error more clearly.
 
+**Linux: the game crashes while loading, or stutters badly.**
+Settings → Help → *Check installation …* checks two system limits. With *Memory map limit (vm.max_map_count) too low*, Star Citizen crashes while loading; the dialog shows the command that raises it to 16777216 for good. With *Open-file limit too low*, Wine's esync and fsync do not work; the dialog says which systemd setting to change. The launcher only reports this and changes nothing on your system.
+
 **A setting from "Game settings" has no effect.**
 If the dialog lists it as ignored ("not whitelisted"), Star Citizen does not accept it from `user.cfg`. The graphics API only changes when the game is not running; the dialog says when it is still waiting.
 

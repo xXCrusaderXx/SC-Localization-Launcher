@@ -102,6 +102,9 @@ Der RSI-Launcher-Ordner in den Einstellungen muss der sein, in dem `RSI Launcher
 **„Der RSI Launcher ist nicht gestartet“.**
 Der Link in der Meldung öffnet das Log. Das Ende von `sc-launch.log` (LUG Helper) sagt meist, warum. Ein Start direkt über den LUG Helper oder Lutris zeigt denselben Fehler oft deutlicher.
 
+**Linux: Das Spiel stürzt beim Laden ab oder ruckelt stark.**
+Einstellungen → Hilfe → *Installation prüfen …* prüft zwei Systemgrenzen. Bei *Speicherzuordnungs-Limit (vm.max_map_count) zu niedrig* stürzt Star Citizen beim Laden ab; der Dialog zeigt den Befehl, der es dauerhaft auf 16777216 setzt. Bei *Limit offener Dateien zu niedrig* funktionieren esync und fsync von Wine nicht; der Dialog nennt die systemd-Einstellung, die du ändern musst. Der Launcher meldet das nur und ändert nichts an deinem System.
+
 **Eine Spieleinstellung wirkt nicht.**
 Steht sie im Dialog als ignoriert („not whitelisted“), nimmt Star Citizen sie aus der `user.cfg` nicht an. Die Grafik-API ändert sich nur, wenn das Spiel nicht läuft; der Dialog sagt, wenn sie noch wartet.
 
