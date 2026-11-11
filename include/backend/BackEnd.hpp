@@ -943,35 +943,53 @@ class BackEnd
                  });
     }
 
-    void handle (const Protocol::ScanCaches&)
+    struct CacheTargets
     {
-        if(data.caches.busy) return;
-        // Every configured channel folder and the Wine prefixes around them and the RSI Launcher
+        // (name, folder) of every configured channel, in display order
+        std::vector<std::pair<std::string, std::filesystem::path>> channels;
         std::vector<std::filesystem::path> folders;
+        // The Wine prefixes around them and the RSI Launcher
         std::vector<std::filesystem::path> prefixes;
-        auto addPrefix = [&prefixes] (const std::filesystem::path& path)
+    };
+
+    CacheTargets cacheTargets () const
+    {
+        CacheTargets targets;
+        auto addPrefix = [&targets] (const std::filesystem::path& path)
         {
             if(path.empty()) return;
             auto prefix = UpdateManager::findWinePrefix(path);
-            if(prefix && std::find(prefixes.begin(), prefixes.end(), *prefix) == prefixes.end()) prefixes.push_back(*prefix);
+            if(prefix && std::find(targets.prefixes.begin(), targets.prefixes.end(), *prefix) == targets.prefixes.end())
+                targets.prefixes.push_back(*prefix);
         };
+        std::vector<std::string> names = Protocol::CHANNEL_NAMES;
         for(const auto& [name, channel] : data.channels)
-            if(!channel.installPath.empty())
-            {
-                folders.push_back(channel.installPath);
-                addPrefix(channel.installPath);
-            }
+            if(std::find(names.begin(), names.end(), name) == names.end()) names.push_back(name);
+        for(const auto& name : names)
+        {
+            auto it = data.channels.find(name);
+            if(it == data.channels.end() || it->second.installPath.empty()) continue;
+            targets.channels.emplace_back(name, it->second.installPath);
+            targets.folders.push_back(it->second.installPath);
+            addPrefix(it->second.installPath);
+        }
         addPrefix(data.rsiLauncherPath);
+        return targets;
+    }
 
+    void handle (const Protocol::ScanCaches&)
+    {
+        if(data.caches.busy) return;
         data.caches.busy = true;
         startJob(cacheJob,
-                 [this, folders, prefixes]
+                 [this, targets = cacheTargets()]
                  {
-                     auto entries = cacheCleaner.find(prefixes, folders, data.shuttingDown);
+                     auto entries = cacheCleaner.find(targets.prefixes, targets.folders, data.shuttingDown);
+                     auto usage = cacheCleaner.usage(targets.channels, targets.prefixes, data.shuttingDown);
                      queue.post(
-                         [this, entries = std::move(entries)]
+                         [this, entries = std::move(entries), usage = std::move(usage)]
                          {
-                             data.caches = {false, true, entries};
+                             data.caches = {false, true, entries, usage};
                              publish();
                          });
                  });
@@ -991,13 +1009,16 @@ class BackEnd
 
         data.caches.busy = true;
         startJob(cacheJob,
-                 [this, entries = data.caches.entries, paths] () mutable
+                 [this, entries = data.caches.entries, paths, targets = cacheTargets()] () mutable
                  {
                      cacheCleaner.clear(entries, paths, data.shuttingDown);
+                     // The prefix is smaller and the drive has more space now
+                     auto usage = cacheCleaner.usage(targets.channels, targets.prefixes, data.shuttingDown);
                      queue.post(
-                         [this, entries = std::move(entries)]
+                         [this, entries = std::move(entries), usage = std::move(usage)]
                          {
                              data.caches.entries = entries;
+                             data.caches.usage = usage;
                              data.caches.busy = false;
                              publish();
                          });

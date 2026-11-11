@@ -95,6 +95,22 @@
         <translation>Cache sterownika graficznego wszystkich programów</translation>
     </message>
     <message>
+        <source>Game files %1</source>
+        <translation>Pliki gry %1</translation>
+    </message>
+    <message>
+        <source>Wine prefix without the game files</source>
+        <translation>Prefiks Wine bez plików gry</translation>
+    </message>
+    <message>
+        <source>Shader caches listed below</source>
+        <translation>Pamięć podręczna shaderów, wymieniona poniżej</translation>
+    </message>
+    <message>
+        <source>Free on this drive</source>
+        <translation>Wolne na tym dysku</translation>
+    </message>
+    <message>
         <source>Deleted</source>
         <translation>Usunięto</translation>
     </message>
@@ -111,8 +127,8 @@
         <translation>Star Citizen jest uruchomiony</translation>
     </message>
     <message>
-        <source>Clear shader caches</source>
-        <translation>Wyczyść cache shaderów</translation>
+        <source>Disk space and shader caches</source>
+        <translation>Miejsce na dysku i pamięć podręczna shaderów</translation>
     </message>
     <message>
         <source>Close Star Citizen first; the game uses these caches while it runs.</source>
@@ -990,12 +1006,16 @@
         <translation>NARZĘDZIA</translation>
     </message>
     <message>
-        <source>Shader caches of the game and the graphics driver; clearing them helps against stutter after updates</source>
-        <translation>Cache shaderów gry i sterownika graficznego; wyczyszczenie pomaga na przycięcia po aktualizacjach</translation>
+        <source>How much space the game and the shader caches take; clearing the caches helps against stutter after updates</source>
+        <translation>Ile miejsca zajmują gra i pamięć podręczna shaderów; wyczyszczenie pamięci podręcznej pomaga na przycięcia po aktualizacjach</translation>
     </message>
     <message>
-        <source>Clear caches …</source>
-        <translation>Wyczyść cache …</translation>
+        <source>How much space the game, the Wine prefix and the shader caches take; clearing the caches helps against stutter after updates</source>
+        <translation>Ile miejsca zajmują gra, prefiks Wine i pamięć podręczna shaderów; wyczyszczenie pamięci podręcznej pomaga na przycięcia po aktualizacjach</translation>
+    </message>
+    <message>
+        <source>Disk space and caches …</source>
+        <translation>Miejsce na dysku i pamięć podręczna …</translation>
     </message>
     <message>
         <source>Keybindings, profile settings, characters and user.cfg per channel</source>

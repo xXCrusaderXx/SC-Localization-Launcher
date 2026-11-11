@@ -2114,6 +2114,44 @@ class BackendTest : public QObject
         QVERIFY(std::filesystem::exists(live / "Bin64/StarCitizen.exe"));
     }
 
+    void listsTheDiskSpaceOfChannelsAndPrefix ()
+    {
+        QTemporaryDir prefixDir, outsideDir;
+        std::filesystem::path prefix = prefixDir.path().toStdString();
+        auto live = cachePrefix(prefix, outsideDir.path().toStdString());
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", live.string()});
+
+        auto usage = [] (const Protocol::Caches& caches)
+        {
+            std::map<std::string, std::pair<std::string, uint64_t>> result;
+            for(const auto& entry : caches.usage)
+                if(entry.kind != "free") result[entry.kind + " " + entry.name] = {entry.path, entry.bytes};
+            return result;
+        };
+        auto caches = scanCaches();
+        // LIVE: two DXVK caches and the program; the prefix: the game's caches, its GraphicsSettings and the Mesa cache,
+        // without LIVE inside it and without the symlink that leads out
+        std::map<std::string, std::pair<std::string, uint64_t>> expected{{"channel LIVE", {live.string(), 40 + 50 + 5}},
+                                                                         {"prefix ", {prefix.string(), 1000 + 2000 + 10 + 300}}};
+        QCOMPARE(usage(caches), expected);
+        // Both are on the same drive
+        QCOMPARE(std::count_if(caches.usage.begin(), caches.usage.end(), [] (const auto& e) { return e.kind == "free"; }), 1);
+
+        std::vector<std::string> paths;
+        for(const auto& entry : caches.entries)
+            if(entry.kind != "user") paths.push_back(entry.path);
+        size_t from = published();
+        backEnd->execute(Protocol::ClearCaches{paths});
+        auto done =
+            waitForState([] (const auto& s)
+                         { return !s.caches.busy && !s.caches.entries.empty() && s.caches.entries[0].result != Protocol::CacheResult::None; }, from);
+        QVERIFY(done);
+        std::lock_guard lock(mutex);
+        expected = {{"channel LIVE", {live.string(), 5}}, {"prefix ", {prefix.string(), 10}}};
+        QCOMPARE(usage(states[*done].caches), expected);
+    }
+
     void doesNotClearCachesWhileTheGameRuns ()
     {
         qputenv("PATH", "/usr/bin:/bin");

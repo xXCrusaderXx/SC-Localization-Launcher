@@ -95,6 +95,22 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Game files %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Wine prefix without the game files</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Shader caches listed below</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Free on this drive</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Deleted</source>
         <translation type="unfinished"></translation>
     </message>
@@ -111,7 +127,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Clear shader caches</source>
+        <source>Disk space and shader caches</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -989,11 +1005,15 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Shader caches of the game and the graphics driver; clearing them helps against stutter after updates</source>
+        <source>How much space the game and the shader caches take; clearing the caches helps against stutter after updates</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Clear caches …</source>
+        <source>How much space the game, the Wine prefix and the shader caches take; clearing the caches helps against stutter after updates</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Disk space and caches …</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

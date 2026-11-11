@@ -75,7 +75,7 @@ The **dashboard** below the rows shows tiles such as play time, last played, fav
 
 All under Settings → Tools.
 
-- **Clear caches …**: removes the shader caches of the game, DXVK/VKD3D, Mesa and NVIDIA. Helps against stutter after a game or driver update; the first start afterwards takes longer. Graphics settings stay. Not while Star Citizen runs.
+- **Disk space and caches …**: shows how much space each channel's game files, the Wine prefix (without the game files) and the shader caches take, and how much is free on each drive. Below, it removes the shader caches of the game, DXVK/VKD3D, Mesa and NVIDIA. Helps against stutter after a game or driver update; the first start afterwards takes longer. Graphics settings stay. Not while Star Citizen runs.
 - **Backups …**: keybindings, profile settings, saved characters and `user.cfg` per channel. A restore first backs up what it replaces; it is refused while Star Citizen runs. The newest 10 backups per channel are kept.
 - **Game settings …** per channel:
   - frame limits in the game and in menus, and your own `key = value` lines, written into `user.cfg`. After the next game start the launcher shows which of them Star Citizen ignored ("not whitelisted").

@@ -95,6 +95,22 @@
         <translation>Grafiktreiber-Cache aller Programme</translation>
     </message>
     <message>
+        <source>Game files %1</source>
+        <translation>Spieldateien %1</translation>
+    </message>
+    <message>
+        <source>Wine prefix without the game files</source>
+        <translation>Wine-Prefix ohne die Spieldateien</translation>
+    </message>
+    <message>
+        <source>Shader caches listed below</source>
+        <translation>Shader-Caches, unten aufgelistet</translation>
+    </message>
+    <message>
+        <source>Free on this drive</source>
+        <translation>Frei auf diesem Laufwerk</translation>
+    </message>
+    <message>
         <source>Deleted</source>
         <translation>Gelöscht</translation>
     </message>
@@ -111,8 +127,8 @@
         <translation>Star Citizen läuft</translation>
     </message>
     <message>
-        <source>Clear shader caches</source>
-        <translation>Shader-Caches leeren</translation>
+        <source>Disk space and shader caches</source>
+        <translation>Speicherplatz und Shader-Caches</translation>
     </message>
     <message>
         <source>Close Star Citizen first; the game uses these caches while it runs.</source>
@@ -957,12 +973,16 @@
         <translation>WERKZEUGE</translation>
     </message>
     <message>
-        <source>Shader caches of the game and the graphics driver; clearing them helps against stutter after updates</source>
-        <translation>Shader-Caches des Spiels und des Grafiktreibers; leeren hilft gegen Ruckler nach Updates</translation>
+        <source>How much space the game and the shader caches take; clearing the caches helps against stutter after updates</source>
+        <translation>Wie viel Platz das Spiel und die Shader-Caches belegen; Caches leeren hilft gegen Ruckler nach Updates</translation>
     </message>
     <message>
-        <source>Clear caches …</source>
-        <translation>Caches leeren …</translation>
+        <source>How much space the game, the Wine prefix and the shader caches take; clearing the caches helps against stutter after updates</source>
+        <translation>Wie viel Platz das Spiel, der Wine-Prefix und die Shader-Caches belegen; Caches leeren hilft gegen Ruckler nach Updates</translation>
+    </message>
+    <message>
+        <source>Disk space and caches …</source>
+        <translation>Speicherplatz und Caches …</translation>
     </message>
     <message>
         <source>Keybindings, profile settings, characters and user.cfg per channel</source>

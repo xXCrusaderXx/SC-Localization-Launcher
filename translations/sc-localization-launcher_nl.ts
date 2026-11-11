@@ -95,6 +95,22 @@
         <translation>Cache van het grafische stuurprogramma van alle programma&apos;s</translation>
     </message>
     <message>
+        <source>Game files %1</source>
+        <translation>Spelbestanden %1</translation>
+    </message>
+    <message>
+        <source>Wine prefix without the game files</source>
+        <translation>Wine-prefix zonder de spelbestanden</translation>
+    </message>
+    <message>
+        <source>Shader caches listed below</source>
+        <translation>Shadercaches, hieronder vermeld</translation>
+    </message>
+    <message>
+        <source>Free on this drive</source>
+        <translation>Vrij op deze schijf</translation>
+    </message>
+    <message>
         <source>Deleted</source>
         <translation>Verwijderd</translation>
     </message>
@@ -111,8 +127,8 @@
         <translation>Star Citizen draait</translation>
     </message>
     <message>
-        <source>Clear shader caches</source>
-        <translation>Shadercaches wissen</translation>
+        <source>Disk space and shader caches</source>
+        <translation>Schijfruimte en shadercaches</translation>
     </message>
     <message>
         <source>Close Star Citizen first; the game uses these caches while it runs.</source>
@@ -989,12 +1005,16 @@
         <translation>HULPMIDDELEN</translation>
     </message>
     <message>
-        <source>Shader caches of the game and the graphics driver; clearing them helps against stutter after updates</source>
-        <translation>Shadercaches van het spel en het grafische stuurprogramma; wissen helpt tegen haperingen na updates</translation>
+        <source>How much space the game and the shader caches take; clearing the caches helps against stutter after updates</source>
+        <translation>Hoeveel ruimte het spel en de shadercaches innemen; caches legen helpt tegen haperingen na updates</translation>
     </message>
     <message>
-        <source>Clear caches …</source>
-        <translation>Caches wissen …</translation>
+        <source>How much space the game, the Wine prefix and the shader caches take; clearing the caches helps against stutter after updates</source>
+        <translation>Hoeveel ruimte het spel, de Wine-prefix en de shadercaches innemen; caches legen helpt tegen haperingen na updates</translation>
+    </message>
+    <message>
+        <source>Disk space and caches …</source>
+        <translation>Schijfruimte en caches …</translation>
     </message>
     <message>
         <source>Keybindings, profile settings, characters and user.cfg per channel</source>

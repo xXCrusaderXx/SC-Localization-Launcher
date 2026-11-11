@@ -7,7 +7,12 @@
 #include <filesystem>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
+
+#ifndef _WIN32
+#include <sys/stat.h>
+#endif
 
 #include "backend/utils/paths.hpp"
 #include "backend/utils/platform.hpp"
@@ -73,6 +78,38 @@ class CacheCleaner
         return total;
     }
 
+    // Like size(), but leaves out the folders in `skip`, e.g. the channel folders inside a Wine prefix
+    static uint64_t sizeWithout (const std::filesystem::path& path, const std::set<std::filesystem::path>& skip, const std::atomic<bool>& stop)
+    {
+        uint64_t total = 0;
+        std::error_code ec;
+        for(std::filesystem::recursive_directory_iterator it(path, std::filesystem::directory_options::skip_permission_denied, ec), end;
+            !ec && it != end && !stop; it.increment(ec))
+        {
+            std::error_code fileError;
+            if(it->is_symlink(fileError)) continue;
+            if(it->is_directory(fileError))
+            {
+                if(skip.contains(it->path().lexically_normal())) it.disable_recursion_pending();
+                continue;
+            }
+            if(it->is_regular_file(fileError)) total += it->file_size(fileError);
+        }
+        return total;
+    }
+
+    // Identifies the drive a path is on, so free space is listed once per drive
+    static std::string driveOf (const std::filesystem::path& path)
+    {
+#ifdef _WIN32
+        return path.root_name().string();
+#else
+        struct stat info{};
+        if(stat(path.c_str(), &info) != 0) return path.string();
+        return std::to_string(static_cast<unsigned long long>(info.st_dev));
+#endif
+    }
+
     static void add (std::vector<Entry>& entries, const std::string& kind, const std::filesystem::path& path, const std::atomic<bool>& stop)
     {
         if(!isRealDirectory(path) && !isRealFile(path)) return;
@@ -135,6 +172,37 @@ class CacheCleaner
         add(entries, "user", PATHS::getUserRootPath() / ".nv/GLCache", stop);
 #endif
         return entries;
+    }
+
+    // Sizes of the channel folders (name, folder) and the Wine prefixes without them, and the free space of each of their drives
+    std::vector<Protocol::DiskUsage> usage (const std::vector<std::pair<std::string, std::filesystem::path>>& channels,
+                                            const std::vector<std::filesystem::path>& prefixes, const std::atomic<bool>& stop) const
+    {
+        std::vector<Protocol::DiskUsage> result;
+        std::set<std::filesystem::path> channelFolders;
+        std::vector<std::filesystem::path> places;
+        for(const auto& [name, folder] : channels)
+        {
+            if(!isRealDirectory(folder)) continue;
+            channelFolders.insert(folder.lexically_normal());
+            result.push_back({"channel", name, folder.string(), size(folder, stop)});
+            places.push_back(folder);
+        }
+        for(const auto& prefix : prefixes)
+        {
+            if(!isRealDirectory(prefix)) continue;
+            result.push_back({"prefix", "", prefix.string(), sizeWithout(prefix, channelFolders, stop)});
+            places.push_back(prefix);
+        }
+        std::set<std::string> drives;
+        for(const auto& place : places)
+        {
+            std::error_code ec;
+            auto space = std::filesystem::space(place, ec);
+            if(ec || !drives.insert(driveOf(place)).second) continue;
+            result.push_back({"free", "", place.string(), static_cast<uint64_t>(space.available)});
+        }
+        return result;
     }
 
     // Deletes the entries whose path is in `paths`; anything not found by find() is never touched.
