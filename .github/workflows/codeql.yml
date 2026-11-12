@@ -31,10 +31,10 @@ jobs:
       # build-mode none analyses the sources without compiling, so CodeQL
       # needs none of the Qt build dependencies.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.39.2
+        uses: github/codeql-action/init@v4.39.3
         with:
           languages: c-cpp
           build-mode: none
 
       - name: Analyze
-        uses: github/codeql-action/analyze@v4.39.2
+        uses: github/codeql-action/analyze@v4.39.3
