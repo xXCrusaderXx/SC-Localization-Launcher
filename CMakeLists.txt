@@ -144,6 +144,7 @@ set(SC_QML_FILES
   qml/DiagnosticsDialog.qml
   qml/BackupDialog.qml
   qml/GameSettingsDialog.qml
+  qml/TextOverridesDialog.qml
   qml/ProgramsDialog.qml
   qml/InterfaceLanguageBox.qml
   qml/SetupAssistant.qml

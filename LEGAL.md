@@ -32,7 +32,7 @@ The translation texts are **not part of this repository** and are not covered by
 - We **link, we don't host**: no translation file is stored in, mirrored to, or redistributed through this repository or its releases.
 - A language is only listed when its maintainers publish it themselves and its license allows this. The launcher shows the project and license of every translation it installs.
 - The launcher does not use the servers of other launchers or projects beyond the files their maintainers publish for download.
-- Additions the launcher writes into the installed `global.ini` on the player's computer (item values, blueprint details) turn it into a modified copy. That copy stays on the player's computer, is never redistributed, and remains under the translation's license.
+- Additions the launcher writes into the installed `global.ini` on the player's computer (item values, blueprint details, the player's own texts) turn it into a modified copy. That copy stays on the player's computer, is never redistributed, and remains under the translation's license.
 - The original English game texts belong to CIG.
 
 ## Game data

@@ -1037,6 +1037,14 @@
         <translation>Namen tonen</translation>
     </message>
     <message>
+        <source>Your own texts for single entries of the translation per channel, written again after every update</source>
+        <translation>Je eigen teksten voor losse vermeldingen van de vertaling per kanaal, na elke update opnieuw geschreven</translation>
+    </message>
+    <message>
+        <source>Own texts …</source>
+        <translation>Eigen teksten …</translation>
+    </message>
+    <message>
         <source>TOOLS</source>
         <translation>HULPMIDDELEN</translation>
     </message>
@@ -1491,6 +1499,49 @@
     <message>
         <source>Close</source>
         <translation>Sluiten</translation>
+    </message>
+</context>
+<context>
+    <name>TextOverridesDialog</name>
+    <message>
+        <source>Not saved – at most 64 KB of own texts per channel.</source>
+        <translation>Niet opgeslagen – maximaal 64 KB eigen teksten per kanaal.</translation>
+    </message>
+    <message>
+        <source>Not saved – this line is no &quot;key=value&quot; or repeats a key: %1</source>
+        <translation>Niet opgeslagen – deze regel is geen &quot;key=value&quot; of herhaalt een sleutel: %1</translation>
+    </message>
+    <message>
+        <source>Used once this channel has a translation; English has no file to change.</source>
+        <translation>Gebruikt zodra dit kanaal een vertaling heeft; Engels heeft geen bestand om te wijzigen.</translation>
+    </message>
+    <message>
+        <source>Written into the translation with its next update.</source>
+        <translation>Komt met de volgende update in de vertaling.</translation>
+    </message>
+    <message>
+        <source>Not in the translation, added at its end: %1. If the game does not show them, check the spelling.</source>
+        <translation>Niet in de vertaling, aan het einde toegevoegd: %1. Toont het spel ze niet, controleer dan de spelling.</translation>
+    </message>
+    <message>
+        <source>In the installed translation; written again after every update.</source>
+        <translation>In de geïnstalleerde vertaling; na elke update opnieuw geschreven.</translation>
+    </message>
+    <message>
+        <source>Own texts</source>
+        <translation>Eigen teksten</translation>
+    </message>
+    <message>
+        <source>Replaces single texts of the channel&apos;s translation with your own, e.g. a shorter name. One &quot;key=value&quot; per line, with the key as in global.ini; lines starting with ; are comments. They stay on this computer.</source>
+        <translation>Vervangt losse teksten van de vertaling van het kanaal door je eigen, bijv. een kortere naam. Eén &quot;key=value&quot; per regel, met de sleutel zoals in global.ini; regels die met ; beginnen zijn commentaar. Ze blijven op deze computer.</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Sluiten</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Opslaan</translation>
     </message>
 </context>
 <context>

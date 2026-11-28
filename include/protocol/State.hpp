@@ -192,11 +192,19 @@ struct Channel
     std::string translationVersion;
     // translationVersion is older than gameVersion: texts new in this game version show up in English
     bool translationOutdated = false;
+    // The player's own "key=value" lines for global.ini, written after every update of the translation
+    std::string textOverrides;
+    // Why the last SetTextOverrides was refused: "too long", or the line that is no "key=value" or repeats a key
+    std::string overridesError;
+    // textOverrides are not in the installed file yet; they follow with the next update of this channel
+    bool overridesPending = false;
+    // Keys of textOverrides the installed translation does not have; they were added at the end of its file
+    std::vector<std::string> appendedOverrides;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status, notices, custom, gameSettings,
                                                 settingsChecked, ignoredSettings, settingsError, graphicsApiWaiting, gameVersion, translationVersion,
-                                                translationOutdated)
+                                                translationOutdated, textOverrides, overridesError, overridesPending, appendedOverrides)
 
 // Updates of the launcher itself, from the GitHub releases of the project
 enum class SelfUpdateStatus

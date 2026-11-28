@@ -1005,6 +1005,14 @@
         <translation>Namen anzeigen</translation>
     </message>
     <message>
+        <source>Your own texts for single entries of the translation per channel, written again after every update</source>
+        <translation>Eigene Texte für einzelne Einträge der Übersetzung pro Spielversion, nach jedem Update erneut eingetragen</translation>
+    </message>
+    <message>
+        <source>Own texts …</source>
+        <translation>Eigene Texte …</translation>
+    </message>
+    <message>
         <source>TOOLS</source>
         <translation>WERKZEUGE</translation>
     </message>
@@ -1491,6 +1499,49 @@
     <message>
         <source>Close</source>
         <translation>Schließen</translation>
+    </message>
+</context>
+<context>
+    <name>TextOverridesDialog</name>
+    <message>
+        <source>Not saved – at most 64 KB of own texts per channel.</source>
+        <translation>Nicht gespeichert – höchstens 64 KB eigene Texte pro Spielversion.</translation>
+    </message>
+    <message>
+        <source>Not saved – this line is no &quot;key=value&quot; or repeats a key: %1</source>
+        <translation>Nicht gespeichert – diese Zeile ist kein „Schlüssel=Wert“ oder wiederholt einen Schlüssel: %1</translation>
+    </message>
+    <message>
+        <source>Used once this channel has a translation; English has no file to change.</source>
+        <translation>Wird verwendet, sobald diese Spielversion eine Übersetzung hat; Englisch hat keine Datei zum Ändern.</translation>
+    </message>
+    <message>
+        <source>Written into the translation with its next update.</source>
+        <translation>Kommt mit dem nächsten Update in die Übersetzung.</translation>
+    </message>
+    <message>
+        <source>Not in the translation, added at its end: %1. If the game does not show them, check the spelling.</source>
+        <translation>Nicht in der Übersetzung, am Ende angefügt: %1. Zeigt das Spiel sie nicht, prüfe die Schreibweise.</translation>
+    </message>
+    <message>
+        <source>In the installed translation; written again after every update.</source>
+        <translation>In der installierten Übersetzung; wird nach jedem Update erneut eingetragen.</translation>
+    </message>
+    <message>
+        <source>Own texts</source>
+        <translation>Eigene Texte</translation>
+    </message>
+    <message>
+        <source>Replaces single texts of the channel&apos;s translation with your own, e.g. a shorter name. One &quot;key=value&quot; per line, with the key as in global.ini; lines starting with ; are comments. They stay on this computer.</source>
+        <translation>Ersetzt einzelne Texte der Übersetzung dieser Spielversion durch deine eigenen, z. B. einen kürzeren Namen. Ein „Schlüssel=Wert“ pro Zeile, mit dem Schlüssel wie in der global.ini; Zeilen mit ; am Anfang sind Kommentare. Sie bleiben auf diesem Computer.</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Schließen</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Speichern</translation>
     </message>
 </context>
 <context>

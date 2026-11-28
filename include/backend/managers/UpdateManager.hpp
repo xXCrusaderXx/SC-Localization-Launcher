@@ -20,6 +20,7 @@
 
 #include "backend/database/DataBase.hpp"
 #include "backend/managers/ItemValues.hpp"
+#include "backend/managers/TextOverrides.hpp"
 #include "backend/utils/UserCfg.hpp"
 #include "backend/utils/platform.hpp"
 #include "backend/utils/utils.hpp"
@@ -384,6 +385,11 @@ class UpdateManager
         std::shared_ptr<const ItemValues::Plan> itemValues;
         // Signature of the values in the installed file, which a "not modified" answer keeps
         std::string installedItemValues;
+        // The player's own texts, written after the item values; none: nothing is changed
+        TextOverrides::Overrides textOverrides;
+        // What of them the installed file has, which a "not modified" answer keeps
+        std::string installedTextOverrides;
+        std::vector<std::string> installedAppendedOverrides;
     };
 
     struct Result
@@ -397,6 +403,9 @@ class UpdateManager
         std::string folder;
         // Signature of the item values now in the file
         std::string itemValues;
+        // Signature of the player's own texts now in the file, and the keys of them added at its end
+        std::string textOverrides;
+        std::vector<std::string> appendedOverrides;
     };
 
     static std::filesystem::path translationFile (const std::filesystem::path& installPath, const std::string& folder)
@@ -476,11 +485,31 @@ class UpdateManager
                 auto file = translationFile(job.installPath, job.folder);
                 // Before the hash: the integrity check compares against the file as the launcher left it
                 if(download.notModified)
+                {
                     result.itemValues = job.installedItemValues;
-                else if(job.itemValues && ItemValues::apply(file, *job.itemValues))
-                    result.itemValues = job.itemValues->signature;
-                else if(job.itemValues)
-                    LOG_ERROR(lg) << "update() - cannot add item values to " << file;
+                    result.textOverrides = job.installedTextOverrides;
+                    result.appendedOverrides = job.installedAppendedOverrides;
+                }
+                else
+                {
+                    if(job.itemValues && ItemValues::apply(file, *job.itemValues))
+                        result.itemValues = job.itemValues->signature;
+                    else if(job.itemValues)
+                        LOG_ERROR(lg) << "update() - cannot add item values to " << file;
+                    // Last, so the player's own texts win over the item values
+                    if(!job.textOverrides.empty())
+                    {
+                        if(auto appended = TextOverrides::apply(file, job.textOverrides))
+                        {
+                            result.textOverrides = TextOverrides::signature(job.textOverrides);
+                            result.appendedOverrides = *appended;
+                            LOG_INFO(lg) << "update() - " << job.textOverrides.size() << " own texts written, " << appended->size()
+                                         << " of them appended";
+                        }
+                        else
+                            LOG_ERROR(lg) << "update() - cannot write own texts into " << file;
+                    }
+                }
                 result.fileHash = fileSha256(file);
             }
             removeTranslations(job.installPath, job.managedFolders, job.folder);

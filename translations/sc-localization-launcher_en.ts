@@ -1037,6 +1037,14 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Your own texts for single entries of the translation per channel, written again after every update</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Own texts …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>TOOLS</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1490,6 +1498,49 @@
     </message>
     <message>
         <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TextOverridesDialog</name>
+    <message>
+        <source>Not saved – at most 64 KB of own texts per channel.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not saved – this line is no &quot;key=value&quot; or repeats a key: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Used once this channel has a translation; English has no file to change.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Written into the translation with its next update.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not in the translation, added at its end: %1. If the game does not show them, check the spelling.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>In the installed translation; written again after every update.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Own texts</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Replaces single texts of the channel&apos;s translation with your own, e.g. a shorter name. One &quot;key=value&quot; per line, with the key as in global.ini; lines starting with ; are comments. They stay on this computer.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

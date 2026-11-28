@@ -25,6 +25,7 @@
 #include "managers/GameStatistics.hpp"
 #include "managers/ProfileBackup.hpp"
 #include "managers/SelfUpdateManager.hpp"
+#include "managers/TextOverrides.hpp"
 #include "managers/UpdateManager.hpp"
 #include "protocol/Commands.hpp"
 #include "protocol/State.hpp"
@@ -177,6 +178,8 @@ class BackEnd
         // Switched on or off since the file was installed
         if(ItemValues::kinds(data.options.itemNameDetails, data.options.itemDescriptionStats) != ItemValues::kindsOf(channel.installed.itemValues))
             return ChannelStatus::UpdateAvailable;
+        // Own texts added, changed or removed since
+        if(TextOverrides::signatureOf(channel.textOverrides) != channel.installed.textOverrides) return ChannelStatus::UpdateAvailable;
         if(!channel.remoteEtag.empty() && channel.remoteEtag != channel.installed.etag) return ChannelStatus::UpdateAvailable;
         return ChannelStatus::Installed;
     }
@@ -283,7 +286,19 @@ class BackEnd
         // Same language as installed and intact: the source can answer "not modified" instead of sending the file again
         bool reuse = !force && !channel.damaged && channel.installed.language == channel.language;
         UpdateManager::Job job{name, channel.installPath, channel.language, "", {}, managedFolders(channel), reuse ? channel.installed.etag : ""};
-        if(channel.installed.language == channel.language) job.installedItemValues = channel.installed.itemValues;
+        if(channel.installed.language == channel.language)
+        {
+            job.installedItemValues = channel.installed.itemValues;
+            job.installedTextOverrides = channel.installed.textOverrides;
+            job.installedAppendedOverrides = channel.installed.appendedOverrides;
+        }
+        std::string error;
+        if(auto overrides = TextOverrides::parse(channel.textOverrides, error))
+            job.textOverrides = *overrides;
+        else
+            LOG_ERROR(lg) << "update - " << name << ": own texts skipped, cannot read them (" << error.size() << " bytes)";
+        // Changed texts go on a fresh copy, so a removed one gets the translation's own text back
+        if(TextOverrides::signature(job.textOverrides) != job.installedTextOverrides) job.etag.clear();
         if(auto language = languageFor(name, channel.language))
         {
             job.folder = language->folder;
@@ -412,7 +427,13 @@ class BackEnd
                                  channel.lastUpdateFailed = !result.success;
                                  if(!result.success) continue;
                                  bool english = result.language == Protocol::ENGLISH;
-                                 channel.installed = {english ? "" : result.language, result.etag, result.fileHash, result.folder, result.itemValues};
+                                 channel.installed = {english ? "" : result.language,
+                                                      result.etag,
+                                                      result.fileHash,
+                                                      result.folder,
+                                                      result.itemValues,
+                                                      result.textOverrides,
+                                                      result.appendedOverrides};
                                  channel.damaged = false;
                                  if(channel.language == result.language) channel.remoteEtag = result.etag;
                              }
@@ -513,10 +534,15 @@ class BackEnd
         {
             const auto& channel = data.channels.at(name);
             auto [gameVersion, translationVersion] = versions(channel);
+            bool sameLanguage = channel.installed.language == channel.language;
+            auto overrides = TextOverrides::signatureOf(channel.textOverrides);
+            bool overridesPending = channel.language != Protocol::ENGLISH && !channel.installPath.empty() &&
+                                    (overrides != channel.installed.textOverrides || (!sameLanguage && !overrides.empty()));
             state.channels.push_back({name, channel.installPath.string(), channel.language, availableLanguages(name), channelStatus(name, channel),
                                       notices(name), channel.custom, channel.gameSettings, channel.settingsChecked, channel.ignoredSettings,
                                       channel.settingsError, channel.graphicsApiWaiting, gameVersion, translationVersion,
-                                      GameVersion::older(translationVersion, gameVersion)});
+                                      GameVersion::older(translationVersion, gameVersion), channel.textOverrides, channel.overridesError,
+                                      overridesPending, sameLanguage ? channel.installed.appendedOverrides : std::vector<std::string>{}});
         }
 
         state.rsiLauncherPath = data.rsiLauncherPath.string();
@@ -545,7 +571,10 @@ class BackEnd
     {
         if(data.shuttingDown) return;
         Protocol::State state = snapshot();
-        LOG_DEBUG(lg) << "publish() - state:\n" << nlohmann::json(state).dump(4);
+        auto logged = nlohmann::json(state);
+        // The refused line is the player's text as well
+        for(const char* field : {"textOverrides", "overridesError"}) TextOverrides::hideIn(logged["channels"], field);
+        LOG_DEBUG(lg) << "publish() - state:\n" << logged.dump(4);
         stateCallback(state);
     }
 
@@ -562,6 +591,7 @@ class BackEnd
             data.channels[name].gameSettings = settings.gameSettings;
             data.channels[name].managedKeys = settings.managedKeys;
             data.channels[name].settingsWritten = settings.settingsWritten;
+            data.channels[name].textOverrides = settings.textOverrides;
         }
         data.rsiLauncherPath = file.rsiLauncherPath;
         data.options = file.options;
@@ -583,8 +613,8 @@ class BackEnd
     {
         SettingsFile file;
         for(const auto& [name, channel] : data.channels)
-            file.channels[name] = {channel.installPath.string(), channel.language,    channel.installed,      channel.custom,
-                                   channel.gameSettings,         channel.managedKeys, channel.settingsWritten};
+            file.channels[name] = {channel.installPath.string(), channel.language,    channel.installed,       channel.custom,
+                                   channel.gameSettings,         channel.managedKeys, channel.settingsWritten, channel.textOverrides};
         file.rsiLauncherPath = data.rsiLauncherPath.string();
         file.options = data.options;
         file.lastSeenVersion = data.lastSeenVersion;
@@ -1043,7 +1073,10 @@ class BackEnd
             }
             input.channels.push_back({name, channel.installPath, folder, nlohmann::json(channelStatus(name, channel)).get<std::string>()});
         }
-        input.settings = nlohmann::json(settingsFile()).dump(2) + "\n";
+        // The player's own texts stay on this computer, also when the report is shared
+        auto settings = nlohmann::json(settingsFile());
+        TextOverrides::hideIn(settings["channels"], "textOverrides");
+        input.settings = settings.dump(2) + "\n";
         return input;
     }
 
@@ -1129,6 +1162,25 @@ class BackEnd
         channel->settingsChecked = false;
         channel->ignoredSettings.clear();
         applyGraphicsApi(*channel);
+    }
+
+    void handle (const Protocol::SetTextOverrides& command)
+    {
+        auto* channel = findChannel(command.channel);
+        if(!channel) return;
+        channel->overridesError.clear();
+        std::string error;
+        if(!TextOverrides::parse(command.lines, error))
+        {
+            channel->overridesError = error;
+            return;
+        }
+        channel->textOverrides = command.lines;
+        // An installed translation gets them right away; otherwise, or while an update or the game runs, the
+        // channel shows an update and they follow with it
+        bool installed = !channel->installPath.empty() && channel->language != Protocol::ENGLISH && channel->installed.language == channel->language;
+        if(installed && TextOverrides::signatureOf(channel->textOverrides) != channel->installed.textOverrides)
+            handle(Protocol::StartUpdate{.channels = {command.channel}, .allowGameStart = false});
     }
 
     void handle (const Protocol::LoadBackups&)

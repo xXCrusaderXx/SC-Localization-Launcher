@@ -61,6 +61,14 @@ Das **Dashboard** unter den Zeilen zeigt Kacheln wie Spielzeit, zuletzt gespielt
 - *Größe, Klasse und Grad an Gegenstandsnamen anhängen*, z. B. „Holdstrong (S4 Militär A)“. Rüstungen bekommen ihre Gewichtsklasse, z. B. „ADP Core (Schwer)“, Mining-Laser ihre Größe.
 - *Werte in Gegenstandsbeschreibungen einfügen*, z. B. „HP 100.000 · Regen 19.000/s“ bei Schilden. Rüstungen und Mining-Gegenstände behalten ihre Beschreibung, denn dort stehen ihre Werte im Spiel schon.
 
+**Eigene Texte** (Einstellungen → Übersetzungen → *Eigene Texte …*) ersetzen einzelne Texte der Übersetzung einer Spielversion durch deine eigenen, z. B. einen kürzeren Namen oder eine persönliche Korrektur:
+
+- Ein `Schlüssel=Wert` pro Zeile, mit dem Schlüssel wie in der `global.ini` (Groß- und Kleinschreibung egal); Zeilen mit `;` am Anfang sind Kommentare. Eine Zeile, die kein `Schlüssel=Wert` ist oder einen Schlüssel wiederholt, wird abgelehnt, und nichts wird gespeichert.
+- *Speichern* trägt sie sofort in die installierte Übersetzung ein; ist noch keine installiert oder läuft Star Citizen, kommen sie mit dem nächsten Update. Nach jedem Übersetzungsupdate werden sie erneut eingetragen, nach den Item-Werten, deine Texte gewinnen also.
+- Ein Schlüssel, den die Übersetzung nicht hat, wird am Ende der Datei angefügt. Der Dialog listet diese Schlüssel auf, so fällt ein Tippfehler auf.
+- Eine Zeile, die du entfernst, bekommt den Text der Übersetzung zurück: Der Launcher lädt die Datei neu und trägt nur die übrigen Texte ein.
+- Deine Texte bleiben auf deinem Computer. Der Bericht von *Installation prüfen …* lässt sie weg.
+
 **Die Sprache des Launchers** stellst du unter Einstellungen → Verhalten → *Sprache des Launchers* ein: *Automatisch (Systemsprache)* oder English, Deutsch, Español, Français, Italiano, Nederlands, Polski, Português. *Darstellung* wählt ein dunkles oder helles Theme oder folgt dem System. Der *Streamer-Modus* blendet deinen Benutzernamen und Home-Ordner in angezeigten Pfaden aus, während du streamst oder aufnimmst.
 
 ## Updates
@@ -107,6 +115,9 @@ Einstellungen → Hilfe → *Installation prüfen …* prüft zwei Systemgrenzen
 
 **Eine Spieleinstellung wirkt nicht.**
 Steht sie im Dialog als ignoriert („not whitelisted“), nimmt Star Citizen sie aus der `user.cfg` nicht an. Die Grafik-API ändert sich nur, wenn das Spiel nicht läuft; der Dialog sagt, wenn sie noch wartet.
+
+**Ein eigener Text erscheint nicht im Spiel.**
+Listet *Eigene Texte …* seinen Schlüssel als am Ende angefügt, hat die Übersetzung diesen Schlüssel nicht; vergleiche die Schreibweise mit der `global.ini`. Star Citizen liest die Texte beim Start, starte es nach dem Speichern also neu.
 
 **Ein Start des Launchers holt nur ein offenes Fenster nach vorne.**
 Es läuft immer nur ein Launcher. Ist er im Infobereich, öffnet ein zweiter Start diesen. Um eine andere Version zu starten, beende zuerst den laufenden: Infobereich → *Beenden*.

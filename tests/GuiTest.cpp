@@ -152,8 +152,9 @@ class GuiTest : public QObject
     // A failed test may leave a modal dialog open, which would swallow the clicks of the next test
     void cleanup ()
     {
-        for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog", "backupDialog",
-                                "gameSettingsDialog", "programsDialog", "setupAssistant", "statisticsDialog", "dashboardDialog", "systemInfoDialog"})
+        for(const char* name :
+            {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog", "backupDialog", "gameSettingsDialog",
+             "textOverridesDialog", "programsDialog", "setupAssistant", "statisticsDialog", "dashboardDialog", "systemInfoDialog"})
         {
             auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
             if(!dialog || !dialog->property("visible").toBool()) continue;
@@ -682,6 +683,38 @@ class GuiTest : public QObject
         custom->setProperty("text", "");
         QVERIFY(clickButton("Save"));
         QTRY_VERIFY(channel("LIVE")["gameSettings"].toMap()["customLines"].toString().isEmpty());
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    void savesOwnTextsFromTheSettings ()
+    {
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        QMetaObject::invokeMethod(panel, "textOverridesRequested");
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("textOverridesDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        dialog->setProperty("channelName", "LIVE");
+        auto* lines = engine->rootObjects().first()->findChild<QQuickItem*>("textOverridesLines");
+        QVERIFY(lines);
+        lines->setProperty("text", "test_key=Mein Text");
+        window->grabWindow();
+        QVERIFY(clickButton("Save"));
+        QTRY_COMPARE(channel("LIVE")["textOverrides"].toString(), QString("test_key=Mein Text"));
+
+        lines->setProperty("text", "not a text");
+        QVERIFY(clickButton("Save"));
+        QTRY_VERIFY(findText("Not saved – this line is no \"key=value\" or repeats a key: not a text"));
+        QCOMPARE(channel("LIVE")["textOverrides"].toString(), QString("test_key=Mein Text"));
+
+        // Leaves the translation as the other tests expect it
+        lines->setProperty("text", "");
+        QVERIFY(clickButton("Save"));
+        QTRY_VERIFY(channel("LIVE")["textOverrides"].toString().isEmpty());
+        QTRY_COMPARE(bridge->state()["update"].toString() == "running", false);
         QTest::keyClick(window, Qt::Key_Escape);
         QTRY_VERIFY(!dialog->property("visible").toBool());
         panel->setProperty("open", false);

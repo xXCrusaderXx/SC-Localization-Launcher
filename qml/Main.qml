@@ -655,6 +655,7 @@ ApplicationWindow {
             backend.loadBackups();
         }
         onGameSettingsRequested: gameSettingsDialog.open()
+        onTextOverridesRequested: textOverridesDialog.open()
         onProgramsRequested: programsDialog.open()
         onStatisticsRequested: {
             statisticsDialog.open();
@@ -725,6 +726,13 @@ ApplicationWindow {
 
         channels: window.visibleChannels
         onSaveRequested: (channel, maxFps, maxIdleFps, customLines, graphicsApi) => backend.setGameSettings(channel, maxFps, maxIdleFps, customLines, graphicsApi)
+    }
+
+    TextOverridesDialog {
+        id: textOverridesDialog
+
+        channels: window.visibleChannels
+        onSaveRequested: (channel, lines) => backend.setTextOverrides(channel, lines)
     }
 
     BackupDialog {

@@ -217,6 +217,10 @@ class BackendBridge : public QObject
             .settings = {
                 .maxFps = maxFps, .maxIdleFps = maxIdleFps, .customLines = customLines.toStdString(), .graphicsApi = graphicsApi.toStdString()}});
     }
+    Q_INVOKABLE void setTextOverrides (const QString& channel, const QString& lines)
+    {
+        backEnd.execute(Protocol::SetTextOverrides{.channel = channel.toStdString(), .lines = lines.toStdString()});
+    }
     // programs: objects with command, enabled and stopWithGame, as in State.programs
     Q_INVOKABLE void setPrograms (const QVariantList& programs)
     {
