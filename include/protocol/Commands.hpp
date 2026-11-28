@@ -206,6 +206,14 @@ struct SetDashboardTiles
     std::vector<std::string> tiles;
 };
 
+// Asks GitHub what the project of the channel's chosen language published, see State.translationChanges. Only the window
+// sends it, when the user opens the list, so the few requests GitHub allows without an account are not used up in the background.
+struct LoadTranslationChanges
+{
+    static constexpr const char* name = "loadTranslationChanges";
+    std::string channel;
+};
+
 // The setup assistant was finished or skipped; it is not offered again
 struct FinishSetup
 {
@@ -242,11 +250,13 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetPrograms, programs)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInterfaceLanguage, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetTheme, theme)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetDashboardTiles, tiles)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LoadTranslationChanges, channel)
 
-using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
-                             InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches,
-                             ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms,
-                             SetInterfaceLanguage, FinishSetup, SetTheme, LoadStatistics, SaveStatisticsReport, SetDashboardTiles>;
+using Command =
+    std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate, InstallUpdate,
+                 RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches, ClearCaches, RunDiagnostics,
+                 SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms, SetInterfaceLanguage, FinishSetup, SetTheme,
+                 LoadStatistics, SaveStatisticsReport, SetDashboardTiles, LoadTranslationChanges>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

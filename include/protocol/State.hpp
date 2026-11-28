@@ -51,9 +51,11 @@ struct Language
     std::string folder;
     // Names listed in the header of an installed copy of this translation; empty if none is installed or it lists none
     std::vector<std::string> contributors;
+    // "owner/name" of the project on GitHub, whose releases or commits show what changed; empty if it names none
+    std::string repository;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Language, code, name, credit, folder, contributors)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Language, code, name, credit, folder, contributors, repository)
 
 enum class UpdateStatus
 {
@@ -455,6 +457,42 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Statistics, busy, loaded, sessio
                                                 missionsCompleted, missionsFailed, kills, deaths, ships, regions, days, firstPlayed, lastPlayed,
                                                 lastSessionSeconds, diskFreeBytes, systems, reportPath, error)
 
+// A release or commit of a translation project, see TranslationChanges. title and text come from the internet: plain text.
+struct TranslationChange
+{
+    // One line
+    std::string title;
+    std::string text;
+    // Seconds since the epoch; 0 if GitHub named no time
+    std::int64_t time = 0;
+    // The release or commit on github.com; empty unless it is a page of the project's repository
+    std::string url;
+    // Published after the installed copy was downloaded: the next update brings it
+    bool pending = false;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(TranslationChange, title, text, time, url, pending)
+
+// What the project of a channel's chosen language published on GitHub; filled by LoadTranslationChanges
+struct TranslationChanges
+{
+    std::string channel;
+    std::string language;
+    // "owner/name"; empty if the language names no repository, then there is nothing to show
+    std::string repository;
+    bool busy = false;
+    // An answer arrived, entries is the current list
+    bool loaded = false;
+    // "releases", or "commits" that changed the channel's file when the project has no releases; empty if neither
+    std::string kind;
+    // Newest first
+    std::vector<TranslationChange> entries;
+    // "network error", "rate limit" or "unexpected answer"
+    std::string error;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(TranslationChanges, channel, language, repository, busy, loaded, kind, entries, error)
+
 // Tile ids the dashboard knows, and the ones shown until the user chooses
 inline const std::vector<std::string> DASHBOARD_TILES = {"playTime", "lastPlayed",  "topShip",      "freeSpace", "sessions",
                                                          "crashes",  "disconnects", "quantumJumps", "missions",  "killsDeaths"};
@@ -494,10 +532,11 @@ struct State
     Statistics statistics;
     // Tiles of the main window's dashboard, in order, see DASHBOARD_TILES
     std::vector<std::string> dashboardTiles;
+    TranslationChanges translationChanges;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
                                                 handledCommands, whatsNew, caches, diagnostics, backups, programs, failedPrograms, interfaceLanguage,
-                                                setupNeeded, theme, statistics, dashboardTiles)
+                                                setupNeeded, theme, statistics, dashboardTiles, translationChanges)
 
 }  // namespace Protocol

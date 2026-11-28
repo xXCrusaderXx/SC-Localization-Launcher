@@ -40,6 +40,7 @@ Each game channel with a folder has a row:
 - The **dot** shows the state: green = up to date, amber = an update is waiting, red = the files were changed or the last update failed.
 - After a game patch the line can read *Translation for game version 4.10.2, the game is 4.11.0: new texts stay in English*. The translation is up to date, but its project has not caught up with the patch yet; texts that are new in the game stay English until it does. The warning goes away with the next translation update for the new version. It needs a translation that names its game version in its file, and a translation project's own notice is shown instead when it has one.
 - The **drop-down** chooses the translation for this channel. *English* removes the translation again.
+- **☰** shows *What changed in …* the translation, if its project publishes on GitHub (the German, French, Italian and Portuguese ones do): the project's latest releases, or, if it has none, the changes to the channel's translation file, newest first. *Newer than your installed copy* marks what the next update brings. The texts are shown as the project wrote them. The launcher asks GitHub only when you open the list, and at most every ten minutes; without an account GitHub answers only a few requests per hour.
 - **↻ Repair** downloads the translation again and rewrites its lines in `user.cfg`, e.g. after a game update replaced the files.
 - **✎** changes the channel's folder.
 

@@ -210,6 +210,10 @@
         <translation>Map kiezen</translation>
     </message>
     <message>
+        <source>What changed</source>
+        <translation>Wat er veranderd is</translation>
+    </message>
+    <message>
         <source>Repair</source>
         <translation>Repareren</translation>
     </message>
@@ -1498,6 +1502,57 @@
     <message>
         <source>SOON</source>
         <translation>BINNENKORT</translation>
+    </message>
+</context>
+<context>
+    <name>TranslationChangesDialog</name>
+    <message>
+        <source>GitHub answers only a few requests per hour without an account. Please try again later.</source>
+        <translation>Zonder account beantwoordt GitHub maar een paar aanvragen per uur. Probeer het later opnieuw.</translation>
+    </message>
+    <message>
+        <source>GitHub cannot be reached. Please try again later.</source>
+        <translation>GitHub is niet bereikbaar. Probeer het later opnieuw.</translation>
+    </message>
+    <message>
+        <source>GitHub did not answer as expected.</source>
+        <translation>GitHub heeft niet geantwoord zoals verwacht.</translation>
+    </message>
+    <message>
+        <source>What changed in %1</source>
+        <translation>Wat er veranderd is in %1</translation>
+    </message>
+    <message>
+        <source>Changes to the translation file in %1 on GitHub</source>
+        <translation>Wijzigingen in het vertaalbestand in %1 op GitHub</translation>
+    </message>
+    <message>
+        <source>Releases of %1 on GitHub</source>
+        <translation>Releases van %1 op GitHub</translation>
+    </message>
+    <message>
+        <source>Asking GitHub …</source>
+        <translation>GitHub wordt gevraagd …</translation>
+    </message>
+    <message>
+        <source>The translation project has not published any releases or changes on GitHub yet.</source>
+        <translation>Het vertaalproject heeft nog geen releases of wijzigingen op GitHub gepubliceerd.</translation>
+    </message>
+    <message>
+        <source>Newer than your installed copy</source>
+        <translation>Nieuwer dan je geïnstalleerde kopie</translation>
+    </message>
+    <message>
+        <source>Open on GitHub</source>
+        <translation>Openen op GitHub</translation>
+    </message>
+    <message>
+        <source>As the translation project published it.</source>
+        <translation>Zoals het vertaalproject het heeft gepubliceerd.</translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation>OK</translation>
     </message>
 </context>
 <context>

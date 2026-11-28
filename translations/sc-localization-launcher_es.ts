@@ -210,6 +210,10 @@
         <translation>Elegir carpeta</translation>
     </message>
     <message>
+        <source>What changed</source>
+        <translation>Qué ha cambiado</translation>
+    </message>
+    <message>
         <source>Repair</source>
         <translation>Reparar</translation>
     </message>
@@ -1498,6 +1502,57 @@
     <message>
         <source>SOON</source>
         <translation>PRONTO</translation>
+    </message>
+</context>
+<context>
+    <name>TranslationChangesDialog</name>
+    <message>
+        <source>GitHub answers only a few requests per hour without an account. Please try again later.</source>
+        <translation>Sin cuenta, GitHub solo responde a unas pocas peticiones por hora. Vuelve a intentarlo más tarde.</translation>
+    </message>
+    <message>
+        <source>GitHub cannot be reached. Please try again later.</source>
+        <translation>No se puede conectar con GitHub. Vuelve a intentarlo más tarde.</translation>
+    </message>
+    <message>
+        <source>GitHub did not answer as expected.</source>
+        <translation>GitHub no ha respondido como se esperaba.</translation>
+    </message>
+    <message>
+        <source>What changed in %1</source>
+        <translation>Qué ha cambiado en %1</translation>
+    </message>
+    <message>
+        <source>Changes to the translation file in %1 on GitHub</source>
+        <translation>Cambios en el archivo de traducción de %1 en GitHub</translation>
+    </message>
+    <message>
+        <source>Releases of %1 on GitHub</source>
+        <translation>Versiones de %1 en GitHub</translation>
+    </message>
+    <message>
+        <source>Asking GitHub …</source>
+        <translation>Consultando GitHub …</translation>
+    </message>
+    <message>
+        <source>The translation project has not published any releases or changes on GitHub yet.</source>
+        <translation>El proyecto de traducción aún no ha publicado versiones ni cambios en GitHub.</translation>
+    </message>
+    <message>
+        <source>Newer than your installed copy</source>
+        <translation>Más reciente que tu copia instalada</translation>
+    </message>
+    <message>
+        <source>Open on GitHub</source>
+        <translation>Abrir en GitHub</translation>
+    </message>
+    <message>
+        <source>As the translation project published it.</source>
+        <translation>Tal como lo publicó el proyecto de traducción.</translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation>Aceptar</translation>
     </message>
 </context>
 <context>

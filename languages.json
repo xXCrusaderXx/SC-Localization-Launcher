@@ -11,6 +11,7 @@
                     "HOTFIX": ["https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live/global.ini"]
                 }
             },
+            "repository": "rjcncpt/StarCitizen-Deutsch-INI",
             "credit": {
                 "project": "StarCitizen-Deutsch-INI",
                 "authors": "rjcncpt & Community",
@@ -29,6 +30,7 @@
                     "HOTFIX": ["https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live/full/global.ini"]
                 }
             },
+            "repository": "rjcncpt/StarCitizen-Deutsch-INI",
             "credit": {
                 "project": "StarCitizen-Deutsch-INI",
                 "authors": "rjcncpt & Community",
@@ -47,6 +49,7 @@
                     "HOTFIX": ["https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live-CH/global.ini"]
                 }
             },
+            "repository": "rjcncpt/StarCitizen-Deutsch-INI",
             "credit": {
                 "project": "StarCitizen-Deutsch-INI",
                 "authors": "rjcncpt & Community",
@@ -65,6 +68,7 @@
                     "HOTFIX": ["https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/french_(france)/global.ini"]
                 }
             },
+            "repository": "Dymerz/StarCitizen-Localization",
             "credit": {
                 "project": "StarCitizen-Localization",
                 "authors": "Cirque Lisoir & French community, traduction.circuspes.fr",
@@ -83,6 +87,7 @@
                     "HOTFIX": ["https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/italian_(italy)/global.ini"]
                 }
             },
+            "repository": "Dymerz/StarCitizen-Localization",
             "credit": {
                 "project": "StarCitizen-Localization",
                 "authors": "xGattoMattox & Community",
@@ -101,6 +106,7 @@
                     "HOTFIX": ["https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/main/data/Localization/portuguese_(brazil)/global.ini"]
                 }
             },
+            "repository": "Dymerz/StarCitizen-Localization",
             "credit": {
                 "project": "StarCitizen-Localization",
                 "authors": "Nxzzin & Community",

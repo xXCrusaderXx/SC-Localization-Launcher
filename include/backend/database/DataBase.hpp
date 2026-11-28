@@ -35,9 +35,11 @@ struct LanguageDefinition
     Protocol::Credit credit;
     // Short notice per channel, e.g. "translation in preparation"; "*" applies to every channel
     std::map<std::string, std::string> notices;
+    // "owner/name" on GitHub, whose releases or commits show what changed; only the repository of the files or of credit.url
+    std::string repository;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(LanguageDefinition, code, name, folder, source, credit, notices)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(LanguageDefinition, code, name, folder, source, credit, notices, repository)
 
 struct LanguageCatalog
 {
@@ -57,6 +59,8 @@ struct AvailableLanguage
     Protocol::Credit credit;
     // Channel name or "*" -> notice, already checked and shortened
     std::map<std::string, std::string> notices;
+    // Checked "owner/name" on GitHub, empty if none
+    std::string repository;
 };
 
 // What the launcher last installed into a channel. Empty language: nothing, the game shows English.
@@ -171,6 +175,9 @@ struct BackendData
     std::string theme;
     Protocol::Statistics statistics;
     std::vector<std::string> dashboardTiles = Protocol::DEFAULT_DASHBOARD_TILES;
+    Protocol::TranslationChanges translationChanges;
+    // Asked for while another channel's changes were loading; loaded next
+    std::string pendingChangesChannel;
 
     // Set when the app closes; background jobs read it to stop early
     std::atomic<bool> shuttingDown{false};

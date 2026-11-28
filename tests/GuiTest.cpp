@@ -122,6 +122,18 @@ class GuiTest : public QObject
         watchOwnTestPrograms();
         qputenv("SC_LANGUAGES_URL", server.url("/languages.json").toUtf8());
         qputenv("SC_RELEASES_URL", server.url("/releases/latest").toUtf8());
+        qputenv("SC_GITHUB_API_URL", server.url("/github/").toUtf8());
+        // German names its project's GitHub repository, so its rows offer what changed
+        auto languages = nlohmann::json::parse(fixtureFiles().value("/languages.json").toStdString());
+        languages["languages"][0]["repository"] = "test-owner/test-ini";
+        languages["languages"][0]["credit"]["url"] = "https://github.com/test-owner/test-ini";
+        server.setFile("/languages.json", QByteArray::fromStdString(languages.dump()));
+        nlohmann::json projectReleases = nlohmann::json::array({{{"tag_name", "v2"},
+                                                                 {"name", "<b>4.11</b> LIVE"},
+                                                                 {"body", "<a href=\"https://example.org\">Neue Texte</a>"},
+                                                                 {"published_at", "2026-11-22T10:47:15Z"},
+                                                                 {"html_url", "https://github.com/test-owner/test-ini/releases/tag/v2"}}});
+        server.setFile("/github/repos/test-owner/test-ini/releases?per_page=10", QByteArray::fromStdString(projectReleases.dump()));
         qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
         QCoreApplication::setApplicationVersion("0.6.0");
         resetUserDir();
@@ -152,8 +164,9 @@ class GuiTest : public QObject
     // A failed test may leave a modal dialog open, which would swallow the clicks of the next test
     void cleanup ()
     {
-        for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog", "backupDialog",
-                                "gameSettingsDialog", "programsDialog", "setupAssistant", "statisticsDialog", "dashboardDialog", "systemInfoDialog"})
+        for(const char* name :
+            {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog", "backupDialog", "gameSettingsDialog",
+             "programsDialog", "setupAssistant", "statisticsDialog", "dashboardDialog", "systemInfoDialog", "translationChangesDialog"})
         {
             auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
             if(!dialog || !dialog->property("visible").toBool()) continue;
@@ -409,6 +422,35 @@ class GuiTest : public QObject
         std::filesystem::remove(live / "build_manifest.id");
         bridge->setOption("showUpdateProgress", progress);
         QTRY_VERIFY(!row->property("outdated").toBool());
+    }
+
+    void showsWhatChangedInTheTranslation ()
+    {
+        // German is installed on LIVE, and its project names a repository
+        // Rows are made by a Repeater, so the button is found in the visual tree
+        QQuickItem* button = nullptr;
+        std::function<QQuickItem*(QQuickItem*)> walk = [&] (QQuickItem* item) -> QQuickItem*
+        {
+            if(item->objectName() == "changesButton" && item->isVisible()) return item;
+            for(auto* child : item->childItems())
+                if(auto* found = walk(child)) return found;
+            return nullptr;
+        };
+        QTRY_VERIFY((button = walk(window->contentItem())));
+        QPointF center = button->mapToScene(QPointF(button->width() / 2, button->height() / 2));
+        QTest::mouseClick(window, Qt::LeftButton, {}, center.toPoint());
+
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("translationChangesDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QTRY_VERIFY(findText("What changed in Deutsch"));
+        QTRY_VERIFY(findText("Releases of test-owner/test-ini on GitHub"));
+        // Texts from the internet are shown as they are, never as markup
+        QVERIFY(findText("<b>4.11</b> LIVE"));
+        QVERIFY(findText("<a href=\"https://example.org\">Neue Texte</a>"));
+        QVERIFY(findText("Open on GitHub"));
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
     }
 
     void showsWhenTheGameCannotStart ()
