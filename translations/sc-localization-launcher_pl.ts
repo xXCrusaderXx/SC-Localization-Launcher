@@ -851,12 +851,16 @@
         <translation>Programy z grą</translation>
     </message>
     <message>
-        <source>Started when Star Citizen starts, also when it was started without this launcher. The launcher has to be open, e.g. in the system tray. Quotes work as in a shell; for variables or pipes, start a script or sh -c &apos;…&apos;.</source>
-        <translation>Uruchamiane razem ze Star Citizen, także gdy gra została uruchomiona bez tego launchera. Launcher musi być otwarty, np. w zasobniku systemowym. Cudzysłowy działają jak w powłoce; dla zmiennych lub potoków uruchom skrypt albo sh -c &apos;…&apos;.</translation>
+        <source>Started when Star Citizen starts or, if chosen, already with the RSI Launcher, also when they were started without this launcher. The launcher has to be open, e.g. in the system tray. Quotes work as in a shell; for variables or pipes, start a script or sh -c &apos;…&apos;.</source>
+        <translation>Uruchamiane razem ze Star Citizen lub, jeśli wybrano, już z RSI Launcher, także gdy zostały uruchomione bez tego launchera. Launcher musi być otwarty, np. w zasobniku systemowym. Cudzysłowy działają jak w powłoce; dla zmiennych lub potoków uruchom skrypt albo sh -c &apos;…&apos;.</translation>
     </message>
     <message>
         <source>Active</source>
         <translation>Aktywny</translation>
+    </message>
+    <message>
+        <source>Start it with the RSI Launcher</source>
+        <translation>Uruchom z RSI Launcher</translation>
     </message>
     <message>
         <source>End it when the game quits</source>
@@ -867,8 +871,8 @@
         <translation>Brak programów.</translation>
     </message>
     <message>
-        <source>Could not be started at the last game start: %1</source>
-        <translation>Nie udało się uruchomić przy ostatnim starcie gry: %1</translation>
+        <source>Could not be started at the last start: %1</source>
+        <translation>Nie udało się uruchomić przy ostatnim starcie: %1</translation>
     </message>
     <message>
         <source>Choose program …</source>

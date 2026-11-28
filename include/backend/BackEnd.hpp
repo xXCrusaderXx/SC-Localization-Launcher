@@ -349,9 +349,11 @@ class BackEnd
         // A game update may have replaced the translation, and an update may have waited for the game to close
         bool gameClosed = data.gameProcess == Database::GameProcess::Game && process != Database::GameProcess::Game;
         bool gameStarted = data.gameProcess != Database::GameProcess::Game && process == Database::GameProcess::Game;
+        bool appeared = data.gameProcess == Database::GameProcess::None && process != Database::GameProcess::None;
         data.gameProcess = process;
-        if(gameStarted) data.failedPrograms = companionPrograms.start(data.programs);
-        if(gameClosed) companionPrograms.stop();
+        if(appeared || gameStarted) data.failedPrograms = companionPrograms.start(data.programs, gameStarted);
+        if(gameClosed || process == Database::GameProcess::None) companionPrograms.stop();
+        if(process == Database::GameProcess::None) companionPrograms.reset();
         if(gameClosed) checkGameSettings();
         // The finished game start counts now
         if(gameClosed && data.statistics.loaded) handle(Protocol::LoadStatistics{});

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <fstream>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -15,8 +16,8 @@
 #include "logging/logging.h"
 #include "protocol/State.hpp"
 
-// Starts the user's programs when Star Citizen starts and ends those with stopWithGame when it quits.
-// Only touched by the backend thread.
+// Starts the user's programs when Star Citizen or, with startWithLauncher, already the RSI Launcher starts, and ends
+// those with stopWithGame when the game quits. Only touched by the backend thread.
 class CompanionPrograms
 {
    private:
@@ -25,10 +26,14 @@ class CompanionPrograms
         int64_t pid = 0;
         // A different value means the id now belongs to another process
         uint64_t startTime = 0;
+        std::string command;
     };
 
     LoggerFramework::LogEx lg;
     std::vector<Started> toStop;
+    // Commands of the startWithLauncher programs started since the RSI Launcher or the game appeared and not ended
+    // since; the others, also those that failed, start again with the next game start
+    std::set<std::string> startedWithLauncher;
 
     static uint64_t startTimeOf (int64_t pid) { return Platform::processStartTime(pid); }
 
@@ -87,13 +92,16 @@ class CompanionPrograms
     {
     }
 
-    // Returns the commands that could not be started
-    std::vector<std::string> start (const std::vector<Protocol::Program>& programs)
+    // Called when the RSI Launcher or the game appears (gameStarted false) and when the game starts (true); starts
+    // the startWithLauncher programs not started yet and, with gameStarted, the others. Returns the commands that
+    // could not be started.
+    std::vector<std::string> start (const std::vector<Protocol::Program>& programs, bool gameStarted)
     {
         std::vector<std::string> failed;
         for(const auto& program : programs)
         {
             if(!program.enabled) continue;
+            if(program.startWithLauncher ? startedWithLauncher.contains(program.command) : !gameStarted) continue;
             auto words = splitWords(program.command);
             std::optional<qint64> pid;
             if(words && !words->isEmpty())
@@ -108,20 +116,26 @@ class CompanionPrograms
                 continue;
             }
             LOG_INFO(lg) << "start() - " << program.command << " (pid " << *pid << ")";
-            if(program.stopWithGame) toStop.push_back({*pid, startTimeOf(*pid)});
+            if(program.startWithLauncher) startedWithLauncher.insert(program.command);
+            if(program.stopWithGame) toStop.push_back({*pid, startTimeOf(*pid), program.command});
         }
         return failed;
     }
 
-    // Ends what start() started with stopWithGame and is still running
+    // Ends what start() started with stopWithGame and is still running; called when the game quits and when the RSI
+    // Launcher quits without it
     void stop ()
     {
         for(const auto& started : toStop)
         {
+            startedWithLauncher.erase(started.command);
             if(started.startTime == 0 || startTimeOf(started.pid) != started.startTime) continue;
             LOG_INFO(lg) << "stop() - pid " << started.pid;
             Platform::endProcess(started.pid);
         }
         toStop.clear();
     }
+
+    // Neither the RSI Launcher nor the game runs any more, so the next one to appear starts all programs again
+    void reset () { startedWithLauncher.clear(); }
 };

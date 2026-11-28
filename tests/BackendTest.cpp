@@ -2901,6 +2901,82 @@ class BackendTest : public QObject
         QTRY_VERIFY(!processRuns(pid));
     }
 
+    void startsProgramsWithTheRsiLauncher ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir dir;
+        auto path = std::filesystem::path(dir.path().toStdString());
+        std::string voice = "/bin/sh -c 'echo $$ >> \"" + (path / "voice").string() + "\"; exec sleep 30'";
+        std::string kept = "/bin/sh -c 'echo $$ >> \"" + (path / "kept").string() + "\"; exec sleep 30'";
+        std::string withGame = "/bin/sh -c 'echo $$ >> \"" + (path / "game").string() + "\"'";
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetPrograms{{{.command = voice, .stopWithGame = true, .startWithLauncher = true},
+                                                {.command = kept, .startWithLauncher = true},
+                                                {.command = withGame}}});
+        QVERIFY(waitForPreviousCommands());
+        QVERIFY(readSettingsFile()["programs"][0]["startWithLauncher"].get<bool>());
+        auto lines = [&] (const char* file)
+        {
+            std::vector<qint64> pids;
+            std::istringstream text(readFile(path / file));
+            for(qint64 pid; text >> pid;) pids.push_back(pid);
+            return pids;
+        };
+
+        QProcess rsiLauncher;
+        rsiLauncher.start("/bin/bash", {"-c", QString::fromStdString(fakeRsiLauncher())});
+        QVERIFY(rsiLauncher.waitForStarted());
+        auto running = waitForState([] (const auto& s) { return s.game == GameStart::Running; });
+        QTRY_COMPARE(lines("voice").size(), size_t(1));
+        QTRY_COMPARE(lines("kept").size(), size_t(1));
+        bool gameProgramWaited = !std::filesystem::exists(path / "game");
+
+        // Started once for the whole session, the game start only adds the programs of the game
+        QProcess game;
+        game.start("/bin/bash", {"-c", QString::fromStdString(fakeWineProcess(testGameProgram()))});
+        QVERIFY(game.waitForStarted());
+        auto playing = waitForState([] (const auto& s) { return s.game == GameStart::Playing; }, running.value_or(0));
+        QTRY_COMPARE(lines("game").size(), size_t(1));
+        bool startedOnce = lines("voice").size() == 1 && lines("kept").size() == 1;
+        auto voicePid = lines("voice").front();
+
+        // Back to the RSI Launcher: the voice tool ends with the game and starts again with the next game start
+        game.kill();
+        game.waitForFinished();
+        auto back = waitForState([] (const auto& s) { return s.game == GameStart::Running; }, playing.value_or(0));
+        QTRY_VERIFY(!processRuns(voicePid));
+        bool keptRuns = processRuns(lines("kept").front());
+        game.start("/bin/bash", {"-c", QString::fromStdString(fakeWineProcess(testGameProgram()))});
+        QVERIFY(game.waitForStarted());
+        QTRY_COMPARE(lines("voice").size(), size_t(2));
+        QTRY_COMPARE(lines("game").size(), size_t(2));
+        bool keptOnce = lines("kept").size() == 1;
+        game.kill();
+        game.waitForFinished();
+        rsiLauncher.kill();
+        rsiLauncher.waitForFinished();
+        for(auto pid : lines("kept")) Platform::endProcess(pid);
+        QVERIFY(running);
+        QVERIFY(gameProgramWaited);
+        QVERIFY(playing);
+        QVERIFY(startedOnce);
+        QVERIFY(back);
+        QVERIFY(keptRuns);
+        QVERIFY(keptOnce);
+        QVERIFY(latest().failedPrograms.empty());
+        QTRY_VERIFY(!processRuns(lines("voice").back()));
+    }
+
+    void loadsProgramsSavedWithoutTheStartChoice ()
+    {
+        writeSettingsFile({{"programs", {{{"command", "/usr/bin/opentrack"}, {"stopWithGame", true}}}}});
+        QVERIFY(start());
+        QCOMPARE(latest().programs.size(), size_t(1));
+        QVERIFY(latest().programs[0].enabled);
+        QVERIFY(latest().programs[0].stopWithGame);
+        QVERIFY(!latest().programs[0].startWithLauncher);
+    }
+
     void backgroundUpdateWaitsUntilTheGameIsClosed ()
     {
         qputenv("PATH", "/usr/bin:/bin");

@@ -850,11 +850,15 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Started when Star Citizen starts, also when it was started without this launcher. The launcher has to be open, e.g. in the system tray. Quotes work as in a shell; for variables or pipes, start a script or sh -c &apos;…&apos;.</source>
+        <source>Started when Star Citizen starts or, if chosen, already with the RSI Launcher, also when they were started without this launcher. The launcher has to be open, e.g. in the system tray. Quotes work as in a shell; for variables or pipes, start a script or sh -c &apos;…&apos;.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Active</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Start it with the RSI Launcher</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -866,7 +870,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Could not be started at the last game start: %1</source>
+        <source>Could not be started at the last start: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
