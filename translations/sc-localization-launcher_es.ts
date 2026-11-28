@@ -677,6 +677,26 @@
 <context>
     <name>Main</name>
     <message>
+        <source>your own translation</source>
+        <translation>tu traducción propia</translation>
+    </message>
+    <message>
+        <source>Translation updated: %1</source>
+        <translation>Traducción actualizada: %1</translation>
+    </message>
+    <message>
+        <source>New translation: %1</source>
+        <translation>Nueva traducción: %1</translation>
+    </message>
+    <message>
+        <source>The new version of %1 is installed.</source>
+        <translation>La nueva versión de %1 está instalada.</translation>
+    </message>
+    <message>
+        <source>A new version of %1 is available. Open the launcher to install it.</source>
+        <translation>Hay una nueva versión de %1. Abre el launcher para instalarla.</translation>
+    </message>
+    <message>
         <source>COMMUNITY TRANSLATIONS FOR LINUX</source>
         <translation>TRADUCCIONES DE LA COMUNIDAD PARA LINUX</translation>
     </message>
@@ -1011,6 +1031,22 @@
     <message>
         <source>Search automatically</source>
         <translation>Buscar automáticamente</translation>
+    </message>
+    <message>
+        <source>NOTIFICATIONS</source>
+        <translation>NOTIFICACIONES</translation>
+    </message>
+    <message>
+        <source>A desktop notification when the hourly check finds a new version of a channel&apos;s translation, or the automatic update installs it</source>
+        <translation>Una notificación de escritorio cuando la comprobación horaria encuentra una nueva versión de la traducción de un canal o la actualización automática la instala</translation>
+    </message>
+    <message>
+        <source>Choose a game folder first</source>
+        <translation>Elige primero una carpeta del juego</translation>
+    </message>
+    <message>
+        <source>New translation versions for %1</source>
+        <translation>Nuevas versiones de la traducción para %1</translation>
     </message>
     <message>
         <source>TRANSLATIONS</source>

@@ -343,6 +343,45 @@ Item {
 
                 SectionTitle {
                     Layout.topMargin: 12
+                    text: qsTr("NOTIFICATIONS")
+                }
+
+                // One switch per channel with a game folder; all off until the user switches them on
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 14
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: panel.channels.some(c => c.installPath) ? qsTr("A desktop notification when the hourly check finds a new version of a channel's translation, or the automatic update installs it") : qsTr("Choose a game folder first")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    // By index, so the switches are not made anew with every state
+                    Repeater {
+                        model: panel.channels.length
+
+                        delegate: Toggle {
+                            required property int index
+                            readonly property var channel: panel.channels[index] || ({})
+
+                            objectName: "notifications" + (channel.name || "")
+                            visible: (channel.installPath || "") !== ""
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
+                            text: qsTr("New translation versions for %1").arg(channel.name || "")
+                            checked: channel.notifications === true
+                            onSwitched: on => backend.setNotifications(channel.name, on)
+                        }
+                    }
+                }
+
+                SectionTitle {
+                    Layout.topMargin: 12
                     text: qsTr("TRANSLATIONS")
                 }
 

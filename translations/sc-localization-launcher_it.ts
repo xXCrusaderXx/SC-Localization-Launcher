@@ -677,6 +677,26 @@
 <context>
     <name>Main</name>
     <message>
+        <source>your own translation</source>
+        <translation>la tua traduzione personale</translation>
+    </message>
+    <message>
+        <source>Translation updated: %1</source>
+        <translation>Traduzione aggiornata: %1</translation>
+    </message>
+    <message>
+        <source>New translation: %1</source>
+        <translation>Nuova traduzione: %1</translation>
+    </message>
+    <message>
+        <source>The new version of %1 is installed.</source>
+        <translation>La nuova versione di %1 è installata.</translation>
+    </message>
+    <message>
+        <source>A new version of %1 is available. Open the launcher to install it.</source>
+        <translation>È disponibile una nuova versione di %1. Apri il launcher per installarla.</translation>
+    </message>
+    <message>
         <source>COMMUNITY TRANSLATIONS FOR LINUX</source>
         <translation>TRADUZIONI DELLA COMMUNITY PER LINUX</translation>
     </message>
@@ -1011,6 +1031,22 @@
     <message>
         <source>Search automatically</source>
         <translation>Cerca automaticamente</translation>
+    </message>
+    <message>
+        <source>NOTIFICATIONS</source>
+        <translation>NOTIFICHE</translation>
+    </message>
+    <message>
+        <source>A desktop notification when the hourly check finds a new version of a channel&apos;s translation, or the automatic update installs it</source>
+        <translation>Una notifica sul desktop quando il controllo orario trova una nuova versione della traduzione di un canale o l&apos;aggiornamento automatico la installa</translation>
+    </message>
+    <message>
+        <source>Choose a game folder first</source>
+        <translation>Scegli prima una cartella del gioco</translation>
+    </message>
+    <message>
+        <source>New translation versions for %1</source>
+        <translation>Nuove versioni della traduzione per %1</translation>
     </message>
     <message>
         <source>TRANSLATIONS</source>

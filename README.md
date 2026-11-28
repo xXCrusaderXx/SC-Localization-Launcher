@@ -8,7 +8,7 @@ A launcher for Linux and Windows that installs and updates **community translati
 
 Available today: German (standard, complete and Swiss German), French, Italian and Portuguese (Brazil). More languages are being added. Each language is listed in [`languages.json`](languages.json); adding one needs no programming, see [Adding a game language](CONTRIBUTING.md#adding-a-game-language).
 
-What comes next — notifications, blueprints and more — is in the [roadmap](ROADMAP.md). It is open for proposals.
+What comes next — blueprints and more — is in the [roadmap](ROADMAP.md). It is open for proposals.
 
 New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)) explains installation, the first start and common problems.
 
@@ -27,6 +27,7 @@ New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)
 - Keeps working offline with the last known channel list.
 - Checks and updates from the command line, e.g. from a `systemd --user` timer, without opening a window.
 - Checks for new translation versions every hour while it is open. With "Update translations automatically" it installs them, and waits until Star Citizen has been closed if the game runs.
+- Tells you with a desktop notification when the hourly check finds a new translation version or the automatic update installs it, once per version. Switched on per channel under Settings → Notifications (off by default). It uses the desktop's notification service; without one, e.g. on Windows, the tray icon shows it.
 - Shows the overall status as a coloured light in the system tray, with "Update translations" and "Open" in its menu. With "Keep running in the system tray", closing the window leaves the launcher running there. Desktops without a tray (GNOME without the AppIndicator extension) simply don't show it.
 - Starts with the system if you want: with *Start with the system* it opens at login, straight into the tray when *Keep running in the system tray* is on. This works for the packages, the AppImage, the Flatpak and on Windows.
 - Shows the disk space of each channel, the Wine prefix and the shader caches, and the free space of each drive (Settings → Tools → "Disk space and caches …").
@@ -40,7 +41,7 @@ New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)
 - Streamer mode hides your user name and home folder in the paths the launcher shows.
 - The interface is available in English, German, French, Spanish, Italian, Polish, Dutch and Portuguese, following the system language or the choice in the settings, with a light or dark theme.
 
-Planned, not available yet: desktop notifications, backups of the launcher's settings; see the [roadmap](ROADMAP.md).
+Planned, not available yet: backups of the launcher's settings; see the [roadmap](ROADMAP.md).
 
 The translation texts are maintained by community projects such as [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI). Report wrong or missing texts there, not here.
 
@@ -62,7 +63,7 @@ For openSUSE, Ubuntu 22.04 and other distributions, use the AppImage or the Flat
 
 The Flatpak repository is signed with [`packaging/flatpak-signing-key.asc`](packaging/flatpak-signing-key.asc); the `.flatpakref` carries that key and pulls the KDE runtime from Flathub. Every release also has a single-file bundle (`SC-Localization-Launcher-*-x86_64.flatpak`) for offline installs, which does not update by itself.
 
-The Flatpak can read game folders anywhere (`--filesystem=host`) and starts the game outside the sandbox through `flatpak-spawn --host` (`--talk-name=org.freedesktop.Flatpak`).
+The Flatpak can read game folders anywhere (`--filesystem=host`) starts the game outside the sandbox through `flatpak-spawn --host` (`--talk-name=org.freedesktop.Flatpak`) and shows desktop notifications (`--talk-name=org.freedesktop.Notifications`).
 
 The Windows version is new; please report what does not work. The program is not signed with a code signing certificate, so Windows SmartScreen may warn on the first start (*More info* → *Run anyway*); `SHA256SUMS` below proves the file is the one from the release. It does not update itself yet: the launcher shows when a new version is out, and you unpack the new ZIP over the old folder.
 

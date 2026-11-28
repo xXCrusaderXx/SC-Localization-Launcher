@@ -677,6 +677,26 @@
 <context>
     <name>Main</name>
     <message>
+        <source>your own translation</source>
+        <translation>votre traduction personnalisée</translation>
+    </message>
+    <message>
+        <source>Translation updated: %1</source>
+        <translation>Traduction mise à jour&#xa0;: %1</translation>
+    </message>
+    <message>
+        <source>New translation: %1</source>
+        <translation>Nouvelle traduction&#xa0;: %1</translation>
+    </message>
+    <message>
+        <source>The new version of %1 is installed.</source>
+        <translation>La nouvelle version de %1 est installée.</translation>
+    </message>
+    <message>
+        <source>A new version of %1 is available. Open the launcher to install it.</source>
+        <translation>Une nouvelle version de %1 est disponible. Ouvrez le launcher pour l&apos;installer.</translation>
+    </message>
+    <message>
         <source>COMMUNITY TRANSLATIONS FOR LINUX</source>
         <translation>TRADUCTIONS COMMUNAUTAIRES POUR LINUX</translation>
     </message>
@@ -1011,6 +1031,22 @@
     <message>
         <source>Search automatically</source>
         <translation>Rechercher automatiquement</translation>
+    </message>
+    <message>
+        <source>NOTIFICATIONS</source>
+        <translation>NOTIFICATIONS</translation>
+    </message>
+    <message>
+        <source>A desktop notification when the hourly check finds a new version of a channel&apos;s translation, or the automatic update installs it</source>
+        <translation>Une notification de bureau quand la vérification horaire trouve une nouvelle version de la traduction d&apos;un canal, ou que la mise à jour automatique l&apos;installe</translation>
+    </message>
+    <message>
+        <source>Choose a game folder first</source>
+        <translation>Choisissez d&apos;abord un dossier du jeu</translation>
+    </message>
+    <message>
+        <source>New translation versions for %1</source>
+        <translation>Nouvelles versions de la traduction pour %1</translation>
     </message>
     <message>
         <source>TRANSLATIONS</source>

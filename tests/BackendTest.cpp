@@ -2940,6 +2940,126 @@ class BackendTest : public QObject
         QCOMPARE(latest().update, UpdateStatus::Succeeded);
     }
 
+    // One cycle of the background check; returns once it is done, together with an update it started
+    bool checkSources ()
+    {
+        backEnd->checkNow();
+        // A marker queued after the check started: from its state on, the end of the check shows as checking == false
+        bool value = !latest().options.showUpdateProgress;
+        size_t from = published();
+        backEnd->execute(Protocol::SetOption{"showUpdateProgress", value});
+        auto marker = waitForState([&] (const auto& s) { return s.options.showUpdateProgress == value; }, from);
+        if(!marker || !waitForState([] (const auto& s) { return !s.checking; }, *marker)) return false;
+        // The end of the check starts the background update in the same step, so it runs by the next marker
+        if(!waitForPreviousCommands()) return false;
+        return waitForState([] (const auto& s) { return s.update != UpdateStatus::Running; }, published() - 1).has_value();
+    }
+
+    // German installed on LIVE, background checks on (the hourly timer never fires in a test) and, if wanted,
+    // notifications for LIVE switched on
+    bool installGermanWithBackgroundChecks (const QTemporaryDir& game, bool notifications)
+    {
+        // Only the working URL: each check would wait for the fixture's missing primary file first
+        serveCatalogue(nlohmann::json::array({catalogueEntry("de", "Deutsch", "german_(germany)", "LIVE")}));
+        if(!installGerman(game)) return false;
+        if(notifications) backEnd->execute(Protocol::SetNotifications{"LIVE", true});
+        backEnd->execute(Protocol::StartBackgroundChecks{});
+        return waitForPreviousCommands() && channel(latest(), "LIVE").notifications == notifications && latest().notifications.empty();
+    }
+
+    void notifiesANewVersionOnce ()
+    {
+        QTemporaryDir game;
+        QVERIFY(installGermanWithBackgroundChecks(game, true));
+
+        server.setFile("/de.ini", TRANSLATION + "new_key=Neu\n");
+        QVERIFY(checkSources());
+        auto notifications = latest().notifications;
+        QCOMPARE(notifications.size(), size_t(1));
+        QCOMPARE(notifications[0].id, std::uint64_t(1));
+        QCOMPARE(notifications[0].channel, std::string("LIVE"));
+        QCOMPARE(notifications[0].kind, std::string("found"));
+        QCOMPARE(notifications[0].language, std::string("de"));
+        QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::UpdateAvailable);
+
+        // A later check finds the same version
+        QVERIFY(checkSources());
+        QCOMPARE(latest().notifications.size(), size_t(1));
+
+        // Nor after a restart: the notified version is in the settings
+        QVERIFY(restart());
+        backEnd->execute(Protocol::StartBackgroundChecks{});
+        QVERIFY(checkSources());
+        QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::UpdateAvailable);
+        QVERIFY(channel(latest(), "LIVE").notifications);
+        QVERIFY(latest().notifications.empty());
+
+        // A further version is notified again
+        server.setFile("/de.ini", TRANSLATION + "new_key=Neuer\n");
+        QVERIFY(checkSources());
+        QCOMPARE(latest().notifications.size(), size_t(1));
+        QCOMPARE(latest().notifications[0].kind, std::string("found"));
+    }
+
+    void notificationsAreOffByDefault ()
+    {
+        QTemporaryDir game;
+        QVERIFY(installGermanWithBackgroundChecks(game, false));
+        QVERIFY(!readSettingsFile()["channels"]["LIVE"]["notifications"].get<bool>());
+
+        server.setFile("/de.ini", TRANSLATION + "new_key=Neu\n");
+        QVERIFY(checkSources());
+        QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::UpdateAvailable);
+        QVERIFY(latest().notifications.empty());
+    }
+
+    void oldSettingsLoadWithNotificationsOff ()
+    {
+        writeSettingsFile({{"channels", {{"LIVE", {{"installPath", "/games/LIVE"}, {"language", "de"}}}}}});
+        QVERIFY(start());
+        QVERIFY(!channel(latest(), "LIVE").notifications);
+        QCOMPARE(channel(latest(), "LIVE").installPath, std::string("/games/LIVE"));
+    }
+
+    void notifiesWhatTheAutomaticUpdateInstalled ()
+    {
+        QTemporaryDir game;
+        auto ini = std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini";
+        QVERIFY(installGermanWithBackgroundChecks(game, true));
+        backEnd->execute(Protocol::SetOption{"installNewTranslations", true});
+
+        const QByteArray newVersion = TRANSLATION + "new_key=Neu\n";
+        server.setFile("/de.ini", newVersion);
+        QVERIFY(checkSources());
+        // One notification for the version: "installed", not "found" before it
+        QCOMPARE(latest().update, UpdateStatus::Succeeded);
+        QCOMPARE(latest().notifications.size(), size_t(1));
+        QCOMPARE(latest().notifications[0].kind, std::string("installed"));
+        QCOMPARE(QByteArray::fromStdString(readFile(ini)), newVersion);
+
+        QVERIFY(checkSources());
+        QCOMPARE(latest().notifications.size(), size_t(1));
+    }
+
+    void updatesStartedByTheUserAreNotNotified ()
+    {
+        QTemporaryDir game;
+        QVERIFY(installGermanWithBackgroundChecks(game, true));
+        server.setFile("/de.ini", TRANSLATION + "new_key=Neu\n");
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QVERIFY(checkSources());
+        QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::Installed);
+        QVERIFY(latest().notifications.empty());
+    }
+
+    void rejectsNotificationsForUnknownChannels ()
+    {
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetNotifications{"NOPE", true});
+        QVERIFY(waitForPreviousCommands());
+        for(const auto& c : latest().channels) QVERIFY(!c.notifications);
+    }
+
     void addsItemValuesToNames ()
     {
         serveItemData();

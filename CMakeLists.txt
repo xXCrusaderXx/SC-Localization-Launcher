@@ -66,6 +66,15 @@ include(GNUInstallDirs)
 # Widgets: the system tray of the KDE platform theme builds on QApplication
 find_package(Qt6 6.4 REQUIRED COMPONENTS Quick Network Widgets)
 message(STATUS "Using Qt ${Qt6_VERSION}")
+# Desktop notifications through the freedesktop notification service; without it (Windows) they show at the tray icon
+if(NOT WIN32)
+  find_package(Qt6 QUIET COMPONENTS DBus)
+endif()
+if(TARGET Qt6::DBus)
+  set(SC_DBUS_TARGET Qt6::DBus)
+else()
+  message(STATUS "Qt DBus not found, notifications only show at the tray icon")
+endif()
 if(QT_KNOWN_POLICY_QTP0004)
   qt_policy(SET QTP0004 NEW)
 endif()
@@ -194,6 +203,7 @@ target_link_libraries(${SC_LAUNCHER_BINARY} PRIVATE
   Qt6::Quick
   Qt6::Network
   Qt6::Widgets
+  ${SC_DBUS_TARGET}
   PkgConfig::SODIUM
   nlohmann_json::nlohmann_json
   CURL::libcurl
@@ -208,6 +218,7 @@ target_include_directories(${SC_LAUNCHER_BINARY} PRIVATE
 target_compile_definitions(${SC_LAUNCHER_BINARY} PRIVATE
   SC_APP_ID="${SC_APP_ID}"
   SC_VERSION="${SC_FULL_VERSION}"
+  $<$<BOOL:${SC_DBUS_TARGET}>:SC_HAVE_DBUS>
 )
 
 configure_file(

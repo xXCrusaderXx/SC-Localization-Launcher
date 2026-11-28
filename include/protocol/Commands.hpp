@@ -83,6 +83,14 @@ struct SetCustomSource
     std::string folder;
 };
 
+// Desktop notifications about new translation versions of one channel, see Channel.notifications
+struct SetNotifications
+{
+    static constexpr const char* name = "setNotifications";
+    std::string channel;
+    bool enabled = false;
+};
+
 // Asks GitHub whether a newer launcher version exists; nothing is installed
 struct CheckForUpdate
 {
@@ -219,6 +227,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetOption, option, value)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(StartUpdate, channels, allowGameStart)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RepairChannel, channel)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetCustomSource, channel, url, folder)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetNotifications, channel, enabled)
 inline void to_json (nlohmann::json& j, const StartGame&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const FinishSetup&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const LoadStatistics&) { j = nlohmann::json::object(); }
@@ -246,7 +255,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetDashboardTiles, tiles)
 using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
                              InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches,
                              ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms,
-                             SetInterfaceLanguage, FinishSetup, SetTheme, LoadStatistics, SaveStatisticsReport, SetDashboardTiles>;
+                             SetInterfaceLanguage, FinishSetup, SetTheme, LoadStatistics, SaveStatisticsReport, SetDashboardTiles, SetNotifications>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

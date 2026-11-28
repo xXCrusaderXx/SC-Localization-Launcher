@@ -677,6 +677,26 @@
 <context>
     <name>Main</name>
     <message>
+        <source>your own translation</source>
+        <translation>je eigen vertaling</translation>
+    </message>
+    <message>
+        <source>Translation updated: %1</source>
+        <translation>Vertaling bijgewerkt: %1</translation>
+    </message>
+    <message>
+        <source>New translation: %1</source>
+        <translation>Nieuwe vertaling: %1</translation>
+    </message>
+    <message>
+        <source>The new version of %1 is installed.</source>
+        <translation>De nieuwe versie van %1 is geïnstalleerd.</translation>
+    </message>
+    <message>
+        <source>A new version of %1 is available. Open the launcher to install it.</source>
+        <translation>Er is een nieuwe versie van %1. Open de launcher om die te installeren.</translation>
+    </message>
+    <message>
         <source>COMMUNITY TRANSLATIONS FOR LINUX</source>
         <translation>COMMUNITYVERTALINGEN VOOR LINUX</translation>
     </message>
@@ -1011,6 +1031,22 @@
     <message>
         <source>Search automatically</source>
         <translation>Automatisch zoeken</translation>
+    </message>
+    <message>
+        <source>NOTIFICATIONS</source>
+        <translation>MELDINGEN</translation>
+    </message>
+    <message>
+        <source>A desktop notification when the hourly check finds a new version of a channel&apos;s translation, or the automatic update installs it</source>
+        <translation>Een bureaubladmelding wanneer de controle van elk uur een nieuwe versie van de vertaling van een kanaal vindt, of de automatische update die installeert</translation>
+    </message>
+    <message>
+        <source>Choose a game folder first</source>
+        <translation>Kies eerst een spelmap</translation>
+    </message>
+    <message>
+        <source>New translation versions for %1</source>
+        <translation>Nieuwe vertalingsversies voor %1</translation>
     </message>
     <message>
         <source>TRANSLATIONS</source>

@@ -53,6 +53,10 @@ ApplicationWindow {
     readonly property bool hasWhatsNew: ((appState.whatsNew || {}).notes || "") !== ""
     // Started at login: set once the first state has decided between window and tray
     property bool loginShown: false
+    // Highest State.notifications id shown so far; each one is shown once
+    property real shownNotification: 0
+    // Read by the GUI test
+    property string lastNotificationTitle: ""
 
     // The setting "Appearance", or the desktop's colour scheme
     Binding {
@@ -106,6 +110,34 @@ ApplicationWindow {
         // For the dashboard; reloaded by the backend after every game start
         backend.loadStatistics();
     }
+    onAppStateChanged: {
+        for (const notification of appState.notifications || []) {
+            if (notification.id <= shownNotification)
+                continue;
+            shownNotification = notification.id;
+            showNotification(notification);
+        }
+    }
+
+    // A State.notifications entry, worded in the interface language
+    function showNotification(notification) {
+        const language = (appState.languages || []).find(l => l.code === notification.language);
+        const name = notification.language === "custom" ? qsTr("your own translation") : (language ? language.name : notification.language);
+        const title = notification.kind === "installed" ? qsTr("Translation updated: %1").arg(notification.channel) : qsTr("New translation: %1").arg(notification.channel);
+        const body = notification.kind === "installed" ? qsTr("The new version of %1 is installed.").arg(name) : qsTr("A new version of %1 is available. Open the launcher to install it.").arg(name);
+        lastNotificationTitle = title;
+        backend.showNotification(title, body);
+    }
+
+    // Without a notification service (e.g. on Windows) the tray icon shows it, if there is one
+    Connections {
+        target: backend
+        function onNotificationUndelivered(title, body) {
+            if (tray.available)
+                tray.showMessage(title, body);
+        }
+    }
+
     // The first state carries the settings
     Connections {
         target: backend

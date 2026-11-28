@@ -18,6 +18,11 @@
 #include <QTranslator>
 #include <QUrl>
 #include <QVariantMap>
+#ifdef SC_HAVE_DBUS
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusPendingCallWatcher>
+#endif
 
 #include "backend/BackEnd.hpp"
 #include "backend/utils/paths.hpp"
@@ -200,6 +205,43 @@ class BackendBridge : public QObject
         backEnd.execute(Protocol::SetCustomSource{
             .channel = channel.toStdString(), .url = url.trimmed().toStdString(), .folder = folder.trimmed().toStdString()});
     }
+    Q_INVOKABLE void setNotifications (const QString& channel, bool enabled)
+    {
+        backEnd.execute(Protocol::SetNotifications{.channel = channel.toStdString(), .enabled = enabled});
+    }
+
+    // Through the desktop's notification service (org.freedesktop.Notifications); where there is none, e.g. on
+    // Windows, notificationUndelivered lets the window show it at the tray icon instead
+    Q_INVOKABLE void showNotification (const QString& title, const QString& body)
+    {
+#ifdef SC_HAVE_DBUS
+        auto bus = QDBusConnection::sessionBus();
+        if(!bus.isConnected())
+        {
+            LOG_INFO(lg) << "showNotification() - no session bus";
+            emit notificationUndelivered(title, body);
+            return;
+        }
+        auto message = QDBusMessage::createMethodCall("org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+                                                      "org.freedesktop.Notifications", "Notify");
+        QVariantMap hints;
+        hints["desktop-entry"] = SelfUpdateManager::FLATPAK_APP_ID;
+        // Application name, id to replace (none), icon, summary, body, actions, hints, timeout (-1: the server's default)
+        message << QString("SC Localization Launcher") << 0u << SelfUpdateManager::FLATPAK_APP_ID << title << body << QStringList() << hints << -1;
+        auto* watcher = new QDBusPendingCallWatcher(bus.asyncCall(message), this);
+        connect(watcher, &QDBusPendingCallWatcher::finished, this,
+                [this, title, body] (QDBusPendingCallWatcher* call)
+                {
+                    call->deleteLater();
+                    if(!call->isError()) return;
+                    LOG_INFO(lg) << "showNotification() - no notification service: " << call->error().message().toStdString();
+                    emit notificationUndelivered(title, body);
+                });
+#else
+        emit notificationUndelivered(title, body);
+#endif
+    }
+
     Q_INVOKABLE void repairChannel (const QString& channel) { backEnd.execute(Protocol::RepairChannel{.channel = channel.toStdString()}); }
     Q_INVOKABLE void autoSearch () { backEnd.execute(Protocol::AutoSearch{}); }
     Q_INVOKABLE void checkForUpdate () { backEnd.execute(Protocol::CheckForUpdate{}); }
@@ -278,4 +320,5 @@ class BackendBridge : public QObject
    signals:
     void stateChanged ();
     void systemDarkChanged ();
+    void notificationUndelivered (const QString& title, const QString& body);
 };

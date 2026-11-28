@@ -800,6 +800,26 @@
         <translation>Übersetzungen aktualisieren</translation>
     </message>
     <message>
+        <source>your own translation</source>
+        <translation>deiner eigenen Übersetzung</translation>
+    </message>
+    <message>
+        <source>Translation updated: %1</source>
+        <translation>Übersetzung aktualisiert: %1</translation>
+    </message>
+    <message>
+        <source>New translation: %1</source>
+        <translation>Neue Übersetzung: %1</translation>
+    </message>
+    <message>
+        <source>The new version of %1 is installed.</source>
+        <translation>Die neue Version von %1 ist installiert.</translation>
+    </message>
+    <message>
+        <source>A new version of %1 is available. Open the launcher to install it.</source>
+        <translation>Eine neue Version von %1 ist verfügbar. Öffne den Launcher, um sie zu installieren.</translation>
+    </message>
+    <message>
         <source>Starting game …</source>
         <translation>Spiel wird gestartet …</translation>
     </message>
@@ -991,6 +1011,22 @@
     <message>
         <source>Opens the launcher when you log in</source>
         <translation>Öffnet den Launcher beim Anmelden</translation>
+    </message>
+    <message>
+        <source>NOTIFICATIONS</source>
+        <translation>BENACHRICHTIGUNGEN</translation>
+    </message>
+    <message>
+        <source>A desktop notification when the hourly check finds a new version of a channel&apos;s translation, or the automatic update installs it</source>
+        <translation>Eine Desktop-Benachrichtigung, wenn die stündliche Prüfung eine neue Version der Übersetzung eines Kanals findet oder die automatische Aktualisierung sie installiert</translation>
+    </message>
+    <message>
+        <source>Choose a game folder first</source>
+        <translation>Wähle zuerst einen Spielordner</translation>
+    </message>
+    <message>
+        <source>New translation versions for %1</source>
+        <translation>Neue Übersetzungsversionen für %1</translation>
     </message>
     <message>
         <source>Contributors (%1)</source>

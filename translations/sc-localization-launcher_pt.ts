@@ -677,6 +677,26 @@
 <context>
     <name>Main</name>
     <message>
+        <source>your own translation</source>
+        <translation>sua tradução personalizada</translation>
+    </message>
+    <message>
+        <source>Translation updated: %1</source>
+        <translation>Tradução atualizada: %1</translation>
+    </message>
+    <message>
+        <source>New translation: %1</source>
+        <translation>Nova tradução: %1</translation>
+    </message>
+    <message>
+        <source>The new version of %1 is installed.</source>
+        <translation>A nova versão de %1 está instalada.</translation>
+    </message>
+    <message>
+        <source>A new version of %1 is available. Open the launcher to install it.</source>
+        <translation>Uma nova versão de %1 está disponível. Abra o launcher para instalá-la.</translation>
+    </message>
+    <message>
         <source>COMMUNITY TRANSLATIONS FOR LINUX</source>
         <translation>TRADUÇÕES DA COMUNIDADE PARA LINUX</translation>
     </message>
@@ -1011,6 +1031,22 @@
     <message>
         <source>Search automatically</source>
         <translation>Procurar automaticamente</translation>
+    </message>
+    <message>
+        <source>NOTIFICATIONS</source>
+        <translation>NOTIFICAÇÕES</translation>
+    </message>
+    <message>
+        <source>A desktop notification when the hourly check finds a new version of a channel&apos;s translation, or the automatic update installs it</source>
+        <translation>Uma notificação na área de trabalho quando a verificação de hora em hora encontra uma nova versão da tradução de um canal ou a atualização automática a instala</translation>
+    </message>
+    <message>
+        <source>Choose a game folder first</source>
+        <translation>Escolha primeiro uma pasta do jogo</translation>
+    </message>
+    <message>
+        <source>New translation versions for %1</source>
+        <translation>Novas versões da tradução para %1</translation>
     </message>
     <message>
         <source>TRANSLATIONS</source>
