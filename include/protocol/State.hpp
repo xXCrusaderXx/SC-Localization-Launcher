@@ -358,6 +358,38 @@ struct BackupEntry
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(BackupEntry, channel, name, bytes)
 
+// A file of a backup that a restore would change
+struct BackupFile
+{
+    // Relative to the channel folder, or ProfileBackup::SETTINGS_FILE for the launcher's settings
+    std::string path;
+    // "changed": differs from the current file; "missing": there is no such file now
+    std::string change;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(BackupFile, path, change)
+
+// A backup compared with the current files, see CompareBackup
+struct BackupComparison
+{
+    std::string channel;
+    // BackupEntry.name
+    std::string name;
+    bool busy = false;
+    // Only the files that differ
+    std::vector<BackupFile> files;
+    // Files of the backup that are the same as now
+    int unchanged = 0;
+    // Older backups hold no launcher settings
+    bool hasSettings = false;
+    // Commands that restoring the launcher's settings would newly start with the game
+    std::vector<std::string> programs;
+    // e.g. "damaged backup"; empty if the comparison worked
+    std::string error;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(BackupComparison, channel, name, busy, files, unchanged, hasSettings, programs, error)
+
 struct Backups
 {
     bool busy = false;
@@ -366,9 +398,11 @@ struct Backups
     // Of the last CreateBackup or RestoreBackup: "created" or "restored", or an error such as "Star Citizen is running"
     std::string result;
     std::string resultChannel;
+    // Of the last CompareBackup
+    BackupComparison comparison;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Backups, busy, entries, result, resultChannel)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Backups, busy, entries, result, resultChannel, comparison)
 
 struct NamedCount
 {

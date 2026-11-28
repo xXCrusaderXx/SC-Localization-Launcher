@@ -2431,6 +2431,152 @@ class BackendTest : public QObject
         QCOMPARE(readFile(path / "user.cfg"), std::string("changed\n"));
     }
 
+    Protocol::BackupComparison compareBackup (const std::string& channel, const std::string& backup)
+    {
+        size_t from = published();
+        backEnd->execute(Protocol::CompareBackup{channel, backup});
+        // An earlier comparison of the same backup may still be in the state
+        auto started = waitForState([&] (const auto& s) { return s.backups.comparison.busy && s.backups.comparison.name == backup; }, from);
+        if(!started) return {};
+        auto done = waitForState([&] (const auto& s) { return !s.backups.busy && !s.backups.comparison.busy; }, *started);
+        if(!done) return {};
+        std::lock_guard lock(mutex);
+        return states[*done].backups.comparison;
+    }
+
+    static std::string changeOf (const Protocol::BackupComparison& comparison, const std::string& path)
+    {
+        for(const auto& file : comparison.files)
+            if(file.path == path) return file.change;
+        return "";
+    }
+
+    void backsUpTheLauncherSettingsAndComparesBeforeARestore ()
+    {
+        QTemporaryDir game;
+        auto path = std::filesystem::path(game.path().toStdString());
+        writeProfile(path);
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", path.string()});
+        backEnd->execute(Protocol::SetPrograms{{{"/opt/tools/overlay --hud", true, true}}});
+        backEnd->execute(Protocol::SetTheme{"light"});
+        std::string backup = backupCommand(Protocol::CreateBackup{"LIVE"}).entries.front().name;
+        QVERIFY(readFile(ProfileBackup().folder() / "LIVE" / backup).find("launcher/settings.json") != std::string::npos);
+
+        // Nothing changed yet
+        auto same = compareBackup("LIVE", backup);
+        QVERIFY2(same.error.empty(), same.error.c_str());
+        QVERIFY(same.hasSettings);
+        QVERIFY(same.files.empty());
+        QCOMPARE(same.unchanged, 6);
+        QVERIFY(same.programs.empty());
+
+        std::ofstream(path / "user/client/0/Profiles/default/actionmaps.xml") << "<ActionMaps version=\"2\"/>\n";
+        std::filesystem::remove(path / "user/client/0/CustomCharacters/pilot.chf");
+        backEnd->execute(Protocol::SetPrograms{{{"/opt/tools/other", true, false}}});
+        backEnd->execute(Protocol::SetTheme{"dark"});
+        auto comparison = compareBackup("LIVE", backup);
+        QCOMPARE(changeOf(comparison, "user/client/0/Profiles/default/actionmaps.xml"), std::string("changed"));
+        QCOMPARE(changeOf(comparison, "user/client/0/CustomCharacters/pilot.chf"), std::string("missing"));
+        QCOMPARE(changeOf(comparison, ProfileBackup::SETTINGS_FILE), std::string("changed"));
+        QCOMPARE(comparison.files.size(), size_t(3));
+        QCOMPARE(comparison.unchanged, 3);
+        // The program the restore would start with the game, so the user sees it before switching the settings on
+        QCOMPARE(comparison.programs, std::vector<std::string>{"/opt/tools/overlay --hud"});
+        // Comparing writes nothing
+        QCOMPARE(readFile(path / "user/client/0/Profiles/default/actionmaps.xml"), std::string("<ActionMaps version=\"2\"/>\n"));
+
+        // Without the settings only the profile comes back
+        auto profileOnly = backupCommand(Protocol::RestoreBackup{"LIVE", backup, false});
+        QCOMPARE(profileOnly.result, std::string("restored"));
+        QCOMPARE(readFile(path / "user/client/0/Profiles/default/actionmaps.xml"), std::string("<ActionMaps version=\"1\"/>\n"));
+        QCOMPARE(latest().programs.size(), size_t(1));
+        QCOMPARE(latest().programs.front().command, std::string("/opt/tools/other"));
+
+        auto withSettings = backupCommand(Protocol::RestoreBackup{"LIVE", backup, true});
+        QCOMPARE(withSettings.result, std::string("restored"));
+        auto state = latest();
+        QCOMPARE(state.programs.size(), size_t(1));
+        QCOMPARE(state.programs.front().command, std::string("/opt/tools/overlay --hud"));
+        QVERIFY(state.programs.front().stopWithGame);
+        QCOMPARE(state.theme, std::string("light"));
+        QCOMPARE(channel(state, "LIVE").installPath, path.string());
+        // The settings were saved as well, so they are still there after a restart
+        QVERIFY(restart());
+        QCOMPARE(latest().programs.front().command, std::string("/opt/tools/overlay --hud"));
+        QCOMPARE(latest().theme, std::string("light"));
+    }
+
+    void restoresOldBackupsWithoutLauncherSettings ()
+    {
+        QTemporaryDir game;
+        auto path = std::filesystem::path(game.path().toStdString());
+        writeProfile(path);
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", path.string()});
+        backEnd->execute(Protocol::SetPrograms{{{"/opt/tools/overlay", true, false}}});
+        auto folder = ProfileBackup().folder() / "LIVE";
+        requireTestHome(folder);
+        std::filesystem::create_directories(folder);
+        {
+            // As versions before the launcher settings wrote it
+            ZipWriter zip(folder / "LIVE-20200101-000000-000.zip");
+            zip.add("backup.json", R"({"channel": "LIVE", "launcherVersion": "1.0.0", "files": ["user.cfg"]})");
+            zip.add("user.cfg", "r_DisplayInfo = 3\n");
+            QVERIFY(zip.finish());
+        }
+        auto comparison = compareBackup("LIVE", "LIVE-20200101-000000-000.zip");
+        QVERIFY2(comparison.error.empty(), comparison.error.c_str());
+        QVERIFY(!comparison.hasSettings);
+        QCOMPARE(changeOf(comparison, "user.cfg"), std::string("changed"));
+        QCOMPARE(comparison.files.size(), size_t(1));
+
+        auto restored = backupCommand(Protocol::RestoreBackup{"LIVE", "LIVE-20200101-000000-000.zip", true});
+        QCOMPARE(restored.result, std::string("restored"));
+        QCOMPARE(readFile(path / "user.cfg"), std::string("r_DisplayInfo = 3\n"));
+        QCOMPARE(latest().programs.front().command, std::string("/opt/tools/overlay"));
+    }
+
+    void refusesLauncherSettingsThatAreDamagedOrUnsafe ()
+    {
+        QTemporaryDir game;
+        auto path = std::filesystem::path(game.path().toStdString());
+        writeProfile(path);
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", path.string()});
+        auto folder = ProfileBackup().folder() / "LIVE";
+        requireTestHome(folder);
+        std::filesystem::create_directories(folder);
+        {
+            ZipWriter zip(folder / "LIVE-20200101-000000-000.zip");
+            zip.add("user.cfg", "g_language = evil\n");
+            zip.add("launcher/settings.json", "not json");
+            QVERIFY(zip.finish());
+        }
+        QCOMPARE(compareBackup("LIVE", "LIVE-20200101-000000-000.zip").error, std::string("damaged backup"));
+        QCOMPARE(backupCommand(Protocol::RestoreBackup{"LIVE", "LIVE-20200101-000000-000.zip", true}).result, std::string("damaged backup"));
+        QCOMPARE(readFile(path / "user.cfg"), std::string("r_DisplayInfo = 2\n"));
+
+        // An own source the launcher would not accept is dropped; the game folder of the backup's settings is kept
+        nlohmann::json settings = {
+            {"channels", {{"LIVE", {{"installPath", path.string()}, {"custom", {{"url", "http://example.org/x.ini"}, {"folder", "../../Bin64"}}}}}}},
+            {"theme", "light"},
+            {"programs", {{{"command", "/tmp/evil --now"}, {"enabled", true}}, {{"command", "/opt/off"}, {"enabled", false}}}}};
+        {
+            ZipWriter zip(folder / "LIVE-20200102-000000-000.zip");
+            zip.add("user.cfg", "r_DisplayInfo = 2\n");
+            zip.add("launcher/settings.json", settings.dump());
+            QVERIFY(zip.finish());
+        }
+        // Only what would start with the game is listed
+        QCOMPARE(compareBackup("LIVE", "LIVE-20200102-000000-000.zip").programs, std::vector<std::string>{"/tmp/evil --now"});
+        QCOMPARE(backupCommand(Protocol::RestoreBackup{"LIVE", "LIVE-20200102-000000-000.zip", true}).result, std::string("restored"));
+        auto state = latest();
+        QCOMPARE(state.theme, std::string("light"));
+        QCOMPARE(channel(state, "LIVE").custom.url, std::string());
+        QCOMPARE(channel(state, "LIVE").installPath, path.string());
+    }
+
     void userCfgEditKeepsOtherLinesByteForByte ()
     {
         UserCfg cfg("-- my settings\r\nr_DisplayInfo = 2\r\n\r\nG_LANGUAGE = french_(france)\r\nsys_maxFps=30\r\n; old\r\nfoo   =  bar");

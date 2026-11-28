@@ -4,6 +4,18 @@
 <context>
     <name>BackupDialog</name>
     <message>
+        <source>Launcher settings (channels, options, programs)</source>
+        <translation>Launcherinstellingen (kanalen, opties, programma&apos;s)</translation>
+    </message>
+    <message>
+        <source>missing now</source>
+        <translation>ontbreekt nu</translation>
+    </message>
+    <message>
+        <source>changed</source>
+        <translation>gewijzigd</translation>
+    </message>
+    <message>
         <source>Backup saved.</source>
         <translation>Back-up opgeslagen.</translation>
     </message>
@@ -32,8 +44,8 @@
         <translation>Kies eerst een spelmap.</translation>
     </message>
     <message>
-        <source>Keybindings, profile settings, saved characters and user.cfg of a channel. The newest 10 backups per channel are kept.</source>
-        <translation>Toetsbindingen, profielinstellingen, opgeslagen personages en user.cfg van een kanaal. Per kanaal blijven de nieuwste 10 back-ups bewaard.</translation>
+        <source>Keybindings, profile settings, saved characters and user.cfg of a channel, together with the launcher&apos;s settings. The newest 10 backups per channel are kept.</source>
+        <translation>Toetsbindingen, profielinstellingen, opgeslagen personages en user.cfg van een kanaal, samen met de instellingen van de launcher. Per kanaal blijven de nieuwste 10 back-ups bewaard.</translation>
     </message>
     <message>
         <source>Back up %1</source>
@@ -54,6 +66,51 @@
     <message>
         <source>Restore %1 from %2? The current files are backed up first.</source>
         <translation>%1 van %2 terugzetten? Van de huidige bestanden wordt eerst een back-up gemaakt.</translation>
+    </message>
+    <message>
+        <source>Comparing the backup with the current files …</source>
+        <translation>Back-up wordt vergeleken met de huidige bestanden …</translation>
+    </message>
+    <message>
+        <source>All files in this backup are the same as the current ones.</source>
+        <translation>Alle bestanden in deze back-up zijn gelijk aan de huidige.</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s) differ from the current ones:</source>
+        <translation>
+            <numerusform>%n bestand wijkt af van het huidige:</numerusform>
+            <numerusform>%n bestanden wijken af van de huidige:</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>and %n more</source>
+        <translation>
+            <numerusform>en nog %n</numerusform>
+            <numerusform>en nog %n</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s) are the same as now.</source>
+        <translation>
+            <numerusform>%n bestand is gelijk aan nu.</numerusform>
+            <numerusform>%n bestanden zijn gelijk aan nu.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>These programs will start with the game:</source>
+        <translation>Deze programma&apos;s starten dan mee met het spel:</translation>
+    </message>
+    <message>
+        <source>Also restore the launcher&apos;s settings</source>
+        <translation>Ook de instellingen van de launcher terugzetten</translation>
+    </message>
+    <message>
+        <source>Game folders, languages, options and programs. Installed translations and the game settings of other channels stay as they are.</source>
+        <translation>Spelmappen, talen, opties en programma&apos;s. Geïnstalleerde vertalingen en de spelinstellingen van andere kanalen blijven zoals ze zijn.</translation>
+    </message>
+    <message>
+        <source>This backup holds no launcher settings.</source>
+        <translation>Deze back-up bevat geen instellingen van de launcher.</translation>
     </message>
     <message>
         <source>Cancel</source>

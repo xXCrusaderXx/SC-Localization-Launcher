@@ -139,11 +139,20 @@ struct LoadBackups
     static constexpr const char* name = "loadBackups";
 };
 
-// Backs up keybindings, profile settings, characters and user.cfg of a channel
+// Backs up keybindings, profile settings, characters and user.cfg of a channel, together with the launcher's settings
 struct CreateBackup
 {
     static constexpr const char* name = "createBackup";
     std::string channel;
+};
+
+// Compares a backup with the current files, see State.backups.comparison
+struct CompareBackup
+{
+    static constexpr const char* name = "compareBackup";
+    std::string channel;
+    // BackupEntry.name
+    std::string backup;
 };
 
 // Writes a backup back into its channel after backing up the current files. Refused while Star Citizen runs.
@@ -153,6 +162,8 @@ struct RestoreBackup
     std::string channel;
     // BackupEntry.name
     std::string backup;
+    // Also restores the launcher's settings, if the backup holds them
+    bool settings = false;
 };
 
 // Writes frame limits and own lines into the channel's user.cfg; the game reads them at its next start
@@ -236,7 +247,8 @@ inline void to_json (nlohmann::json& j, const RunDiagnostics&) { j = nlohmann::j
 inline void to_json (nlohmann::json& j, const SaveReport&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const LoadBackups&) { j = nlohmann::json::object(); }
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CreateBackup, channel)
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RestoreBackup, channel, backup)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CompareBackup, channel, backup)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RestoreBackup, channel, backup, settings)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetGameSettings, channel, settings)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetPrograms, programs)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInterfaceLanguage, language)
@@ -245,8 +257,8 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetDashboardTiles, tiles)
 
 using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
                              InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches,
-                             ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms,
-                             SetInterfaceLanguage, FinishSetup, SetTheme, LoadStatistics, SaveStatisticsReport, SetDashboardTiles>;
+                             ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, CompareBackup, RestoreBackup, SetGameSettings,
+                             SetPrograms, SetInterfaceLanguage, FinishSetup, SetTheme, LoadStatistics, SaveStatisticsReport, SetDashboardTiles>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

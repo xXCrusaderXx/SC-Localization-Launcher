@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "backend/jsonParser/SettingsJsonParser.hpp"
 #include "backend/utils/ZipReader.hpp"
 #include "backend/utils/ZipWriter.hpp"
 #include "backend/utils/paths.hpp"
@@ -22,6 +23,7 @@
 
 // Backs up and restores what a player set up in a game channel: user.cfg, and per client profile the keybindings
 // and settings (Profiles: actionmaps.xml, attributes.xml, ...), exported control mappings and saved characters.
+// The launcher's own settings travel along as SETTINGS_FILE; they are handed back to the caller, never written here.
 // One ZIP per backup in <data>/backups/<channel>/, the newest KEEP per channel are kept. Only these paths are ever
 // written back, and a restore first backs up what it replaces.
 class ProfileBackup
@@ -29,6 +31,15 @@ class ProfileBackup
    public:
     using Entry = Protocol::BackupEntry;
     static constexpr size_t KEEP = 10;
+    static constexpr const char* SETTINGS_FILE = "launcher/settings.json";
+
+    struct Comparison
+    {
+        std::vector<Protocol::BackupFile> files;
+        int unchanged = 0;
+        // The launcher's settings in the backup, compared by the caller
+        std::optional<std::string> settings;
+    };
 
    private:
     LoggerFramework::LogEx lg;
@@ -87,6 +98,40 @@ class ProfileBackup
             std::filesystem::remove(zips[i], ec);
             LOG_DEBUG(lg) << "rotate() - removed " << zips[i];
         }
+    }
+
+    static std::optional<std::string> readFile (const std::filesystem::path& path)
+    {
+        if(!isRegularFile(path)) return std::nullopt;
+        std::ifstream in(path, std::ios::binary);
+        if(!in.is_open()) return std::nullopt;
+        return std::string((std::istreambuf_iterator<char>(in)), {});
+    }
+
+    // The files of a backup, each checked to go only where a restore may write it
+    std::optional<std::vector<ZipReader::File>> readBackup (const std::string& channel, const std::string& name, std::string& error) const
+    {
+        error = "unknown backup";
+        if(!validChannel(channel) || name.find('/') != std::string::npos || name.find('\\') != std::string::npos || !name.ends_with(".zip"))
+            return std::nullopt;
+        auto path = root / channel / name;
+        if(!isRegularFile(path)) return std::nullopt;
+
+        error = "damaged backup";
+        auto files = ZipReader::read(path);
+        if(!files) return std::nullopt;
+        for(const auto& file : *files)
+        {
+            bool valid = file.name == "backup.json" || isProfilePath(file.name) ||
+                         (file.name == SETTINGS_FILE && SettingsJsonParser::parse(file.data).has_value());
+            if(!valid)
+            {
+                LOG_ERROR(lg) << "readBackup() - " << path << " contains " << file.name;
+                return std::nullopt;
+            }
+        }
+        error.clear();
+        return files;
     }
 
     static bool writeFile (const std::filesystem::path& path, const std::string& data)
@@ -170,8 +215,10 @@ class ProfileBackup
         return entries;
     }
 
-    // Returns the name of the new backup, or nullopt if there is nothing to back up or it could not be written
-    std::optional<std::string> create (const std::string& channel, const std::filesystem::path& installPath, const std::string& version)
+    // Returns the name of the new backup, or nullopt if there is nothing to back up or it could not be written.
+    // settings: the launcher's settings.json to store along, none if empty
+    std::optional<std::string> create (const std::string& channel, const std::filesystem::path& installPath, const std::string& version,
+                                       const std::string& settings = "")
     {
         if(!validChannel(channel)) return std::nullopt;
         auto files = profileFiles(installPath);
@@ -188,13 +235,14 @@ class ProfileBackup
 
         ZipWriter zip(path);
         if(!zip.isOpen()) return std::nullopt;
-        nlohmann::json about = {{"channel", channel}, {"launcherVersion", version}, {"files", files}};
+        nlohmann::json about = {{"channel", channel}, {"launcherVersion", version}, {"files", files}, {"launcherSettings", !settings.empty()}};
         zip.add("backup.json", about.dump(2) + "\n");
         for(const auto& file : files)
         {
             std::ifstream in(installPath / file, std::ios::binary);
             zip.add(file, std::string((std::istreambuf_iterator<char>(in)), {}));
         }
+        if(!settings.empty()) zip.add(SETTINGS_FILE, settings);
         if(!zip.finish())
         {
             std::filesystem::remove(path, ec);
@@ -206,37 +254,63 @@ class ProfileBackup
         return path.filename().string();
     }
 
-    // Writes the files of a backup back into the channel folder; files not in the backup stay as they are.
-    // Returns an error message, nullopt on success.
-    std::optional<std::string> restore (const std::string& channel, const std::string& name, const std::filesystem::path& installPath,
-                                        const std::string& version)
+    // Which files of a backup differ from those in the channel folder. Returns an error message, nullopt on success.
+    std::optional<std::string> compare (const std::string& channel, const std::string& name, const std::filesystem::path& installPath,
+                                        Comparison& result) const
     {
-        if(!validChannel(channel) || name.find('/') != std::string::npos || !name.ends_with(".zip")) return "unknown backup";
-        auto path = root / channel / name;
-        if(!isRegularFile(path)) return "unknown backup";
-        if(installPath.empty() || !std::filesystem::is_directory(installPath)) return "no game folder";
-
-        auto files = ZipReader::read(path);
-        if(!files) return "damaged backup";
-        for(const auto& file : *files)
-            if(file.name != "backup.json" && !isProfilePath(file.name))
-            {
-                LOG_ERROR(lg) << "restore() - " << path << " contains " << file.name;
-                return "damaged backup";
-            }
-
-        // What is replaced now can be restored in turn
-        create(channel, installPath, version);
+        result = {};
+        std::string error;
+        auto files = readBackup(channel, name, error);
+        if(!files) return error;
         for(const auto& file : *files)
         {
             if(file.name == "backup.json") continue;
+            if(file.name == SETTINGS_FILE)
+            {
+                result.settings = file.data;
+                continue;
+            }
+            auto current = installPath.empty() ? std::nullopt : readFile(installPath / file.name);
+            if(!current)
+                result.files.push_back({file.name, "missing"});
+            else if(*current != file.data)
+                result.files.push_back({file.name, "changed"});
+            else
+                ++result.unchanged;
+        }
+        return std::nullopt;
+    }
+
+    // Writes the files of a backup back into the channel folder; files not in the backup stay as they are.
+    // settings: what the replaced files are backed up with first. restoredSettings, if given, receives the
+    // launcher's settings of the backup (none for older backups); they are not written here.
+    // Returns an error message, nullopt on success.
+    std::optional<std::string> restore (const std::string& channel, const std::string& name, const std::filesystem::path& installPath,
+                                        const std::string& version, const std::string& settings = "",
+                                        std::optional<std::string>* restoredSettings = nullptr)
+    {
+        std::string error;
+        auto files = readBackup(channel, name, error);
+        if(!files) return error;
+        if(installPath.empty() || !std::filesystem::is_directory(installPath)) return "no game folder";
+
+        // What is replaced now can be restored in turn
+        create(channel, installPath, version, settings);
+        for(const auto& file : *files)
+        {
+            if(file.name == "backup.json") continue;
+            if(file.name == SETTINGS_FILE)
+            {
+                if(restoredSettings) *restoredSettings = file.data;
+                continue;
+            }
             if(!writeFile(installPath / file.name, file.data))
             {
                 LOG_ERROR(lg) << "restore() - cannot write " << installPath / file.name;
                 return "cannot write";
             }
         }
-        LOG_DEBUG(lg) << "restore() - " << path << " into " << installPath;
+        LOG_DEBUG(lg) << "restore() - " << channel << "/" << name << " into " << installPath;
         return std::nullopt;
     }
 };

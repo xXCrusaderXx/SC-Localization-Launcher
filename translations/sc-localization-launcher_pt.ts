@@ -4,6 +4,18 @@
 <context>
     <name>BackupDialog</name>
     <message>
+        <source>Launcher settings (channels, options, programs)</source>
+        <translation>Configurações do launcher (canais, opções, programas)</translation>
+    </message>
+    <message>
+        <source>missing now</source>
+        <translation>ausente agora</translation>
+    </message>
+    <message>
+        <source>changed</source>
+        <translation>alterado</translation>
+    </message>
+    <message>
         <source>Backup saved.</source>
         <translation>Backup salvo.</translation>
     </message>
@@ -32,8 +44,8 @@
         <translation>Escolha uma pasta do jogo primeiro.</translation>
     </message>
     <message>
-        <source>Keybindings, profile settings, saved characters and user.cfg of a channel. The newest 10 backups per channel are kept.</source>
-        <translation>Mapeamento de teclas, configurações de perfil, personagens salvos e user.cfg de um canal. Os 10 backups mais recentes por canal são mantidos.</translation>
+        <source>Keybindings, profile settings, saved characters and user.cfg of a channel, together with the launcher&apos;s settings. The newest 10 backups per channel are kept.</source>
+        <translation>Mapeamento de teclas, configurações de perfil, personagens salvos e user.cfg de um canal, junto com as configurações do launcher. Os 10 backups mais recentes por canal são mantidos.</translation>
     </message>
     <message>
         <source>Back up %1</source>
@@ -54,6 +66,51 @@
     <message>
         <source>Restore %1 from %2? The current files are backed up first.</source>
         <translation>Restaurar %1 de %2? Os arquivos atuais são salvos antes.</translation>
+    </message>
+    <message>
+        <source>Comparing the backup with the current files …</source>
+        <translation>Comparando o backup com os arquivos atuais …</translation>
+    </message>
+    <message>
+        <source>All files in this backup are the same as the current ones.</source>
+        <translation>Todos os arquivos deste backup são iguais aos atuais.</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s) differ from the current ones:</source>
+        <translation>
+            <numerusform>%n arquivo difere do atual:</numerusform>
+            <numerusform>%n arquivos diferem dos atuais:</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>and %n more</source>
+        <translation>
+            <numerusform>e mais %n</numerusform>
+            <numerusform>e mais %n</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s) are the same as now.</source>
+        <translation>
+            <numerusform>%n arquivo é igual ao de agora.</numerusform>
+            <numerusform>%n arquivos são iguais aos de agora.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>These programs will start with the game:</source>
+        <translation>Estes programas vão iniciar com o jogo:</translation>
+    </message>
+    <message>
+        <source>Also restore the launcher&apos;s settings</source>
+        <translation>Restaurar também as configurações do launcher</translation>
+    </message>
+    <message>
+        <source>Game folders, languages, options and programs. Installed translations and the game settings of other channels stay as they are.</source>
+        <translation>Pastas do jogo, idiomas, opções e programas. As traduções instaladas e as configurações de jogo dos outros canais ficam como estão.</translation>
+    </message>
+    <message>
+        <source>This backup holds no launcher settings.</source>
+        <translation>Este backup não contém configurações do launcher.</translation>
     </message>
     <message>
         <source>Cancel</source>

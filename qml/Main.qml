@@ -734,7 +734,8 @@ ApplicationWindow {
         channels: window.visibleChannels.map(c => c.name)
         gamePlaying: window.gamePlaying
         onBackupRequested: channel => backend.createBackup(channel)
-        onRestoreRequested: (channel, backup) => backend.restoreBackup(channel, backup)
+        onCompareRequested: (channel, backup) => backend.compareBackup(channel, backup)
+        onRestoreRequested: (channel, backup, settings) => backend.restoreBackup(channel, backup, settings)
     }
 
     DiagnosticsDialog {

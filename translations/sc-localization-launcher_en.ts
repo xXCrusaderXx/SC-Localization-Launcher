@@ -4,6 +4,18 @@
 <context>
     <name>BackupDialog</name>
     <message>
+        <source>Launcher settings (channels, options, programs)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>missing now</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>changed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Backup saved.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -32,7 +44,7 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Keybindings, profile settings, saved characters and user.cfg of a channel. The newest 10 backups per channel are kept.</source>
+        <source>Keybindings, profile settings, saved characters and user.cfg of a channel, together with the launcher&apos;s settings. The newest 10 backups per channel are kept.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -53,6 +65,51 @@
     </message>
     <message>
         <source>Restore %1 from %2? The current files are backed up first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Comparing the backup with the current files …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>All files in this backup are the same as the current ones.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s) differ from the current ones:</source>
+        <translation>
+            <numerusform>%n file differs from the current one:</numerusform>
+            <numerusform>%n files differ from the current ones:</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>and %n more</source>
+        <translation>
+            <numerusform>and %n more</numerusform>
+            <numerusform>and %n more</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s) are the same as now.</source>
+        <translation>
+            <numerusform>%n file is the same as now.</numerusform>
+            <numerusform>%n files are the same as now.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>These programs will start with the game:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Also restore the launcher&apos;s settings</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Game folders, languages, options and programs. Installed translations and the game settings of other channels stay as they are.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>This backup holds no launcher settings.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
