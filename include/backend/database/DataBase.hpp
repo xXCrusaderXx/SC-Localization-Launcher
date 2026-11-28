@@ -98,6 +98,10 @@ struct ChannelData
     std::vector<std::string> ignoredSettings;
     std::string settingsError;
     bool graphicsApiWaiting = false;
+    // Desktop notifications about new versions, see Protocol::Channel::notifications
+    bool notifications = false;
+    // ETag of the last version notified; a version is notified only once, also across restarts
+    std::string notifiedEtag;
 };
 
 // What SelfUpdateManager::install() needs from a release; filled by its check() when a matching signed package exists
@@ -171,6 +175,9 @@ struct BackendData
     std::string theme;
     Protocol::Statistics statistics;
     std::vector<std::string> dashboardTiles = Protocol::DEFAULT_DASHBOARD_TILES;
+    std::vector<Protocol::Notification> notifications;
+    // Set by updateInBackground() while it starts an update: the new versions that update installs are notified
+    bool startingBackgroundUpdate = false;
 
     // Set when the app closes; background jobs read it to stop early
     std::atomic<bool> shuttingDown{false};

@@ -192,11 +192,30 @@ struct Channel
     std::string translationVersion;
     // translationVersion is older than gameVersion: texts new in this game version show up in English
     bool translationOutdated = false;
+    // The window shows a desktop notification when the background check finds or installs a new translation version
+    bool notifications = false;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status, notices, custom, gameSettings,
                                                 settingsChecked, ignoredSettings, settingsError, graphicsApiWaiting, gameVersion, translationVersion,
-                                                translationOutdated)
+                                                translationOutdated, notifications)
+
+// A desktop notification about a new translation version, for a channel with notifications on; each version is notified once
+struct Notification
+{
+    // Counts up from 1 with every start of the launcher; the window shows each id once
+    std::uint64_t id = 0;
+    std::string channel;
+    // "found": a new version is available; "installed": the background update installed it
+    std::string kind;
+    // Code of the translation, from State::languages or CUSTOM
+    std::string language;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Notification, id, channel, kind, language)
+
+// Notifications kept in State::notifications
+inline constexpr size_t MAX_NOTIFICATIONS = 10;
 
 // Updates of the launcher itself, from the GitHub releases of the project
 enum class SelfUpdateStatus
@@ -494,10 +513,12 @@ struct State
     Statistics statistics;
     // Tiles of the main window's dashboard, in order, see DASHBOARD_TILES
     std::vector<std::string> dashboardTiles;
+    // The latest desktop notifications, oldest first, at most MAX_NOTIFICATIONS
+    std::vector<Notification> notifications;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
                                                 handledCommands, whatsNew, caches, diagnostics, backups, programs, failedPrograms, interfaceLanguage,
-                                                setupNeeded, theme, statistics, dashboardTiles)
+                                                setupNeeded, theme, statistics, dashboardTiles, notifications)
 
 }  // namespace Protocol

@@ -230,7 +230,8 @@ class BackEnd
                              }
                              data.checking = false;
                              publish();
-                             updateInBackground();
+                             // What the background update installs now is notified once it is installed
+                             if(!updateInBackground() && notifyFoundVersions()) publish();
                          });
                  });
     }
@@ -244,12 +245,40 @@ class BackEnd
         return std::chrono::hours(1);
     }
 
-    // With the option on, installs what the last check found, unless the game reads the files right now;
-    // the game watcher checks again once it has been closed
-    void updateInBackground ()
+    // Tells the user once per version about a new translation of a channel with notifications on. Only the window
+    // checks in the background, so a run on the command line never uses up a notification.
+    bool notify (const std::string& name, Database::ChannelData& channel, const std::string& language, const std::string& etag,
+                 const std::string& kind)
     {
-        if(!data.backgroundChecks || !data.options.installNewTranslations) return;
-        if(data.update == Protocol::UpdateStatus::Running || data.game == Protocol::GameStart::Starting) return;
+        if(!data.backgroundChecks || !channel.notifications || etag.empty() || etag == channel.notifiedEtag) return false;
+        channel.notifiedEtag = etag;
+        std::uint64_t id = data.notifications.empty() ? 1 : data.notifications.back().id + 1;
+        data.notifications.push_back({id, name, kind, language});
+        if(data.notifications.size() > Protocol::MAX_NOTIFICATIONS) data.notifications.erase(data.notifications.begin());
+        LOG_INFO(lg) << "notification - " << name << ": " << kind << " " << language;
+        return true;
+    }
+
+    // Channels whose source has a newer version of the installed translation than the one installed
+    bool notifyFoundVersions ()
+    {
+        bool notified = false;
+        for(auto& [name, channel] : data.channels)
+        {
+            bool newer = channel.language != Protocol::ENGLISH && channel.installed.language == channel.language && !channel.installed.etag.empty() &&
+                         channel.remoteEtag != channel.installed.etag;
+            if(newer) notified |= notify(name, channel, channel.language, channel.remoteEtag, "found");
+        }
+        if(notified) saveSettings();
+        return notified;
+    }
+
+    // With the option on, installs what the last check found, unless the game reads the files right now;
+    // the game watcher checks again once it has been closed. Returns whether an update was started.
+    bool updateInBackground ()
+    {
+        if(!data.backgroundChecks || !data.options.installNewTranslations) return false;
+        if(data.update == Protocol::UpdateStatus::Running || data.game == Protocol::GameStart::Starting) return false;
         bool pending = std::any_of(data.channels.begin(), data.channels.end(),
                                    [this] (const auto& entry)
                                    {
@@ -258,15 +287,18 @@ class BackEnd
                                        return status == Protocol::ChannelStatus::NotInstalled || status == Protocol::ChannelStatus::UpdateAvailable ||
                                               status == Protocol::ChannelStatus::Damaged || status == Protocol::ChannelStatus::Failed;
                                    });
-        if(!pending) return;
+        if(!pending) return false;
         if(gamePlaying())
         {
             LOG_INFO(lg) << "background update - waiting until Star Citizen has been closed";
-            return;
+            return false;
         }
         LOG_INFO(lg) << "background update";
+        data.startingBackgroundUpdate = true;
         handle(Protocol::StartUpdate{.allowGameStart = false});
+        data.startingBackgroundUpdate = false;
         publish();
+        return data.update == Protocol::UpdateStatus::Running;
     }
 
     // force: download even if the source reports "not modified", e.g. to repair a changed file
@@ -397,12 +429,13 @@ class BackEnd
         // A repair may run while the RSI Launcher is still starting; that start reports its own result
         if(data.game != Protocol::GameStart::Starting) data.game = Protocol::GameStart::Idle;
         startJob(updateJob,
-                 [this, jobs, launchGame, names = data.options.itemNameDetails, stats = data.options.itemDescriptionStats] () mutable
+                 [this, jobs, launchGame, names = data.options.itemNameDetails, stats = data.options.itemDescriptionStats,
+                  background = data.startingBackgroundUpdate] () mutable
                  {
                      prepareItemValues(jobs, names, stats);
                      auto results = updateManager.update(jobs);
                      queue.post(
-                         [this, results, launchGame, jobCount = jobs.size()]
+                         [this, results, launchGame, background, jobCount = jobs.size()]
                          {
                              bool success = results.size() == jobCount;
                              for(const auto& result : results)
@@ -412,6 +445,9 @@ class BackEnd
                                  channel.lastUpdateFailed = !result.success;
                                  if(!result.success) continue;
                                  bool english = result.language == Protocol::ENGLISH;
+                                 // A new version of the translation that was installed; not a first install or another language
+                                 if(background && !english && channel.installed.language == result.language && channel.installed.etag != result.etag)
+                                     notify(result.channel, channel, result.language, result.etag, "installed");
                                  channel.installed = {english ? "" : result.language, result.etag, result.fileHash, result.folder, result.itemValues};
                                  channel.damaged = false;
                                  if(channel.language == result.language) channel.remoteEtag = result.etag;
@@ -516,7 +552,7 @@ class BackEnd
             state.channels.push_back({name, channel.installPath.string(), channel.language, availableLanguages(name), channelStatus(name, channel),
                                       notices(name), channel.custom, channel.gameSettings, channel.settingsChecked, channel.ignoredSettings,
                                       channel.settingsError, channel.graphicsApiWaiting, gameVersion, translationVersion,
-                                      GameVersion::older(translationVersion, gameVersion)});
+                                      GameVersion::older(translationVersion, gameVersion), channel.notifications});
         }
 
         state.rsiLauncherPath = data.rsiLauncherPath.string();
@@ -538,6 +574,7 @@ class BackEnd
         state.theme = data.theme;
         state.statistics = data.statistics;
         state.dashboardTiles = data.dashboardTiles;
+        state.notifications = data.notifications;
         return state;
     }
 
@@ -562,6 +599,8 @@ class BackEnd
             data.channels[name].gameSettings = settings.gameSettings;
             data.channels[name].managedKeys = settings.managedKeys;
             data.channels[name].settingsWritten = settings.settingsWritten;
+            data.channels[name].notifications = settings.notifications;
+            data.channels[name].notifiedEtag = settings.notifiedEtag;
         }
         data.rsiLauncherPath = file.rsiLauncherPath;
         data.options = file.options;
@@ -583,8 +622,9 @@ class BackEnd
     {
         SettingsFile file;
         for(const auto& [name, channel] : data.channels)
-            file.channels[name] = {channel.installPath.string(), channel.language,    channel.installed,      channel.custom,
-                                   channel.gameSettings,         channel.managedKeys, channel.settingsWritten};
+            file.channels[name] = {channel.installPath.string(), channel.language,    channel.installed,       channel.custom,
+                                   channel.gameSettings,         channel.managedKeys, channel.settingsWritten, channel.notifications,
+                                   channel.notifiedEtag};
         file.rsiLauncherPath = data.rsiLauncherPath.string();
         file.options = data.options;
         file.lastSeenVersion = data.lastSeenVersion;
@@ -786,6 +826,16 @@ class BackEnd
         channel->remoteEtag.clear();
         channel->damaged = false;
         channel->lastUpdateFailed = false;
+    }
+
+    void handle (const Protocol::SetNotifications& command)
+    {
+        auto* channel = findChannel(command.channel);
+        if(!channel) return;
+        channel->notifications = command.enabled;
+        // The window shows already that a new version is available
+        if(command.enabled && !channel->remoteEtag.empty() && channel->remoteEtag != channel->installed.etag)
+            channel->notifiedEtag = channel->remoteEtag;
     }
 
     void handle (const Protocol::RepairChannel& command)
@@ -1282,6 +1332,14 @@ class BackEnd
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }
+
+#ifdef SC_TESTING
+    // Test builds only: one cycle of the hourly background check right away, as the timer runs it
+    void checkNow ()
+    {
+        queue.post([this] { checkChannels(); });
+    }
+#endif
 
     // Thread safe, returns immediately
     void execute (Protocol::Command command)

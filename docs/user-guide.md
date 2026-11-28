@@ -66,6 +66,7 @@ The **dashboard** below the rows shows tiles such as play time, last played, fav
 ## Updates
 
 - **Translations**: while the launcher is open, it checks every hour. With *Update translations automatically* it installs new versions by itself, and waits for the game to close if it runs.
+- **Notifications**: under Settings → Notifications, *New translation versions for LIVE* (and for every other channel with a game folder) shows a desktop notification when the hourly check finds a new version of that channel's translation, or when *Update translations automatically* has installed it. Each version is notified once. Off by default. Without a notification service on the desktop (e.g. on Windows) the tray icon shows the message.
 - **System tray**: the tray icon shows the same coloured dot; its menu has *Update translations*, *Open* and *Quit*. With *Keep running in the system tray*, closing the window leaves the launcher running there. GNOME needs the AppIndicator extension for a tray.
 - **Start with the system**: opens the launcher when you log in; with *Keep running in the system tray* it starts in the tray instead of opening the window. If you move the AppImage or the Windows folder, start it once from the new place so the entry follows it.
 - **Without a window**: `sc-localization-launcher --update` updates from a script or a `systemd --user` timer, see [Command line](../README.md#command-line).

@@ -677,6 +677,26 @@
 <context>
     <name>Main</name>
     <message>
+        <source>your own translation</source>
+        <translation>własnego tłumaczenia</translation>
+    </message>
+    <message>
+        <source>Translation updated: %1</source>
+        <translation>Tłumaczenie zaktualizowane: %1</translation>
+    </message>
+    <message>
+        <source>New translation: %1</source>
+        <translation>Nowe tłumaczenie: %1</translation>
+    </message>
+    <message>
+        <source>The new version of %1 is installed.</source>
+        <translation>Nowa wersja %1 została zainstalowana.</translation>
+    </message>
+    <message>
+        <source>A new version of %1 is available. Open the launcher to install it.</source>
+        <translation>Dostępna jest nowa wersja %1. Otwórz launcher, aby ją zainstalować.</translation>
+    </message>
+    <message>
         <source>COMMUNITY TRANSLATIONS FOR LINUX</source>
         <translation>TŁUMACZENIA SPOŁECZNOŚCI DLA LINUXA</translation>
     </message>
@@ -1012,6 +1032,22 @@
     <message>
         <source>Search automatically</source>
         <translation>Szukaj automatycznie</translation>
+    </message>
+    <message>
+        <source>NOTIFICATIONS</source>
+        <translation>POWIADOMIENIA</translation>
+    </message>
+    <message>
+        <source>A desktop notification when the hourly check finds a new version of a channel&apos;s translation, or the automatic update installs it</source>
+        <translation>Powiadomienie na pulpicie, gdy cogodzinne sprawdzanie znajdzie nową wersję tłumaczenia kanału lub automatyczna aktualizacja ją zainstaluje</translation>
+    </message>
+    <message>
+        <source>Choose a game folder first</source>
+        <translation>Najpierw wybierz folder gry</translation>
+    </message>
+    <message>
+        <source>New translation versions for %1</source>
+        <translation>Nowe wersje tłumaczenia dla %1</translation>
     </message>
     <message>
         <source>TRANSLATIONS</source>

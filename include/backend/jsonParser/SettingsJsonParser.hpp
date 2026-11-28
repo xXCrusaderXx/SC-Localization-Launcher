@@ -23,9 +23,13 @@ struct ChannelSettings
     Protocol::GameSettings gameSettings;
     std::vector<std::string> managedKeys;
     int64_t settingsWritten = 0;
+    bool notifications = false;
+    // ETag of the last translation version a notification was shown for
+    std::string notifiedEtag;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelSettings, installPath, language, installed, custom, gameSettings, managedKeys, settingsWritten)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelSettings, installPath, language, installed, custom, gameSettings, managedKeys, settingsWritten,
+                                                notifications, notifiedEtag)
 
 struct SettingsFile
 {

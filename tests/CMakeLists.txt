@@ -36,8 +36,8 @@ add_executable(GuiTest
   ${CMAKE_SOURCE_DIR}/resources/resources.qrc
 )
 # Widgets as in the app: QTEST_MAIN then creates a QApplication, which the tray icon needs
-target_link_libraries(GuiTest PRIVATE sc_test_support Qt6::Quick Qt6::Widgets)
-target_compile_definitions(GuiTest PRIVATE SC_TRANSLATIONS_DIR="${CMAKE_SOURCE_DIR}/translations")
+target_link_libraries(GuiTest PRIVATE sc_test_support Qt6::Quick Qt6::Widgets ${SC_DBUS_TARGET})
+target_compile_definitions(GuiTest PRIVATE SC_TRANSLATIONS_DIR="${CMAKE_SOURCE_DIR}/translations" $<$<BOOL:${SC_DBUS_TARGET}>:SC_HAVE_DBUS>)
 
 # The same QML module as the app. Source file properties are per directory, so they are set again here.
 list(TRANSFORM SC_QML_FILES PREPEND ${CMAKE_SOURCE_DIR}/ OUTPUT_VARIABLE SC_TEST_QML_FILES)
@@ -61,12 +61,12 @@ endif()
 
 foreach(test BackendTest DirectoryFinderTest SingleInstanceTest CommandLineTest WikiApiClientTest LoggerTest GuiTest)
   add_test(NAME ${test} COMMAND ${test})
-  # Own HOME and XDG dirs, so the user's settings are never touched. Empty PATH, so the game can never be started,
-  # and watched program names of their own, so an RSI Launcher or game running on this machine does not count
-  # (each test then makes them unique to its process, see watchOwnTestPrograms() in TestSupport.hpp).
+  # Own HOME and XDG dirs, so the user's settings are never touched. No session bus, so a test never shows a desktop
+  # notification. Empty PATH, so the game can never be started, and watched program names of their own, so an RSI
+  # Launcher or game running on this machine does not count (each test then makes them unique to its process, see watchOwnTestPrograms() in TestSupport.hpp).
   set(test_home ${CMAKE_CURRENT_BINARY_DIR}/home-${test})
   set_tests_properties(${test} PROPERTIES
     TIMEOUT 120
-    ENVIRONMENT "SC_TEST_HOME=${test_home};HOME=${test_home};XDG_CONFIG_HOME=${test_home}/.config;XDG_CACHE_HOME=${test_home}/.cache;XDG_STATE_HOME=${test_home}/.local/state;PATH=/nonexistent;SC_RSI_LAUNCHER_PROGRAM=RSI Test Launcher.exe;SC_GAME_PROGRAM=StarCitizen Test.exe;QT_QPA_PLATFORM=offscreen;QT_FORCE_STDERR_LOGGING=1;LANGUAGE=en;LC_ALL=C.UTF-8"
+    ENVIRONMENT "SC_TEST_HOME=${test_home};DBUS_SESSION_BUS_ADDRESS=unix:path=/nonexistent;HOME=${test_home};XDG_CONFIG_HOME=${test_home}/.config;XDG_CACHE_HOME=${test_home}/.cache;XDG_STATE_HOME=${test_home}/.local/state;PATH=/nonexistent;SC_RSI_LAUNCHER_PROGRAM=RSI Test Launcher.exe;SC_GAME_PROGRAM=StarCitizen Test.exe;QT_QPA_PLATFORM=offscreen;QT_FORCE_STDERR_LOGGING=1;LANGUAGE=en;LC_ALL=C.UTF-8"
   )
 endforeach()

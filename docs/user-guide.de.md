@@ -66,6 +66,7 @@ Das **Dashboard** unter den Zeilen zeigt Kacheln wie Spielzeit, zuletzt gespielt
 ## Updates
 
 - **Übersetzungen**: Solange der Launcher offen ist, prüft er stündlich. Mit *Übersetzungen automatisch aktualisieren* installiert er neue Versionen selbst und wartet, falls das Spiel läuft, bis es beendet ist.
+- **Benachrichtigungen**: Unter Einstellungen → Benachrichtigungen zeigt *Neue Übersetzungsversionen für LIVE* (und für jeden anderen Kanal mit Spielordner) eine Desktop-Benachrichtigung, wenn die stündliche Prüfung eine neue Version der Übersetzung dieses Kanals findet oder *Übersetzungen automatisch aktualisieren* sie installiert hat. Jede Version wird nur einmal gemeldet. Standardmäßig aus. Hat der Desktop keinen Benachrichtigungsdienst (z. B. unter Windows), zeigt das Symbol im Infobereich die Meldung.
 - **Infobereich**: Das Symbol zeigt denselben farbigen Punkt; sein Menü hat *Übersetzungen aktualisieren*, *Öffnen* und *Beenden*. Mit *Im Infobereich weiterlaufen* läuft der Launcher dort weiter, wenn du das Fenster schließt. GNOME braucht dafür die AppIndicator-Erweiterung.
 - **Mit dem System starten**: öffnet den Launcher beim Anmelden; mit *Im Infobereich weiterlaufen* startet er im Infobereich, ohne das Fenster zu öffnen. Verschiebst du das AppImage oder den Windows-Ordner, starte den Launcher einmal vom neuen Ort, damit der Eintrag mitzieht.
 - **Ohne Fenster**: `sc-localization-launcher --update` aktualisiert aus einem Skript oder einem `systemd --user`-Timer, siehe [Command line](../README.md#command-line).

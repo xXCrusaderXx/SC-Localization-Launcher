@@ -5,6 +5,7 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QRegularExpression>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTranslator>
@@ -568,6 +569,56 @@ class GuiTest : public QObject
         panel->setProperty("open", false);
         // Its backdrop would catch the next test's clicks until it has slid out
         QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    void switchesNotificationsPerChannel ()
+    {
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        // Made by a Repeater, so only found in the visual tree; they may sit below the visible part of the panel
+        std::function<QQuickItem*(QQuickItem*, const QString&)> named = [&] (QQuickItem* item, const QString& name) -> QQuickItem*
+        {
+            if(item->objectName() == name) return item;
+            for(auto* child : item->childItems())
+                if(auto* found = named(child, name)) return found;
+            return nullptr;
+        };
+        QQuickItem* toggle = nullptr;
+        QTRY_VERIFY((toggle = named(window->contentItem(), "notificationsLIVE")));
+        // Off by default, and only offered for channels with a game folder
+        QVERIFY(!channel("LIVE")["notifications"].toBool());
+        QCOMPARE(toggle->property("text").toString(), QString("New translation versions for LIVE"));
+        QVERIFY(toggle->isVisible());
+        QVERIFY(channel("EPTU")["installPath"].toString().isEmpty());
+        QQuickItem* eptu = named(window->contentItem(), "notificationsEPTU");
+        QVERIFY(eptu && !eptu->isVisible());
+
+        QMetaObject::invokeMethod(toggle, "clicked");
+        QTRY_VERIFY(channel("LIVE")["notifications"].toBool());
+        QTRY_VERIFY(toggle->property("checked").toBool());
+        QMetaObject::invokeMethod(toggle, "clicked");
+        QTRY_VERIFY(!channel("LIVE")["notifications"].toBool());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    // The test has no session bus, so the notification service is unreachable and the window falls back to the tray
+    void wordsTheNotificationsInTheInterfaceLanguage ()
+    {
+        QObject* root = engine->rootObjects().first();
+        QSignalSpy undelivered(bridge.get(), &BackendBridge::notificationUndelivered);
+        QVariantMap found{{"id", 1}, {"channel", "LIVE"}, {"kind", "found"}, {"language", "de"}};
+        QMetaObject::invokeMethod(root, "showNotification", Q_ARG(QVariant, found));
+        QCOMPARE(root->property("lastNotificationTitle").toString(), QString("New translation: LIVE"));
+        QTRY_COMPARE(undelivered.count(), 1);
+        QCOMPARE(undelivered[0][0].toString(), QString("New translation: LIVE"));
+        QVERIFY(undelivered[0][1].toString().contains("Deutsch"));
+
+        QVariantMap installed{{"id", 2}, {"channel", "PTU"}, {"kind", "installed"}, {"language", "custom"}};
+        QMetaObject::invokeMethod(root, "showNotification", Q_ARG(QVariant, installed));
+        QTRY_COMPARE(undelivered.count(), 2);
+        QCOMPARE(undelivered[1][0].toString(), QString("Translation updated: PTU"));
+        QCOMPARE(undelivered[1][1].toString(), QString("The new version of your own translation is installed."));
     }
 
     void savesAReportFromTheSettings ()
