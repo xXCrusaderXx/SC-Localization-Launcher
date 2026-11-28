@@ -270,6 +270,10 @@
         <source>Repair</source>
         <translation>Reparar</translation>
     </message>
+    <message>
+        <source>Take over settings from LIVE</source>
+        <translation>Usar as configurações do LIVE</translation>
+    </message>
 </context>
 <context>
     <name>CustomSourceDialog</name>
@@ -729,6 +733,92 @@
     <message>
         <source>Restart now</source>
         <translation>Reiniciar agora</translation>
+    </message>
+</context>
+<context>
+    <name>LiveSettingsDialog</name>
+    <message>
+        <source>Own source</source>
+        <translation>Fonte personalizada</translation>
+    </message>
+    <message>
+        <source>Taken over from LIVE. The previous files of %1 were backed up first.</source>
+        <translation>Copiado do LIVE. Os arquivos anteriores de %1 foram salvos antes.</translation>
+    </message>
+    <message>
+        <source>Close Star Citizen first; the game rewrites these files.</source>
+        <translation>Feche o Star Citizen primeiro; o jogo regrava esses arquivos.</translation>
+    </message>
+    <message>
+        <source>LIVE and %1 each need their own game folder.</source>
+        <translation>LIVE e %1 precisam cada um de sua própria pasta do jogo.</translation>
+    </message>
+    <message>
+        <source>Failed: %1</source>
+        <translation>Falhou: %1</translation>
+    </message>
+    <message>
+        <source>Take over settings from LIVE</source>
+        <translation>Usar as configurações do LIVE</translation>
+    </message>
+    <message>
+        <source>%1 can start with what you set up on LIVE. The current files of %1 are backed up first.</source>
+        <translation>%1 pode começar com o que você configurou no LIVE. Os arquivos atuais de %1 são salvos antes.</translation>
+    </message>
+    <message>
+        <source>Language: %1</source>
+        <translation>Idioma: %1</translation>
+    </message>
+    <message>
+        <source>Installed right away</source>
+        <translation>Instalado na hora</translation>
+    </message>
+    <message>
+        <source>%1 is currently not available for this channel</source>
+        <translation>%1 não está disponível para este canal no momento</translation>
+    </message>
+    <message>
+        <source>Own user.cfg lines</source>
+        <translation>Linhas próprias do user.cfg</translation>
+    </message>
+    <message>
+        <source>Frame limits, graphics API and your own lines from the game settings. The language lines stay those of %1.</source>
+        <translation>Limites de quadros, API gráfica e suas próprias linhas das configurações do jogo. As linhas de idioma continuam as de %1.</translation>
+    </message>
+    <message>
+        <source>LIVE has no own lines yet.</source>
+        <translation>O LIVE ainda não tem linhas próprias.</translation>
+    </message>
+    <message>
+        <source>Keybindings and profile</source>
+        <translation>Mapeamento de teclas e perfil</translation>
+    </message>
+    <message>
+        <source>Keybindings, profile settings, exported control mappings and saved characters</source>
+        <translation>Mapeamento de teclas, configurações de perfil, mapeamentos de controle exportados e personagens salvos</translation>
+    </message>
+    <message>
+        <source>Taking over …</source>
+        <translation>Copiando …</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n keybinding and profile file(s) copied.</source>
+        <translation>
+            <numerusform>%n arquivo de teclas e perfil copiado.</numerusform>
+            <numerusform>%n arquivos de teclas e perfil copiados.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No, thanks</source>
+        <translation>Não, obrigado</translation>
+    </message>
+    <message>
+        <source>Take over</source>
+        <translation>Usar</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Fechar</translation>
     </message>
 </context>
 <context>

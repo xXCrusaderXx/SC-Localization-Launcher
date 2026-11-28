@@ -240,6 +240,16 @@ class BackendBridge : public QObject
     {
         backEnd.execute(Protocol::RestoreBackup{.channel = channel.toStdString(), .backup = backup.toStdString(), .settings = settings});
     }
+    // Takes over LIVE's language, own user.cfg lines and keybindings into another channel
+    Q_INVOKABLE void copyLiveSettings (const QString& channel, bool language, bool gameSettings, bool profile)
+    {
+        backEnd.execute(
+            Protocol::CopyLiveSettings{.channel = channel.toStdString(), .language = language, .gameSettings = gameSettings, .profile = profile});
+    }
+    Q_INVOKABLE void dismissLiveSettings (const QString& channel)
+    {
+        backEnd.execute(Protocol::DismissLiveSettings{.channel = channel.toStdString()});
+    }
     // Shows the saved report in the file manager
     Q_INVOKABLE void openReportFolder (const QString& report) const
     {

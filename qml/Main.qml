@@ -101,6 +101,12 @@ ApplicationWindow {
         if (hasWhatsNew)
             whatsNewDialog.open();
     }
+    // A new test channel without settings of its own: LIVE's are offered once
+    readonly property string liveSettingsOffer: (channels.find(c => c.liveSettingsOffer === true) || {}).name || ""
+    onLiveSettingsOfferChanged: {
+        if (liveSettingsOffer !== "" && !liveSettingsDialog.visible)
+            liveSettingsDialog.openFor(liveSettingsOffer);
+    }
     Component.onCompleted: {
         backend.loadWhatsNew();
         // For the dashboard; reloaded by the backend after every game start
@@ -335,10 +341,12 @@ ApplicationWindow {
                 languages: window.appState.languages || []
                 // The running game reads the translation files
                 locked: window.updateBusy || window.gamePlaying
+                liveSet: window.visibleChannels.some(c => c.name === "LIVE")
                 onLanguagePicked: language => backend.setLanguage(channel.name, language)
                 onPathRequested: window.choosePath(channel.name)
                 onRepairRequested: backend.repairChannel(channel.name)
                 onCustomSourceRequested: customSourceDialog.openFor(channel.name, channel.custom, window.localizationFolders)
+                onLiveSettingsRequested: liveSettingsDialog.openFor(channel.name)
             }
         }
 
@@ -736,6 +744,18 @@ ApplicationWindow {
         onBackupRequested: channel => backend.createBackup(channel)
         onCompareRequested: (channel, backup) => backend.compareBackup(channel, backup)
         onRestoreRequested: (channel, backup, settings) => backend.restoreBackup(channel, backup, settings)
+    }
+
+    LiveSettingsDialog {
+        id: liveSettingsDialog
+
+        channels: window.channels
+        languages: window.appState.languages || []
+        liveSettings: window.appState.liveSettings || ({})
+        gamePlaying: window.gamePlaying
+        busy: window.updateBusy || (window.appState.backups || {}).busy === true
+        onCopyRequested: (channel, language, gameSettings, profile) => backend.copyLiveSettings(channel, language, gameSettings, profile)
+        onDismissRequested: channel => backend.dismissLiveSettings(channel)
     }
 
     DiagnosticsDialog {

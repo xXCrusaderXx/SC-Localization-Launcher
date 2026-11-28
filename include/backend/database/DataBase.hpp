@@ -98,6 +98,9 @@ struct ChannelData
     std::vector<std::string> ignoredSettings;
     std::string settingsError;
     bool graphicsApiWaiting = false;
+    // Saved: the offer to take over LIVE's settings was answered; forgotten once the folder is gone
+    bool liveSettingsAnswered = false;
+    bool liveSettingsOffer = false;
 };
 
 // What SelfUpdateManager::install() needs from a release; filled by its check() when a matching signed package exists
@@ -164,6 +167,7 @@ struct BackendData
     Protocol::Caches caches;
     Protocol::Diagnostics diagnostics;
     Protocol::Backups backups;
+    Protocol::LiveSettings liveSettings;
     std::vector<Protocol::Program> programs;
     std::vector<std::string> failedPrograms;
     std::string interfaceLanguage;

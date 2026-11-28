@@ -174,6 +174,26 @@ struct SetGameSettings
     GameSettings settings;
 };
 
+// Takes over what was set up on LIVE into another channel, after backing up that channel's files. Refused while
+// Star Citizen runs. The language is only taken over if the channel offers it, and is installed right away.
+struct CopyLiveSettings
+{
+    static constexpr const char* name = "copyLiveSettings";
+    std::string channel;
+    bool language = true;
+    // The launcher's own user.cfg lines and the graphics API; the language lines stay those of the channel
+    bool gameSettings = true;
+    // Keybindings, profile settings, control mappings and characters
+    bool profile = true;
+};
+
+// The offer to take over LIVE's settings was declined; it is not made again for this channel's folder
+struct DismissLiveSettings
+{
+    static constexpr const char* name = "dismissLiveSettings";
+    std::string channel;
+};
+
 // Replaces the programs started with the game; entries without a command are dropped
 struct SetPrograms
 {
@@ -250,15 +270,18 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CreateBackup, channel)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CompareBackup, channel, backup)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RestoreBackup, channel, backup, settings)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetGameSettings, channel, settings)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CopyLiveSettings, channel, language, gameSettings, profile)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(DismissLiveSettings, channel)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetPrograms, programs)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInterfaceLanguage, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetTheme, theme)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetDashboardTiles, tiles)
 
-using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
-                             InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches,
-                             ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, CompareBackup, RestoreBackup, SetGameSettings,
-                             SetPrograms, SetInterfaceLanguage, FinishSetup, SetTheme, LoadStatistics, SaveStatisticsReport, SetDashboardTiles>;
+using Command =
+    std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate, InstallUpdate,
+                 RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches, ClearCaches, RunDiagnostics,
+                 SaveReport, LoadBackups, CreateBackup, CompareBackup, RestoreBackup, SetGameSettings, SetPrograms, SetInterfaceLanguage, FinishSetup,
+                 SetTheme, LoadStatistics, SaveStatisticsReport, SetDashboardTiles, CopyLiveSettings, DismissLiveSettings>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

@@ -273,6 +273,10 @@
         <source>Repair</source>
         <translation>Napraw</translation>
     </message>
+    <message>
+        <source>Take over settings from LIVE</source>
+        <translation>Przejmij ustawienia z LIVE</translation>
+    </message>
 </context>
 <context>
     <name>CustomSourceDialog</name>
@@ -732,6 +736,93 @@
     <message>
         <source>Restart now</source>
         <translation>Uruchom ponownie</translation>
+    </message>
+</context>
+<context>
+    <name>LiveSettingsDialog</name>
+    <message>
+        <source>Own source</source>
+        <translation>Własne źródło</translation>
+    </message>
+    <message>
+        <source>Taken over from LIVE. The previous files of %1 were backed up first.</source>
+        <translation>Przejęto z LIVE. Poprzednie pliki %1 zostały wcześniej zabezpieczone.</translation>
+    </message>
+    <message>
+        <source>Close Star Citizen first; the game rewrites these files.</source>
+        <translation>Najpierw zamknij Star Citizen; gra nadpisuje te pliki.</translation>
+    </message>
+    <message>
+        <source>LIVE and %1 each need their own game folder.</source>
+        <translation>LIVE i %1 potrzebują osobnych folderów gry.</translation>
+    </message>
+    <message>
+        <source>Failed: %1</source>
+        <translation>Niepowodzenie: %1</translation>
+    </message>
+    <message>
+        <source>Take over settings from LIVE</source>
+        <translation>Przejmij ustawienia z LIVE</translation>
+    </message>
+    <message>
+        <source>%1 can start with what you set up on LIVE. The current files of %1 are backed up first.</source>
+        <translation>%1 może zacząć z tym, co ustawiono na LIVE. Bieżące pliki %1 zostaną najpierw zabezpieczone.</translation>
+    </message>
+    <message>
+        <source>Language: %1</source>
+        <translation>Język: %1</translation>
+    </message>
+    <message>
+        <source>Installed right away</source>
+        <translation>Instalowany od razu</translation>
+    </message>
+    <message>
+        <source>%1 is currently not available for this channel</source>
+        <translation>%1: obecnie niedostępne dla tego kanału</translation>
+    </message>
+    <message>
+        <source>Own user.cfg lines</source>
+        <translation>Własne linie user.cfg</translation>
+    </message>
+    <message>
+        <source>Frame limits, graphics API and your own lines from the game settings. The language lines stay those of %1.</source>
+        <translation>Limity klatek, API grafiki i własne linie z ustawień gry. Linie języka pozostają takie jak w %1.</translation>
+    </message>
+    <message>
+        <source>LIVE has no own lines yet.</source>
+        <translation>LIVE nie ma jeszcze własnych linii.</translation>
+    </message>
+    <message>
+        <source>Keybindings and profile</source>
+        <translation>Przypisania klawiszy i profil</translation>
+    </message>
+    <message>
+        <source>Keybindings, profile settings, exported control mappings and saved characters</source>
+        <translation>Przypisania klawiszy, ustawienia profilu, wyeksportowane mapowania sterowania i zapisane postacie</translation>
+    </message>
+    <message>
+        <source>Taking over …</source>
+        <translation>Przejmowanie …</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n keybinding and profile file(s) copied.</source>
+        <translation>
+            <numerusform>Skopiowano %n plik przypisań i profilu.</numerusform>
+            <numerusform>Skopiowano %n pliki przypisań i profilu.</numerusform>
+            <numerusform>Skopiowano %n plików przypisań i profilu.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No, thanks</source>
+        <translation>Nie, dziękuję</translation>
+    </message>
+    <message>
+        <source>Take over</source>
+        <translation>Przejmij</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Zamknij</translation>
     </message>
 </context>
 <context>

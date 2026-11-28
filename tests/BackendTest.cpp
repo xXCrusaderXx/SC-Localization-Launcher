@@ -2413,8 +2413,10 @@ class BackendTest : public QObject
         QTemporaryDir game;
         auto path = std::filesystem::path(game.path().toStdString());
         writeProfile(path);
+        QTemporaryDir ptu;
         QVERIFY(start());
         backEnd->execute(Protocol::SetInstallPath{"LIVE", path.string()});
+        backEnd->execute(Protocol::SetInstallPath{"PTU", ptu.path().toStdString()});
         std::string backup = backupCommand(Protocol::CreateBackup{"LIVE"}).entries.front().name;
         std::ofstream(path / "user.cfg") << "changed\n";
 
@@ -2425,10 +2427,15 @@ class BackendTest : public QObject
         size_t from = published();
         backEnd->execute(Protocol::RestoreBackup{"LIVE", backup});
         auto refused = waitForState([] (const auto& s) { return s.backups.result == "Star Citizen is running"; }, from);
+        // Taking over LIVE's settings writes the same kind of files
+        backEnd->execute(Protocol::CopyLiveSettings{"PTU"});
+        auto copyRefused = waitForState([] (const auto& s) { return s.liveSettings.result == "Star Citizen is running"; }, from);
         running.kill();
         running.waitForFinished();
         QVERIFY(refused);
+        QVERIFY(copyRefused);
         QCOMPARE(readFile(path / "user.cfg"), std::string("changed\n"));
+        QVERIFY(!std::filesystem::exists(std::filesystem::path(ptu.path().toStdString()) / "user"));
     }
 
     Protocol::BackupComparison compareBackup (const std::string& channel, const std::string& backup)
@@ -2575,6 +2582,131 @@ class BackendTest : public QObject
         QCOMPARE(state.theme, std::string("light"));
         QCOMPARE(channel(state, "LIVE").custom.url, std::string());
         QCOMPARE(channel(state, "LIVE").installPath, path.string());
+    }
+
+    Protocol::LiveSettings copyLiveSettings (const Protocol::CopyLiveSettings& command)
+    {
+        size_t from = published();
+        backEnd->execute(command);
+        auto done =
+            waitForState([&] (const auto& s)
+                         { return s.liveSettings.channel == command.channel && !s.liveSettings.busy && !s.liveSettings.result.empty(); }, from);
+        if(!done) return {};
+        std::lock_guard lock(mutex);
+        return states[*done].liveSettings;
+    }
+
+    void newTestChannelTakesOverTheSettingsOfLive ()
+    {
+        QTemporaryDir liveDir, techDir;
+        auto live = std::filesystem::path(liveDir.path().toStdString());
+        auto tech = std::filesystem::path(techDir.path().toStdString());
+        writeProfile(live);
+        // The new channel has run once: the game wrote its defaults, but no keybinding yet
+        std::filesystem::create_directories(tech / "user/client/0/Profiles/default");
+        std::ofstream(tech / "user/client/0/Profiles/default/attributes.xml") << "<Attributes defaults=\"1\"/>\n";
+        std::ofstream(tech / "user.cfg") << "sys_spec = 2\n";
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", live.string()});
+        QVERIFY(setLanguage("LIVE", "de"));
+        backEnd->execute(Protocol::SetGameSettings{"LIVE", {.maxFps = 60, .customLines = "r_DisplayInfo = 1"}});
+
+        size_t from = published();
+        backEnd->execute(Protocol::SetInstallPath{"TECH-PREVIEW", tech.string()});
+        QVERIFY(waitForState([] (const auto& s) { return channel(s, "TECH-PREVIEW").liveSettingsOffer; }, from));
+        // LIVE itself is never offered anything
+        QVERIFY(!channel(latest(), "LIVE").liveSettingsOffer);
+
+        auto result = copyLiveSettings(Protocol::CopyLiveSettings{"TECH-PREVIEW"});
+        QCOMPARE(result.result, std::string("copied"));
+        QCOMPARE(result.files, 4);
+        QVERIFY(!channel(latest(), "TECH-PREVIEW").liveSettingsOffer);
+        // The language is installed right away
+        QVERIFY(
+            waitForState([] (const auto& s)
+                         { return channel(s, "TECH-PREVIEW").language == "de" && channel(s, "TECH-PREVIEW").status == ChannelStatus::Installed; }));
+
+        QCOMPARE(readFile(tech / "user/client/0/Profiles/default/actionmaps.xml"), std::string("<ActionMaps version=\"1\"/>\n"));
+        QCOMPARE(readFile(tech / "user/client/0/Profiles/default/attributes.xml"), std::string("<Attributes/>\n"));
+        QCOMPARE(readFile(tech / "user/client/0/controls/mappings/hotas.xml"), std::string("<ActionMaps/>\n"));
+        QCOMPARE(readFile(tech / "user/client/0/CustomCharacters/pilot.chf"), std::string("CHF\0\x01\x02", 6));
+        // Not part of a profile
+        QVERIFY(!std::filesystem::exists(tech / "user/client/0/game.cfg"));
+        QVERIFY(!std::filesystem::exists(tech / "Data.p4k"));
+        // Only the launcher's own lines of user.cfg; the channel's other lines stay and the language lines are its own
+        auto cfg = UserCfg::load(tech / "user.cfg");
+        QCOMPARE(cfg.value("sys_spec").value_or(""), std::string("2"));
+        QCOMPARE(cfg.value("sys_maxFps").value_or(""), std::string("60"));
+        QCOMPARE(cfg.value("r_DisplayInfo").value_or(""), std::string("1"));
+        QCOMPARE(cfg.value("g_language").value_or(""), std::string("german_(germany)"));
+        QCOMPARE(channel(latest(), "TECH-PREVIEW").gameSettings.maxFps, 60);
+
+        // What the channel had before can be restored
+        auto backups = latest().backups.entries;
+        QVERIFY(std::any_of(backups.begin(), backups.end(), [] (const auto& b) { return b.channel == "TECH-PREVIEW"; }));
+        QCOMPARE(jsonText(readSettingsFile()["channels"]["TECH-PREVIEW"]["liveSettingsAnswered"]), jsonText(true));
+    }
+
+    void declinedLiveSettingsAreOfferedAgainForANewFolder ()
+    {
+        QTemporaryDir liveDir, ptuDir;
+        auto live = std::filesystem::path(liveDir.path().toStdString());
+        auto ptu = std::filesystem::path(ptuDir.path().toStdString());
+        // Nothing set up on LIVE yet: nothing to offer
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", live.string()});
+        backEnd->execute(Protocol::SetInstallPath{"PTU", ptu.string()});
+        QVERIFY(waitForPreviousCommands());
+        QVERIFY(!channel(latest(), "PTU").liveSettingsOffer);
+
+        writeProfile(live);
+        size_t from = published();
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", live.string()});
+        QVERIFY(waitForState([] (const auto& s) { return channel(s, "PTU").liveSettingsOffer; }, from));
+        from = published();
+        backEnd->execute(Protocol::DismissLiveSettings{"PTU"});
+        QVERIFY(waitForState([] (const auto& s) { return !channel(s, "PTU").liveSettingsOffer; }, from));
+        QVERIFY(restart());
+        QVERIFY(!channel(latest(), "PTU").liveSettingsOffer);
+
+        // The test phase ends and the RSI Launcher installs the next one in the same place
+        std::filesystem::remove_all(ptu);
+        backEnd->execute(Protocol::SetInstallPath{"PTU", ptu.string()});
+        QVERIFY(waitForPreviousCommands());
+        std::filesystem::create_directories(ptu);
+        from = published();
+        backEnd->execute(Protocol::SetInstallPath{"PTU", ptu.string()});
+        QVERIFY(waitForState([] (const auto& s) { return channel(s, "PTU").liveSettingsOffer; }, from));
+
+        // A channel with keybindings of its own is set up already
+        std::filesystem::create_directories(ptu / "user/client/0/controls/mappings");
+        std::ofstream(ptu / "user/client/0/controls/mappings/mine.xml") << "<ActionMaps/>\n";
+        from = published();
+        backEnd->execute(Protocol::SetInstallPath{"PTU", ptu.string()});
+        QVERIFY(waitForState([] (const auto& s) { return !channel(s, "PTU").liveSettingsOffer; }, from));
+    }
+
+    void takesOverLiveSettingsOnlyIntoTheChannelFolder ()
+    {
+        QTemporaryDir liveDir, ptuDir, elsewhere;
+        auto live = std::filesystem::path(liveDir.path().toStdString());
+        auto ptu = std::filesystem::path(ptuDir.path().toStdString());
+        writeProfile(live);
+        // A link below the channel folder must not lead the copy out of it
+        std::filesystem::create_symlink(elsewhere.path().toStdString(), ptu / "user");
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", live.string()});
+        backEnd->execute(Protocol::SetInstallPath{"PTU", ptu.string()});
+        QCOMPARE(copyLiveSettings(Protocol::CopyLiveSettings{"PTU"}).result, std::string("cannot write"));
+        QVERIFY(QDir(elsewhere.path()).isEmpty());
+
+        // LIVE into itself, or a channel in LIVE's folder
+        backEnd->execute(Protocol::CopyLiveSettings{"LIVE"});
+        QVERIFY(waitForPreviousCommands());
+        QCOMPARE(latest().liveSettings.channel, std::string("PTU"));
+        backEnd->execute(Protocol::SetInstallPath{"EPTU", live.string()});
+        QCOMPARE(copyLiveSettings(Protocol::CopyLiveSettings{"EPTU"}).result, std::string("no game folder"));
+        QCOMPARE(readFile(live / "user.cfg"), std::string("r_DisplayInfo = 2\n"));
     }
 
     void userCfgEditKeepsOtherLinesByteForByte ()

@@ -270,6 +270,10 @@
         <source>Repair</source>
         <translation>Réparer</translation>
     </message>
+    <message>
+        <source>Take over settings from LIVE</source>
+        <translation>Reprendre les réglages de LIVE</translation>
+    </message>
 </context>
 <context>
     <name>CustomSourceDialog</name>
@@ -729,6 +733,92 @@
     <message>
         <source>Restart now</source>
         <translation>Redémarrer maintenant</translation>
+    </message>
+</context>
+<context>
+    <name>LiveSettingsDialog</name>
+    <message>
+        <source>Own source</source>
+        <translation>Source personnalisée</translation>
+    </message>
+    <message>
+        <source>Taken over from LIVE. The previous files of %1 were backed up first.</source>
+        <translation>Repris de LIVE. Les fichiers précédents de %1 ont d&apos;abord été sauvegardés.</translation>
+    </message>
+    <message>
+        <source>Close Star Citizen first; the game rewrites these files.</source>
+        <translation>Fermez d&apos;abord Star Citizen&#xa0;; le jeu réécrit ces fichiers.</translation>
+    </message>
+    <message>
+        <source>LIVE and %1 each need their own game folder.</source>
+        <translation>LIVE et %1 ont chacun besoin de leur propre dossier de jeu.</translation>
+    </message>
+    <message>
+        <source>Failed: %1</source>
+        <translation>Échec&#xa0;: %1</translation>
+    </message>
+    <message>
+        <source>Take over settings from LIVE</source>
+        <translation>Reprendre les réglages de LIVE</translation>
+    </message>
+    <message>
+        <source>%1 can start with what you set up on LIVE. The current files of %1 are backed up first.</source>
+        <translation>%1 peut démarrer avec ce que vous avez configuré sur LIVE. Les fichiers actuels de %1 sont d&apos;abord sauvegardés.</translation>
+    </message>
+    <message>
+        <source>Language: %1</source>
+        <translation>Langue : %1</translation>
+    </message>
+    <message>
+        <source>Installed right away</source>
+        <translation>Installée tout de suite</translation>
+    </message>
+    <message>
+        <source>%1 is currently not available for this channel</source>
+        <translation>%1 n&apos;est actuellement pas disponible pour ce canal</translation>
+    </message>
+    <message>
+        <source>Own user.cfg lines</source>
+        <translation>Lignes user.cfg personnelles</translation>
+    </message>
+    <message>
+        <source>Frame limits, graphics API and your own lines from the game settings. The language lines stay those of %1.</source>
+        <translation>Limites d&apos;images, API graphique et vos propres lignes des réglages du jeu. Les lignes de langue restent celles de %1.</translation>
+    </message>
+    <message>
+        <source>LIVE has no own lines yet.</source>
+        <translation>LIVE n&apos;a pas encore de lignes personnelles.</translation>
+    </message>
+    <message>
+        <source>Keybindings and profile</source>
+        <translation>Affectations de touches et profil</translation>
+    </message>
+    <message>
+        <source>Keybindings, profile settings, exported control mappings and saved characters</source>
+        <translation>Affectations de touches, paramètres du profil, configurations de contrôles exportées et personnages enregistrés</translation>
+    </message>
+    <message>
+        <source>Taking over …</source>
+        <translation>Reprise en cours …</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n keybinding and profile file(s) copied.</source>
+        <translation>
+            <numerusform>%n fichier d&apos;affectations et de profil copié.</numerusform>
+            <numerusform>%n fichiers d&apos;affectations et de profil copiés.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No, thanks</source>
+        <translation>Non merci</translation>
+    </message>
+    <message>
+        <source>Take over</source>
+        <translation>Reprendre</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Fermer</translation>
     </message>
 </context>
 <context>

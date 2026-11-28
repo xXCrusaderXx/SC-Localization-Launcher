@@ -41,7 +41,16 @@ Jede Spielversion mit Ordner hat eine Zeile:
 - Nach einem Spielpatch kann in der Zeile *Übersetzung für Spielversion 4.10.2, das Spiel ist 4.11.0: neue Texte bleiben Englisch* stehen. Die Übersetzung ist aktuell, ihr Projekt hat den Patch aber noch nicht nachgezogen; Texte, die im Spiel neu sind, bleiben bis dahin Englisch. Die Warnung verschwindet mit dem nächsten Übersetzungsupdate für die neue Version. Dafür muss die Übersetzung ihre Spielversion in der Datei nennen, und hat das Übersetzungsprojekt einen eigenen Hinweis, steht dieser stattdessen da.
 - Die **Auswahl** legt die Übersetzung dieser Spielversion fest. *English* entfernt die Übersetzung wieder.
 - **↻ Reparieren** lädt die Übersetzung erneut und schreibt ihre Zeilen in der `user.cfg` neu, z. B. wenn ein Spielupdate die Dateien ersetzt hat.
+- **⇆** (nicht bei LIVE) übernimmt die Einstellungen von LIVE, siehe unten.
 - **✎** ändert den Ordner der Spielversion.
+
+**Eine neue Testversion** (PTU, EPTU, Tech-Preview, …) startet ohne deine Einstellungen. Findet der Launcher einen solchen Ordner, der noch keine eigene Sprache, keine Spieleinstellungen und keine Tastenbelegung hat, fragt er einmal: *Einstellungen von LIVE übernehmen*. Wähle, was übernommen wird:
+
+- *Sprache: …* setzt die Übersetzung von LIVE für diese Spielversion und installiert sie sofort, wenn ihr Projekt sie für diese Spielversion anbietet.
+- *Eigene user.cfg-Zeilen*: Bildratenbegrenzung, Grafik-API und deine eigenen Zeilen aus *Spieleinstellungen …*. Der Rest der `user.cfg` dieser Spielversion bleibt, und ihre Sprachzeilen bleiben ihre eigenen.
+- *Tastenbelegung und Profil*: Tastenbelegung, Profileinstellungen, exportierte Steuerungsbelegungen und gespeicherte Charaktere.
+
+*Übernehmen* sichert zuerst die aktuellen Dateien der Spielversion (siehe *Sicherungen …*), du kannst also zurück; solange Star Citizen läuft, wird es abgelehnt. *Nein, danke* oder Schließen des Dialogs fragt für diesen Ordner nicht mehr. Wird der Ordner am Ende einer Testphase entfernt und erscheint ein neuer, fragt der Launcher wieder. Der Button **⇆** macht dasselbe jederzeit.
 
 Der große Button unten rechts installiert, was wartet. Ist *Star Citizen danach starten* an, startet er anschließend den RSI Launcher (unter Linux über das `sc-launch.sh` des LUG Helpers oder über Lutris); wartet nichts, startet er nur das Spiel.
 
