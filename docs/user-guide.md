@@ -76,6 +76,10 @@ The **dashboard** below the rows shows tiles such as play time, last played, fav
 All under Settings → Tools.
 
 - **Disk space and caches …**: shows how much space each channel's game files, the Wine prefix (without the game files) and the shader caches take, and how much is free on each drive. Below, it removes the shader caches of the game, DXVK/VKD3D, Mesa and NVIDIA. Helps against stutter after a game or driver update; the first start afterwards takes longer. Graphics settings stay. Not while Star Citizen runs.
+- **Channels …**: lists every channel with its folder and size.
+  - *Create from LIVE* starts a new PTU, EPTU or Tech-Preview channel as a copy of LIVE in the StarCitizen folder next to it. Then open the RSI Launcher, choose the channel and let it verify the files: it downloads only what differs from LIVE. On Btrfs, XFS and bcachefs the copy shares LIVE's data (a reflink) and takes almost no extra space at first; the saving can shrink after game patches, as the patched files are no longer shared. On other file systems it is a normal copy, and the dialog shows its size and the free space first; it needs the size of LIVE plus 1 GB free. Logs and the login of LIVE are not copied. A copy you cancel leaves nothing behind.
+  - *Remove …* deletes the folder of a channel other than LIVE after showing its size, and the launcher forgets that channel's settings except the language. The RSI Launcher can install it again. LIVE is removed with the RSI Launcher.
+  - Both work only for LIVE's folder `…/StarCitizen/LIVE` and channel folders directly next to it, and not while Star Citizen or the RSI Launcher runs.
 - **Backups …**: keybindings, profile settings, saved characters and `user.cfg` per channel. A restore first backs up what it replaces; it is refused while Star Citizen runs. The newest 10 backups per channel are kept.
 - **Game settings …** per channel:
   - frame limits in the game and in menus, and your own `key = value` lines, written into `user.cfg`. After the next game start the launcher shows which of them Star Citizen ignored ("not whitelisted").

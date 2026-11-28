@@ -141,6 +141,7 @@ set(SC_QML_FILES
   qml/Toggle.qml
   qml/WhatsNewDialog.qml
   qml/CacheDialog.qml
+  qml/ChannelsDialog.qml
   qml/DiagnosticsDialog.qml
   qml/BackupDialog.qml
   qml/GameSettingsDialog.qml

@@ -121,6 +121,36 @@ struct ClearCaches
     std::vector<std::string> paths;
 };
 
+// Lists the channel folders with their sizes and what a copy of LIVE would need, see State.channelFolders
+struct ScanChannelFolders
+{
+    static constexpr const char* name = "scanChannelFolders";
+};
+
+// Copies LIVE into the folder of a new PTU, EPTU or TECH-PREVIEW channel next to it, so the RSI Launcher only
+// downloads what differs. Refused while Star Citizen or the RSI Launcher runs, if the folder is not empty, or if the
+// drive has too little space for a copy that cannot share LIVE's data.
+struct CreateChannel
+{
+    static constexpr const char* name = "createChannel";
+    std::string channel;
+};
+
+// Stops a running CreateChannel; nothing of the copy is kept
+struct CancelChannelCopy
+{
+    static constexpr const char* name = "cancelChannelCopy";
+};
+
+// Deletes the folder of a channel other than LIVE and forgets its settings, except the chosen language and own source.
+// Only a folder .../StarCitizen/<channel> that is no symlink is accepted; refused while Star Citizen or the RSI
+// Launcher runs.
+struct RemoveChannel
+{
+    static constexpr const char* name = "removeChannel";
+    std::string channel;
+};
+
 // Checks the installation without changing anything, see State.diagnostics
 struct RunDiagnostics
 {
@@ -232,6 +262,10 @@ inline void to_json (nlohmann::json& j, const LoadWhatsNew&) { j = nlohmann::jso
 inline void to_json (nlohmann::json& j, const DismissWhatsNew&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const ScanCaches&) { j = nlohmann::json::object(); }
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClearCaches, paths)
+inline void to_json (nlohmann::json& j, const ScanChannelFolders&) { j = nlohmann::json::object(); }
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CreateChannel, channel)
+inline void to_json (nlohmann::json& j, const CancelChannelCopy&) { j = nlohmann::json::object(); }
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RemoveChannel, channel)
 inline void to_json (nlohmann::json& j, const RunDiagnostics&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const SaveReport&) { j = nlohmann::json::object(); }
 inline void to_json (nlohmann::json& j, const LoadBackups&) { j = nlohmann::json::object(); }
@@ -243,10 +277,11 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInterfaceLanguage, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetTheme, theme)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetDashboardTiles, tiles)
 
-using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
-                             InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches,
-                             ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms,
-                             SetInterfaceLanguage, FinishSetup, SetTheme, LoadStatistics, SaveStatisticsReport, SetDashboardTiles>;
+using Command =
+    std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate, InstallUpdate,
+                 RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches, ClearCaches, RunDiagnostics,
+                 SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms, SetInterfaceLanguage, FinishSetup, SetTheme,
+                 LoadStatistics, SaveStatisticsReport, SetDashboardTiles, ScanChannelFolders, CreateChannel, CancelChannelCopy, RemoveChannel>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

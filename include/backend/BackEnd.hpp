@@ -19,6 +19,7 @@
 #include "logging/logging.h"
 #include "managers/Autostart.hpp"
 #include "managers/CacheCleaner.hpp"
+#include "managers/ChannelFolderManager.hpp"
 #include "managers/CompanionPrograms.hpp"
 #include "managers/Diagnostics.hpp"
 #include "managers/GameSettings.hpp"
@@ -50,6 +51,7 @@ class BackEnd
     SelfUpdateManager selfUpdateManager;
     DirectoryFinder directoryFinder;
     CacheCleaner cacheCleaner;
+    ChannelFolderManager channelFolderManager;
     Diagnostics diagnostics;
     ProfileBackup profileBackup;
     CompanionPrograms companionPrograms;
@@ -66,6 +68,7 @@ class BackEnd
     std::thread checkTimerJob;
     std::thread whatsNewJob;
     std::thread cacheJob;
+    std::thread channelJob;
     std::thread diagnosticsJob;
     std::thread backupJob;
     std::thread statisticsJob;
@@ -350,6 +353,12 @@ class BackEnd
         bool gameClosed = data.gameProcess == Database::GameProcess::Game && process != Database::GameProcess::Game;
         bool gameStarted = data.gameProcess != Database::GameProcess::Game && process == Database::GameProcess::Game;
         data.gameProcess = process;
+        // LIVE may be patched or read by the game while it is copied
+        if(process != Database::GameProcess::None && data.channelFolders.operation == "copy")
+        {
+            data.channelCopyStoppedByGame = true;
+            data.cancelChannelCopy = true;
+        }
         if(gameStarted) data.failedPrograms = companionPrograms.start(data.programs);
         if(gameClosed) companionPrograms.stop();
         if(gameClosed) checkGameSettings();
@@ -529,6 +538,7 @@ class BackEnd
         state.selfUpdate = data.selfUpdate;
         state.whatsNew = data.whatsNew;
         state.caches = data.caches;
+        state.channelFolders = data.channelFolders;
         state.diagnostics = data.diagnostics;
         state.backups = data.backups;
         state.programs = data.programs;
@@ -717,6 +727,12 @@ class BackEnd
             LOG_DEBUG(lg) << "startUpdate - Star Citizen is running";
             return;
         }
+        // An update would write into a folder that is copied or deleted right now
+        if(!data.channelFolders.operation.empty())
+        {
+            LOG_DEBUG(lg) << "startUpdate - a channel folder is being copied or removed";
+            return;
+        }
 
         // The jobs work on copies, the user may change settings while they run
         std::vector<UpdateManager::Job> jobs;
@@ -741,6 +757,11 @@ class BackEnd
            data.gameProcess != Database::GameProcess::None)
         {
             LOG_DEBUG(lg) << "startGame - update, game start or game already running";
+            return;
+        }
+        if(!data.channelFolders.operation.empty())
+        {
+            LOG_DEBUG(lg) << "startGame - a channel folder is being copied or removed";
             return;
         }
         startGame();
@@ -790,9 +811,9 @@ class BackEnd
 
     void handle (const Protocol::RepairChannel& command)
     {
-        if(data.update == Protocol::UpdateStatus::Running || gamePlaying())
+        if(data.update == Protocol::UpdateStatus::Running || gamePlaying() || !data.channelFolders.operation.empty())
         {
-            LOG_DEBUG(lg) << "repairChannel - an update or Star Citizen is running";
+            LOG_DEBUG(lg) << "repairChannel - an update, Star Citizen or a channel copy or removal is running";
             return;
         }
         const auto* channel = findChannel(command.channel);
@@ -1021,6 +1042,232 @@ class BackEnd
                              data.caches.usage = usage;
                              data.caches.busy = false;
                              publish();
+                         });
+                 });
+    }
+
+    // Known channels in display order, then whatever else the sources list, with their folders
+    std::vector<std::pair<std::string, std::filesystem::path>> channelFolderTargets () const
+    {
+        std::vector<std::string> names = Protocol::CHANNEL_NAMES;
+        for(const auto& [name, channel] : data.channels)
+            if(std::find(names.begin(), names.end(), name) == names.end()) names.push_back(name);
+        std::vector<std::pair<std::string, std::filesystem::path>> targets;
+        for(const auto& name : names)
+            if(auto it = data.channels.find(name); it != data.channels.end()) targets.emplace_back(name, it->second.installPath);
+        return targets;
+    }
+
+    // Runs in the channel job: sizes of the channel folders, and what a copy of LIVE needs
+    Protocol::ChannelFolders scanChannelFolders (const std::vector<std::pair<std::string, std::filesystem::path>>& targets,
+                                                 const std::filesystem::path& rsiLauncherPath) const
+    {
+        using Manager = ChannelFolderManager;
+        auto stopped = [this] { return data.shuttingDown.load(); };
+        Protocol::ChannelFolders result;
+        result.scanned = true;
+        std::filesystem::path live;
+        for(const auto& [name, path] : targets)
+            if(name == "LIVE") live = path;
+        std::error_code ec;
+        auto library = live.empty() ? std::nullopt : Manager::libraryOf(live, "LIVE");
+        bool liveThere = library && std::filesystem::is_directory(live, ec);
+        if(liveThere)
+        {
+            auto plan = Manager::plan(live, stopped);
+            result.copyBytes = plan.bytes;
+            result.reflink = Manager::canReflink(live, plan, *library);
+            if(auto space = std::filesystem::space(*library, ec); !ec) result.freeBytes = static_cast<std::int64_t>(space.available);
+        }
+        for(const auto& [name, path] : targets)
+        {
+            Protocol::ChannelFolder folder{name};
+            bool creatable = std::find(Manager::CREATABLE.begin(), Manager::CREATABLE.end(), name) != Manager::CREATABLE.end();
+            auto target = library ? *library / name : std::filesystem::path();
+            // Set up elsewhere already: only a copy into an empty or missing folder replaces that
+            folder.canCreate = liveThere && creatable && Manager::isFreeTarget(target) &&
+                               (path.empty() || path.lexically_normal() == target.lexically_normal() || Manager::isFreeTarget(path));
+            auto shown = folder.canCreate || (path.empty() && creatable) ? target : path;
+            folder.path = shown.string();
+            folder.exists = !shown.empty() && std::filesystem::is_directory(shown, ec);
+            if(folder.exists) folder.bytes = Manager::size(shown, stopped);
+            if(folder.exists && !path.empty())
+            {
+                std::vector<std::filesystem::path> keep{rsiLauncherPath};
+                for(const auto& [other, otherPath] : targets)
+                    if(other != name) keep.push_back(otherPath);
+                folder.canRemove = Manager::whyNotRemovable(path, name, keep).empty();
+            }
+            result.folders.push_back(std::move(folder));
+        }
+        return result;
+    }
+
+    // After a copy or removal: the record and settings described the folder that is gone or was replaced
+    void resetChannelFolder (const std::string& name, const std::filesystem::path& installPath)
+    {
+        auto& channel = data.channels[name];
+        Database::ChannelData fresh;
+        fresh.language = channel.language;
+        fresh.custom = channel.custom;
+        fresh.installPath = installPath;
+        channel = fresh;
+    }
+
+    // Ends a channel job: the new scan, and the result of the copy or removal
+    void finishChannelJob (Protocol::ChannelFolders scan, const std::string& result, const std::string& channel)
+    {
+        data.channelFolders = std::move(scan);
+        data.channelFolders.result = result;
+        data.channelFolders.resultChannel = channel;
+        saveSettings();
+        publish();
+    }
+
+    // Refuses a CreateChannel or RemoveChannel; the dialog shows why
+    void refuseChannelCommand (const std::string& command, const std::string& channel, const std::string& why)
+    {
+        LOG_INFO(lg) << command << " - " << channel << " refused: " << why;
+        data.channelFolders.result = why;
+        data.channelFolders.resultChannel = channel;
+    }
+
+    void handle (const Protocol::ScanChannelFolders&)
+    {
+        if(data.channelFolders.busy) return;
+        data.channelFolders.busy = true;
+        startJob(channelJob,
+                 [this, targets = channelFolderTargets(), rsiLauncherPath = data.rsiLauncherPath]
+                 {
+                     auto scan = scanChannelFolders(targets, rsiLauncherPath);
+                     queue.post(
+                         [this, scan = std::move(scan)]
+                         {
+                             // A new scan starts without the result of an earlier copy or removal
+                             data.channelFolders = scan;
+                             publish();
+                         });
+                 });
+    }
+
+    // Star Citizen or the RSI Launcher runs, or an update writes into the channel folders
+    std::string channelFoldersBlocked () const
+    {
+        if(data.gameProcess != Database::GameProcess::None || data.game == Protocol::GameStart::Starting) return "gameRunning";
+        if(data.update == Protocol::UpdateStatus::Running) return "updateRunning";
+        return "";
+    }
+
+    void handle (const Protocol::CreateChannel& command)
+    {
+        using Manager = ChannelFolderManager;
+        if(data.channelFolders.busy) return;
+        const std::string name = command.channel;
+        if(std::find(Manager::CREATABLE.begin(), Manager::CREATABLE.end(), name) == Manager::CREATABLE.end())
+            return refuseChannelCommand("createChannel", name, "notAllowed");
+        if(auto why = channelFoldersBlocked(); !why.empty()) return refuseChannelCommand("createChannel", name, why);
+        auto live = data.channels["LIVE"].installPath;
+        auto library = live.empty() ? std::nullopt : Manager::libraryOf(live, "LIVE");
+        std::error_code ec;
+        if(!library || !std::filesystem::is_directory(live, ec)) return refuseChannelCommand("createChannel", name, "notAllowed");
+        auto target = *library / name;
+        auto configured = data.channels[name].installPath;
+        if(!Manager::isFreeTarget(target) ||
+           (!configured.empty() && configured.lexically_normal() != target.lexically_normal() && !Manager::isFreeTarget(configured)))
+            return refuseChannelCommand("createChannel", name, "exists");
+
+        data.cancelChannelCopy = false;
+        data.channelCopyStoppedByGame = false;
+        data.channelFolders.busy = true;
+        data.channelFolders.operation = "copy";
+        data.channelFolders.channel = name;
+        data.channelFolders.progress = 0;
+        data.channelFolders.result.clear();
+        data.channelFolders.resultChannel = name;
+        startJob(channelJob,
+                 [this, name, live, target, targets = channelFolderTargets(), rsiLauncherPath = data.rsiLauncherPath] () mutable
+                 {
+                     auto stopped = [this] { return data.cancelChannelCopy || data.shuttingDown; };
+                     auto plan = Manager::plan(live, stopped);
+                     bool reflink = Manager::canReflink(live, plan, target.parent_path());
+                     std::error_code ec;
+                     auto space = std::filesystem::space(target.parent_path(), ec);
+                     std::string result;
+                     if(stopped())
+                         result = "cancelled";
+                     else if(!Manager::enoughSpace(plan.bytes, ec ? -1 : static_cast<std::int64_t>(space.available), reflink))
+                         result = "noSpace";
+                     else
+                     {
+                         // Whole percents are enough for the dialog and keep the state updates few
+                         int lastPercent = -1;
+                         result = channelFolderManager.copy(
+                             live, plan, target,
+                             [this, &lastPercent] (std::uint64_t done, std::uint64_t total)
+                             {
+                                 int percent = total ? static_cast<int>(done * 100 / total) : 100;
+                                 if(percent == lastPercent) return;
+                                 lastPercent = percent;
+                                 queue.post(
+                                     [this, percent]
+                                     {
+                                         data.channelFolders.progress = percent / 100.0;
+                                         publish();
+                                     });
+                             },
+                             stopped);
+                     }
+                     for(auto& [channel, path] : targets)
+                         if(channel == name && result == "created") path = target;
+                     auto scan = scanChannelFolders(targets, rsiLauncherPath);
+                     queue.post(
+                         [this, scan = std::move(scan), result, name, target] () mutable
+                         {
+                             if(result == "created") resetChannelFolder(name, target);
+                             if(result == "cancelled" && data.channelCopyStoppedByGame) result = "gameRunning";
+                             finishChannelJob(std::move(scan), result, name);
+                         });
+                 });
+    }
+
+    void handle (const Protocol::CancelChannelCopy&)
+    {
+        if(data.channelFolders.operation == "copy") data.cancelChannelCopy = true;
+    }
+
+    void handle (const Protocol::RemoveChannel& command)
+    {
+        if(data.channelFolders.busy) return;
+        const std::string name = command.channel;
+        auto* channel = findChannel(name);
+        if(!channel) return;
+        if(name == "LIVE") return refuseChannelCommand("removeChannel", name, "live");
+        if(auto why = channelFoldersBlocked(); !why.empty()) return refuseChannelCommand("removeChannel", name, why);
+        if(channel->installPath.empty()) return refuseChannelCommand("removeChannel", name, "notFound");
+        std::vector<std::filesystem::path> keep{data.rsiLauncherPath};
+        for(const auto& [other, otherChannel] : data.channels)
+            if(other != name) keep.push_back(otherChannel.installPath);
+        if(auto why = ChannelFolderManager::whyNotRemovable(channel->installPath, name, keep); !why.empty())
+            return refuseChannelCommand("removeChannel", name, why);
+
+        data.channelFolders.busy = true;
+        data.channelFolders.operation = "remove";
+        data.channelFolders.channel = name;
+        data.channelFolders.progress = 0;
+        data.channelFolders.result.clear();
+        data.channelFolders.resultChannel = name;
+        startJob(channelJob,
+                 [this, name, folder = channel->installPath, targets = channelFolderTargets(), rsiLauncherPath = data.rsiLauncherPath] () mutable
+                 {
+                     auto result = channelFolderManager.remove(folder);
+                     for(auto& [other, path] : targets)
+                         if(other == name && result == "removed") path.clear();
+                     auto scan = scanChannelFolders(targets, rsiLauncherPath);
+                     queue.post(
+                         [this, scan = std::move(scan), result, name] () mutable
+                         {
+                             if(result == "removed") resetChannelFolder(name, {});
+                             finishChannelJob(std::move(scan), result, name);
                          });
                  });
     }
@@ -1278,7 +1525,7 @@ class BackEnd
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
         for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob, &checkTimerJob,
-                         &whatsNewJob, &cacheJob, &diagnosticsJob, &backupJob, &statisticsJob})
+                         &whatsNewJob, &cacheJob, &channelJob, &diagnosticsJob, &backupJob, &statisticsJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }

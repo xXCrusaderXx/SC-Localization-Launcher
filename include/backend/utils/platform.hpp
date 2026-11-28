@@ -26,9 +26,18 @@
 // After windows.h, which it needs
 #include <tlhelp32.h>
 #else
+#include <fcntl.h>
 #include <limits.h>
 #include <signal.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
+#endif
+
+#ifdef __linux__
+#include <linux/fs.h>
+#ifndef FICLONE
+#define FICLONE _IOW(0x94, 9, int)
+#endif
 #endif
 
 namespace Platform
@@ -155,6 +164,33 @@ inline void endProcess (int64_t pid)
     if(::kill(static_cast<pid_t>(-pid), SIGTERM) != 0) ::kill(static_cast<pid_t>(pid), SIGTERM);
 #endif
 }
+// Creates `target` as a reflink of `source`: a separate file that shares the data blocks until one of them is
+// written, on Btrfs, XFS and bcachefs. Never a hard link. False (and no target left behind) where the file system
+// cannot do it, across file systems, and on Windows; the caller then copies the bytes.
+inline bool cloneFile (const std::filesystem::path& source, const std::filesystem::path& target)
+{
+#ifdef __linux__
+    int in = ::open(source.c_str(), O_RDONLY | O_CLOEXEC);
+    if(in < 0) return false;
+    // O_EXCL: never replaces or writes through an existing file or symlink
+    int out = ::open(target.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
+    if(out < 0)
+    {
+        ::close(in);
+        return false;
+    }
+    bool cloned = ::ioctl(out, FICLONE, in) == 0;
+    ::close(out);
+    ::close(in);
+    if(!cloned) ::unlink(target.c_str());
+    return cloned;
+#else
+    (void) source;
+    (void) target;
+    return false;
+#endif
+}
+
 // Windows has no CA bundle where the MSYS2 build of libcurl looks for one; the system's certificate store is used instead
 inline void useSystemCertificates (CURL* curl)
 {

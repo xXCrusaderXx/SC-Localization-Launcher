@@ -646,6 +646,10 @@ ApplicationWindow {
             cacheDialog.open();
             backend.scanCaches();
         }
+        onChannelsRequested: {
+            channelsDialog.open();
+            backend.scanChannelFolders();
+        }
         onDiagnosticsRequested: {
             diagnosticsDialog.open();
             backend.runDiagnostics();
@@ -751,6 +755,17 @@ ApplicationWindow {
         caches: window.appState.caches || ({})
         gamePlaying: window.gamePlaying
         onClearRequested: paths => backend.clearCaches(paths)
+    }
+
+    ChannelsDialog {
+        id: channelsDialog
+
+        channelFolders: window.appState.channelFolders || ({})
+        gameOpen: window.gameRunning || window.gameStarting
+        onCreateRequested: channel => backend.createChannel(channel)
+        onCancelRequested: backend.cancelChannelCopy()
+        onRemoveRequested: channel => backend.removeChannel(channel)
+        onStartRequested: backend.startGame()
     }
 
     CustomSourceDialog {

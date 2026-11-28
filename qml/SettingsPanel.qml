@@ -15,6 +15,7 @@ Item {
 
     signal pathChangeRequested(string target)
     signal cacheCleanerRequested
+    signal channelsRequested
     signal diagnosticsRequested
     signal backupsRequested
     signal gameSettingsRequested
@@ -470,6 +471,27 @@ Item {
                         text: qsTr("Disk space and caches …")
                         enabled: !panel.locked
                         onClicked: panel.cacheCleanerRequested()
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Create PTU, EPTU or Tech-Preview as a copy of LIVE, or remove a channel you no longer play")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("Channels …")
+                        enabled: !panel.locked
+                        onClicked: panel.channelsRequested()
                     }
                 }
 

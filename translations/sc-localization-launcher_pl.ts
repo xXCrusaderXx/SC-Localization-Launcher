@@ -215,6 +215,141 @@
     </message>
 </context>
 <context>
+    <name>ChannelsDialog</name>
+    <message>
+        <source>%1 GB</source>
+        <translation>%1 GB</translation>
+    </message>
+    <message>
+        <source>%1 MB</source>
+        <translation>%1 MB</translation>
+    </message>
+    <message>
+        <source>%1 KB</source>
+        <translation>%1 KB</translation>
+    </message>
+    <message>
+        <source>%1 was created. Open the RSI Launcher, choose %1 and let it verify the files; it downloads only what differs from LIVE.</source>
+        <translation>Utworzono %1. Otwórz RSI Launcher, wybierz %1 i pozwól mu sprawdzić pliki; pobierze tylko to, co różni się od LIVE.</translation>
+    </message>
+    <message>
+        <source>%1 was removed.</source>
+        <translation>Usunięto %1.</translation>
+    </message>
+    <message>
+        <source>The copy was cancelled; nothing of it was kept.</source>
+        <translation>Kopiowanie anulowano; nic z kopii nie zostało.</translation>
+    </message>
+    <message>
+        <source>Close Star Citizen and the RSI Launcher first.</source>
+        <translation>Najpierw zamknij Star Citizen i RSI Launcher.</translation>
+    </message>
+    <message>
+        <source>Wait until the translations are updated.</source>
+        <translation>Poczekaj, aż tłumaczenia zostaną zaktualizowane.</translation>
+    </message>
+    <message>
+        <source>The folder of %1 is not empty; nothing was copied.</source>
+        <translation>Folder %1 nie jest pusty; nic nie skopiowano.</translation>
+    </message>
+    <message>
+        <source>Not enough free space for the copy.</source>
+        <translation>Za mało wolnego miejsca na kopię.</translation>
+    </message>
+    <message>
+        <source>LIVE cannot be removed here; use the RSI Launcher for that.</source>
+        <translation>Kanału LIVE nie można tu usunąć; użyj do tego RSI Launchera.</translation>
+    </message>
+    <message>
+        <source>The folder of %1 was not found.</source>
+        <translation>Nie znaleziono folderu %1.</translation>
+    </message>
+    <message>
+        <source>Only a channel folder directly inside the StarCitizen folder can be created or removed.</source>
+        <translation>Utworzyć lub usunąć można tylko folder kanału leżący bezpośrednio w folderze StarCitizen.</translation>
+    </message>
+    <message>
+        <source>Failed; the log has the details.</source>
+        <translation>Niepowodzenie; szczegóły są w logu.</translation>
+    </message>
+    <message>
+        <source>Channels</source>
+        <translation>Kanały</translation>
+    </message>
+    <message>
+        <source>Measuring the channel folders …</source>
+        <translation>Mierzenie folderów kanałów …</translation>
+    </message>
+    <message>
+        <source>To create a channel from LIVE, LIVE&apos;s folder must be the folder LIVE inside the StarCitizen folder of the RSI Launcher.</source>
+        <translation>Aby utworzyć kanał z LIVE, folder LIVE musi być folderem LIVE w folderze StarCitizen RSI Launchera.</translation>
+    </message>
+    <message>
+        <source>A new PTU, EPTU or Tech-Preview channel can start as a copy of LIVE, so the RSI Launcher only downloads what differs. A channel you no longer play can be removed.</source>
+        <translation>Nowy kanał PTU, EPTU lub Tech-Preview może zacząć jako kopia LIVE, dzięki czemu RSI Launcher pobiera tylko to, co się różni. Kanał, w który już nie grasz, można usunąć.</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Nie zainstalowano</translation>
+    </message>
+    <message>
+        <source>Create from LIVE</source>
+        <translation>Utwórz z LIVE</translation>
+    </message>
+    <message>
+        <source>Remove …</source>
+        <translation>Usuń …</translation>
+    </message>
+    <message>
+        <source>Delete %1 (%2) in %3? The game files of this channel are deleted, and the launcher forgets its settings except the language. The RSI Launcher can install it again.</source>
+        <translation>Usunąć %1 (%2) w %3? Pliki gry tego kanału zostaną usunięte, a launcher zapomni jego ustawienia oprócz języka. RSI Launcher może go zainstalować ponownie.</translation>
+    </message>
+    <message>
+        <source>LIVE (%1) is copied to %2. This file system shares the data of the copy with LIVE, so it takes almost no extra space at first; the saving can shrink after game patches.</source>
+        <translation>LIVE (%1) zostanie skopiowany do %2. Ten system plików współdzieli dane kopii z LIVE, więc na początku nie zajmuje prawie żadnego dodatkowego miejsca; oszczędność może zmaleć po łatkach gry.</translation>
+    </message>
+    <message>
+        <source>LIVE (%1) is copied to %2. This file system cannot share the data with LIVE, so the copy needs %1; %3 are free.</source>
+        <translation>LIVE (%1) zostanie skopiowany do %2. Ten system plików nie może współdzielić danych z LIVE, więc kopia potrzebuje %1; wolne: %3.</translation>
+    </message>
+    <message>
+        <source>Not enough free space: the copy needs %1 and leaves 1 GB free for the patch.</source>
+        <translation>Za mało wolnego miejsca: kopia potrzebuje %1 i zostawia 1 GB wolnego na łatkę.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Anuluj</translation>
+    </message>
+    <message>
+        <source>Delete %1</source>
+        <translation>Usuń %1</translation>
+    </message>
+    <message>
+        <source>Copy LIVE</source>
+        <translation>Kopiuj LIVE</translation>
+    </message>
+    <message>
+        <source>Copying LIVE to %1 … %2 %</source>
+        <translation>Kopiowanie LIVE do %1 … %2 %</translation>
+    </message>
+    <message>
+        <source>Deleting %1 …</source>
+        <translation>Usuwanie %1 …</translation>
+    </message>
+    <message>
+        <source>Cancel copy</source>
+        <translation>Anuluj kopiowanie</translation>
+    </message>
+    <message>
+        <source>Start RSI Launcher</source>
+        <translation>Uruchom RSI Launcher</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Zamknij</translation>
+    </message>
+</context>
+<context>
     <name>CustomSourceDialog</name>
     <message>
         <source>Own source for %1</source>
@@ -1052,6 +1187,14 @@
     <message>
         <source>Disk space and caches …</source>
         <translation>Miejsce na dysku i pamięć podręczna …</translation>
+    </message>
+    <message>
+        <source>Create PTU, EPTU or Tech-Preview as a copy of LIVE, or remove a channel you no longer play</source>
+        <translation>Utwórz PTU, EPTU lub Tech-Preview jako kopię LIVE albo usuń kanał, w który już nie grasz</translation>
+    </message>
+    <message>
+        <source>Channels …</source>
+        <translation>Kanały …</translation>
     </message>
     <message>
         <source>Keybindings, profile settings, characters and user.cfg per channel</source>
