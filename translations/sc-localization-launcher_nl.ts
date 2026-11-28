@@ -462,12 +462,60 @@
         <translation>CPU-governor</translation>
     </message>
     <message>
+        <source>Translation source answers with an error</source>
+        <translation>Vertaalbron antwoordt met een fout</translation>
+    </message>
+    <message>
+        <source>Translation source reachable</source>
+        <translation>Vertaalbron bereikbaar</translation>
+    </message>
+    <message>
+        <source>Translation source not reachable</source>
+        <translation>Vertaalbron niet bereikbaar</translation>
+    </message>
+    <message>
+        <source>Star Citizen Wiki API answers with an error</source>
+        <translation>Star Citizen Wiki API antwoordt met een fout</translation>
+    </message>
+    <message>
+        <source>Star Citizen Wiki API reachable</source>
+        <translation>Star Citizen Wiki API bereikbaar</translation>
+    </message>
+    <message>
+        <source>Star Citizen Wiki API not reachable</source>
+        <translation>Star Citizen Wiki API niet bereikbaar</translation>
+    </message>
+    <message>
+        <source>GitHub answers with an error</source>
+        <translation>GitHub antwoordt met een fout</translation>
+    </message>
+    <message>
+        <source>GitHub reachable</source>
+        <translation>GitHub bereikbaar</translation>
+    </message>
+    <message>
+        <source>GitHub not reachable</source>
+        <translation>GitHub niet bereikbaar</translation>
+    </message>
+    <message>
+        <source>Second installation of this channel</source>
+        <translation>Tweede installatie van dit kanaal</translation>
+    </message>
+    <message>
+        <source>Game folder that no channel uses</source>
+        <translation>Spelmap die geen kanaal gebruikt</translation>
+    </message>
+    <message>
         <source>To set it permanently, run in a terminal:</source>
         <translation>Om het blijvend in te stellen, voer in een terminal uit:</translation>
     </message>
     <message>
         <source>Set DefaultLimitNOFILE=524288 in /etc/systemd/system.conf and /etc/systemd/user.conf, then restart the computer.</source>
         <translation>Stel DefaultLimitNOFILE=524288 in in /etc/systemd/system.conf en /etc/systemd/user.conf en start de computer opnieuw op.</translation>
+    </message>
+    <message>
+        <source>The launcher only uses the game folder set in the settings. If you no longer need this copy, delete it to free disk space.</source>
+        <translation>De launcher gebruikt alleen de spelmap uit de instellingen. Heb je deze kopie niet meer nodig, verwijder hem dan om schijfruimte vrij te maken.</translation>
     </message>
     <message>
         <source>Check the installation</source>

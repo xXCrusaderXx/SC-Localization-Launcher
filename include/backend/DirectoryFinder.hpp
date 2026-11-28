@@ -195,6 +195,26 @@ class DirectoryFinder
         return folders;
     }
 
+    // The folders that hold the channel folders (.../Roberts Space Industries/StarCitizen) at the places the search
+    // looks first; on Linux also in every prefix under ~/Games, as a second LUG Helper installation gets a new name
+    static std::vector<std::filesystem::path> knownLibraries ()
+    {
+        std::vector<std::filesystem::path> libraries;
+#ifdef _WIN32
+        for(const auto& folder : windowsInstallFolders(defaultMountRoots())) libraries.push_back(folder / "StarCitizen");
+#else
+        const char* home = std::getenv("HOME");
+        if(!home || !*home) return libraries;
+        for(const auto& path : knownLauncherPaths(home, defaultMountRoots())) libraries.push_back(path.parent_path() / "StarCitizen");
+        std::error_code ec;
+        auto games = std::filesystem::path(home) / "Games";
+        for(std::filesystem::directory_iterator it(games, std::filesystem::directory_options::skip_permission_denied, ec), end; !ec && it != end;
+            it.increment(ec))
+            libraries.push_back(it->path() / "drive_c/Program Files/Roberts Space Industries/StarCitizen");
+#endif
+        return libraries;
+    }
+
     // mountRoots: where other disks are mounted (on Windows the drives); the tests pass their own
     explicit DirectoryFinder (std::vector<std::filesystem::path> mountRoots = defaultMountRoots())
         : lg("DirectoryFinder")

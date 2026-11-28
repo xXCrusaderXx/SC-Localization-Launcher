@@ -56,6 +56,9 @@ class WikiApiClient
     {
     }
 
+    // A request for one item: what the problem analysis asks to see whether the API answers
+    static std::string probeUrl () { return url("items", {{"page[size]", "1"}}); }
+
     // All entries of an endpoint such as "items"; maxAge: how long a cached copy is used without asking the server.
     // format names what reduce keeps: a cached copy written with another format is not used, also not as fallback.
     Result fetchAll (const std::string& endpoint, const Query& query = {}, const Reducer& reduce = {},

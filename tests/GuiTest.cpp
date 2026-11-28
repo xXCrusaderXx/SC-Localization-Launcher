@@ -122,6 +122,8 @@ class GuiTest : public QObject
         watchOwnTestPrograms();
         qputenv("SC_LANGUAGES_URL", server.url("/languages.json").toUtf8());
         qputenv("SC_RELEASES_URL", server.url("/releases/latest").toUtf8());
+        // The problem analysis asks the Wiki API too
+        qputenv("SC_WIKI_API_URL", server.url("/api/v2/").toUtf8());
         qputenv("SC_UPDATE_SIGNING_KEY", QByteArray::fromStdString(releaseKey.publicKeyFile()));
         QCoreApplication::setApplicationVersion("0.6.0");
         resetUserDir();
@@ -581,6 +583,7 @@ class GuiTest : public QObject
         QVERIFY(dialog);
         QTRY_VERIFY(dialog->property("opened").toBool());
         QTRY_VERIFY(findText("LIVE · Game folder"));
+        QVERIFY(findText("GitHub reachable"));
         QTRY_VERIFY(findButton("Save report (ZIP)"));
         QVERIFY(clickButton("Save report (ZIP)"));
         QTRY_VERIFY(!bridge->state()["diagnostics"].toMap()["reportPath"].toString().isEmpty());
