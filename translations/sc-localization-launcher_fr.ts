@@ -4,6 +4,18 @@
 <context>
     <name>BackupDialog</name>
     <message>
+        <source>Launcher settings (channels, options, programs)</source>
+        <translation>Paramètres du launcher (canaux, options, programmes)</translation>
+    </message>
+    <message>
+        <source>missing now</source>
+        <translation>absent actuellement</translation>
+    </message>
+    <message>
+        <source>changed</source>
+        <translation>modifié</translation>
+    </message>
+    <message>
         <source>Backup saved.</source>
         <translation>Sauvegarde enregistrée.</translation>
     </message>
@@ -32,8 +44,8 @@
         <translation>Choisissez d&apos;abord un dossier de jeu.</translation>
     </message>
     <message>
-        <source>Keybindings, profile settings, saved characters and user.cfg of a channel. The newest 10 backups per channel are kept.</source>
-        <translation>Affectations de touches, paramètres du profil, personnages enregistrés et user.cfg d&apos;un canal. Les 10 sauvegardes les plus récentes par canal sont conservées.</translation>
+        <source>Keybindings, profile settings, saved characters and user.cfg of a channel, together with the launcher&apos;s settings. The newest 10 backups per channel are kept.</source>
+        <translation>Affectations de touches, paramètres du profil, personnages enregistrés et user.cfg d&apos;un canal, avec les paramètres du launcher. Les 10 sauvegardes les plus récentes par canal sont conservées.</translation>
     </message>
     <message>
         <source>Back up %1</source>
@@ -54,6 +66,51 @@
     <message>
         <source>Restore %1 from %2? The current files are backed up first.</source>
         <translation>Restaurer %1 du %2&#xa0;? Les fichiers actuels seront d&apos;abord sauvegardés.</translation>
+    </message>
+    <message>
+        <source>Comparing the backup with the current files …</source>
+        <translation>Comparaison de la sauvegarde avec les fichiers actuels …</translation>
+    </message>
+    <message>
+        <source>All files in this backup are the same as the current ones.</source>
+        <translation>Tous les fichiers de cette sauvegarde sont identiques aux fichiers actuels.</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s) differ from the current ones:</source>
+        <translation>
+            <numerusform>%n fichier diffère du fichier actuel&#xa0;:</numerusform>
+            <numerusform>%n fichiers diffèrent des fichiers actuels&#xa0;:</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>and %n more</source>
+        <translation>
+            <numerusform>et %n autre</numerusform>
+            <numerusform>et %n autres</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>%n file(s) are the same as now.</source>
+        <translation>
+            <numerusform>%n fichier est identique à l&apos;actuel.</numerusform>
+            <numerusform>%n fichiers sont identiques aux actuels.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>These programs will start with the game:</source>
+        <translation>Ces programmes seront lancés avec le jeu&#xa0;:</translation>
+    </message>
+    <message>
+        <source>Also restore the launcher&apos;s settings</source>
+        <translation>Restaurer aussi les paramètres du launcher</translation>
+    </message>
+    <message>
+        <source>Game folders, languages, options and programs. Installed translations and the game settings of other channels stay as they are.</source>
+        <translation>Dossiers du jeu, langues, options et programmes. Les traductions installées et les paramètres de jeu des autres canaux restent inchangés.</translation>
+    </message>
+    <message>
+        <source>This backup holds no launcher settings.</source>
+        <translation>Cette sauvegarde ne contient pas de paramètres du launcher.</translation>
     </message>
     <message>
         <source>Cancel</source>

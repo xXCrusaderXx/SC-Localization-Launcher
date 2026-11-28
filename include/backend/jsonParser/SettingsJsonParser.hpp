@@ -82,6 +82,13 @@ class SettingsJsonParser
         return file;
     }
 
+    static SettingsFile fromJson (const nlohmann::json& json)
+    {
+        SettingsFile file = json.contains("settings") ? fromLegacyJson(json) : json.get<SettingsFile>();
+        for(auto& [name, channel] : file.channels) channel.language = migrateLanguage(channel.language);
+        return file;
+    }
+
     std::optional<SettingsFile> loadFrom (const std::filesystem::path& path)
     {
         std::ifstream stream(path);
@@ -91,9 +98,7 @@ class SettingsJsonParser
         {
             nlohmann::json json = nlohmann::json::parse(stream);
             LOG_DEBUG(lg) << "load() - " << path;
-            SettingsFile file = json.contains("settings") ? fromLegacyJson(json) : json.get<SettingsFile>();
-            for(auto& [name, channel] : file.channels) channel.language = migrateLanguage(channel.language);
-            return file;
+            return fromJson(json);
         }
         catch(const std::exception& e)
         {
@@ -110,6 +115,21 @@ class SettingsJsonParser
         LOG_DEBUG(lg) << "instanziated";
     };
     ~SettingsJsonParser () { LOG_DEBUG(lg) << "destructed"; };
+
+    // The content of a settings.json, e.g. from a backup; nullopt if it is no valid settings file
+    static std::optional<SettingsFile> parse (const std::string& text)
+    {
+        try
+        {
+            auto json = nlohmann::json::parse(text);
+            if(!json.is_object()) return std::nullopt;
+            return fromJson(json);
+        }
+        catch(const std::exception&)
+        {
+            return std::nullopt;
+        }
+    }
 
     // Falls back to the settings of the former SC Deutsch Launcher, the shipped settings.json and then to the
     // defaults, so a broken file never stops the app. The next save() writes to filePath.

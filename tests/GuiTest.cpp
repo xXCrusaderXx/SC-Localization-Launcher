@@ -606,6 +606,9 @@ class GuiTest : public QObject
             out.write(content);
         };
         write(actionmaps, "<ActionMaps version=\"1\"/>");
+        // The backup's settings carry a program that is gone by the time of the restore
+        bridge->setPrograms({QVariantMap{{"command", "/opt/tools/overlay --hud"}, {"enabled", true}}});
+        QTRY_COMPARE(bridge->state()["programs"].toList().size(), 1);
 
         auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
         panel->setProperty("open", true);
@@ -621,11 +624,20 @@ class GuiTest : public QObject
         QTRY_VERIFY(findText("Backup saved."));
 
         write(actionmaps, "<ActionMaps version=\"2\"/>");
+        bridge->setPrograms({});
+        QTRY_COMPARE(bridge->state()["programs"].toList().size(), 0);
         QTRY_VERIFY(findButton("Restore"));
         window->grabWindow();
         QVERIFY(clickButton("Restore"));
-        // Nothing happens before the confirmation
+        // Nothing happens before the confirmation, which lists what differs from the current files
         QTRY_VERIFY(findButton("Restore now"));
+        QVERIFY(findText("user/client/0/Profiles/default/actionmaps.xml"));
+        QVERIFY(findText("changed"));
+        QVERIFY(findButton("Also restore the launcher's settings"));
+        QVERIFY(findText("Launcher settings (channels, options, programs)"));
+        // Shown before the settings can be restored at all
+        QVERIFY(findText("These programs will start with the game:"));
+        QVERIFY(findText("/opt/tools/overlay --hud"));
         {
             QFile unchanged(actionmaps);
             QVERIFY(unchanged.open(QIODevice::ReadOnly));

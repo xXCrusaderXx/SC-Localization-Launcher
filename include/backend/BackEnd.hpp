@@ -549,12 +549,21 @@ class BackEnd
         stateCallback(state);
     }
 
-    void loadSettings ()
+    void loadSettings () { applySettings(settingsJsonParser.load()); }
+
+    void applySettings (const SettingsFile& file)
     {
-        SettingsFile file = settingsJsonParser.load();
         for(const auto& name : Protocol::CHANNEL_NAMES) data.channels[name];
         for(const auto& [name, settings] : file.channels)
         {
+            auto& channel = data.channels[name];
+            if(channel.installPath != settings.installPath || channel.language != settings.language)
+            {
+                // The known version and the last result belonged to the previous folder or language
+                channel.remoteEtag.clear();
+                channel.damaged = false;
+                channel.lastUpdateFailed = false;
+            }
             data.channels[name].installPath = settings.installPath;
             data.channels[name].language = settings.language;
             data.channels[name].installed = settings.installed;
@@ -597,6 +606,51 @@ class BackEnd
     }
 
     void saveSettings () { settingsJsonParser.save(settingsFile()); }
+
+    static std::string settingsText (const SettingsFile& file) { return nlohmann::json(file).dump(4) + "\n"; }
+
+    // The settings of a backup of `channel` as a restore applies them. What describes the files on disk now stays:
+    // the installed translations, and for the other channels their game settings, whose user.cfg is not restored.
+    // A custom source that SetCustomSource would refuse is dropped.
+    static SettingsFile restoredSettings (SettingsFile backup, const SettingsFile& current, const std::string& channel)
+    {
+        for(const auto& [name, now] : current.channels)
+        {
+            auto [it, added] = backup.channels.try_emplace(name, now);
+            if(added) continue;
+            auto& restored = it->second;
+            restored.installed = restored.installPath == now.installPath ? now.installed : Database::InstalledTranslation{};
+            if(name != channel)
+            {
+                restored.gameSettings = now.gameSettings;
+                restored.managedKeys = now.managedKeys;
+                restored.settingsWritten = now.settingsWritten;
+            }
+        }
+        for(auto& [name, restored] : backup.channels)
+        {
+            if(!current.channels.contains(name)) restored.installed = {};
+            const auto& custom = restored.custom;
+            if(!custom.url.empty() && (custom.url.size() > 2048 || !LanguageCatalogParser::isAllowedUrl(custom.url) ||
+                                       !LanguageCatalogParser::isSafeFolderName(custom.folder)))
+                restored.custom = {};
+        }
+        backup.lastSeenVersion = current.lastSeenVersion;
+        backup.setupDone = current.setupDone;
+        return backup;
+    }
+
+    // Applies the launcher settings that a restore of `channel` read from its backup
+    void applyRestoredSettings (const std::string& channel, const std::string& text)
+    {
+        auto file = SettingsJsonParser::parse(text);
+        if(!file) return;
+        bool startWithSystem = data.options.startWithSystem;
+        applySettings(restoredSettings(*file, settingsFile(), channel));
+        data.failedPrograms.clear();
+        if(data.options.startWithSystem != startWithSystem) Autostart::apply(data.options.startWithSystem, lg);
+        LOG_INFO(lg) << "applyRestoredSettings() - launcher settings restored from a backup of " << channel;
+    }
 
     // Reads Game.log of every channel with own settings: once the game started after they were written, it tells which
     // of them it ignored. Game.log is rewritten at every game start.
@@ -1140,8 +1194,54 @@ class BackEnd
     {
         auto* channel = findChannel(command.channel);
         if(!channel || channel->installPath.empty() || data.backups.busy) return;
-        backupJobFor(command.channel, [this, name = command.channel, path = channel->installPath, version = data.selfUpdate.currentVersion]
-                     { return profileBackup.create(name, path, version) ? std::string("created") : std::string("nothing to back up"); });
+        backupJobFor(command.channel, [this, name = command.channel, path = channel->installPath, version = data.selfUpdate.currentVersion,
+                                       settings = settingsText(settingsFile())]
+                     { return profileBackup.create(name, path, version, settings) ? std::string("created") : std::string("nothing to back up"); });
+    }
+
+    void handle (const Protocol::CompareBackup& command)
+    {
+        auto* channel = findChannel(command.channel);
+        if(!channel || data.backups.busy) return;
+        data.backups.busy = true;
+        data.backups.comparison = {.channel = command.channel, .name = command.backup, .busy = true};
+        startJob(backupJob,
+                 [this, name = command.channel, backup = command.backup, path = channel->installPath, current = settingsFile()]
+                 {
+                     Protocol::BackupComparison comparison{.channel = name, .name = backup};
+                     ProfileBackup::Comparison found;
+                     if(auto error = profileBackup.compare(name, backup, path, found))
+                         comparison.error = *error;
+                     else
+                     {
+                         comparison.files = found.files;
+                         comparison.unchanged = found.unchanged;
+                         comparison.hasSettings = found.settings.has_value();
+                         // Compared as they would be applied, so a mere difference in layout or bookkeeping is no change
+                         auto file = found.settings ? SettingsJsonParser::parse(*found.settings) : std::nullopt;
+                         if(file && nlohmann::json(restoredSettings(*file, current, name)) == nlohmann::json(current))
+                             ++comparison.unchanged;
+                         else if(file)
+                             comparison.files.push_back({ProfileBackup::SETTINGS_FILE, "changed"});
+                         // A backup may come from someone else; whatever it would run must be shown before it is restored
+                         if(file)
+                             for(const auto& program : file->programs)
+                             {
+                                 bool startsNow = std::any_of(current.programs.begin(), current.programs.end(),
+                                                              [&] (const auto& p) { return p.enabled && p.command == program.command; });
+                                 if(program.enabled && !startsNow) comparison.programs.push_back(program.command);
+                             }
+                     }
+                     auto entries = profileBackup.list();
+                     queue.post(
+                         [this, comparison, entries]
+                         {
+                             data.backups.busy = false;
+                             data.backups.entries = entries;
+                             data.backups.comparison = comparison;
+                             publish();
+                         });
+                 });
     }
 
     void handle (const Protocol::RestoreBackup& command)
@@ -1155,9 +1255,18 @@ class BackEnd
             data.backups.resultChannel = command.channel;
             return;
         }
+        data.backups.comparison = {};
         backupJobFor(command.channel,
-                     [this, name = command.channel, backup = command.backup, path = channel->installPath, version = data.selfUpdate.currentVersion]
-                     { return profileBackup.restore(name, backup, path, version).value_or("restored"); });
+                     [this, name = command.channel, backup = command.backup, path = channel->installPath, version = data.selfUpdate.currentVersion,
+                      withSettings = command.settings, current = settingsText(settingsFile())]
+                     {
+                         std::optional<std::string> settings;
+                         if(auto error = profileBackup.restore(name, backup, path, version, current, withSettings ? &settings : nullptr))
+                             return *error;
+                         // Posted before the result, so the published state already holds the restored settings
+                         if(settings) queue.post([this, name, text = *settings] { applyRestoredSettings(name, text); });
+                         return std::string("restored");
+                     });
     }
 
     void handle (const Protocol::SetPrograms& command)

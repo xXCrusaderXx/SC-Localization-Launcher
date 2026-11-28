@@ -231,9 +231,14 @@ class BackendBridge : public QObject
         backEnd.execute(command);
     }
     Q_INVOKABLE void createBackup (const QString& channel) { backEnd.execute(Protocol::CreateBackup{.channel = channel.toStdString()}); }
-    Q_INVOKABLE void restoreBackup (const QString& channel, const QString& backup)
+    Q_INVOKABLE void compareBackup (const QString& channel, const QString& backup)
     {
-        backEnd.execute(Protocol::RestoreBackup{.channel = channel.toStdString(), .backup = backup.toStdString()});
+        backEnd.execute(Protocol::CompareBackup{.channel = channel.toStdString(), .backup = backup.toStdString()});
+    }
+    // settings: also restores the launcher's settings the backup holds
+    Q_INVOKABLE void restoreBackup (const QString& channel, const QString& backup, bool settings)
+    {
+        backEnd.execute(Protocol::RestoreBackup{.channel = channel.toStdString(), .backup = backup.toStdString(), .settings = settings});
     }
     // Shows the saved report in the file manager
     Q_INVOKABLE void openReportFolder (const QString& report) const
