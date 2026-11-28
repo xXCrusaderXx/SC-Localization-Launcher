@@ -217,7 +217,7 @@ class BackendBridge : public QObject
             .settings = {
                 .maxFps = maxFps, .maxIdleFps = maxIdleFps, .customLines = customLines.toStdString(), .graphicsApi = graphicsApi.toStdString()}});
     }
-    // programs: objects with command, enabled and stopWithGame, as in State.programs
+    // programs: objects with command, enabled, stopWithGame and startWithLauncher, as in State.programs
     Q_INVOKABLE void setPrograms (const QVariantList& programs)
     {
         Protocol::SetPrograms command;
@@ -226,7 +226,8 @@ class BackendBridge : public QObject
             auto program = entry.toMap();
             command.programs.push_back({.command = program.value("command").toString().toStdString(),
                                         .enabled = program.value("enabled", true).toBool(),
-                                        .stopWithGame = program.value("stopWithGame").toBool()});
+                                        .stopWithGame = program.value("stopWithGame").toBool(),
+                                        .startWithLauncher = program.value("startWithLauncher").toBool()});
         }
         backEnd.execute(command);
     }

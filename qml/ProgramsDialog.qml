@@ -19,7 +19,8 @@ Popup {
         rows = programs.map(p => ({
                     "command": p.command,
                     "enabled": p.enabled,
-                    "stopWithGame": p.stopWithGame
+                    "stopWithGame": p.stopWithGame,
+                    "startWithLauncher": p.startWithLauncher
                 }));
     }
 
@@ -27,7 +28,8 @@ Popup {
         rows = rows.concat([{
                     "command": command,
                     "enabled": true,
-                    "stopWithGame": false
+                    "stopWithGame": false,
+                    "startWithLauncher": false
                 }]);
     }
 
@@ -91,7 +93,7 @@ Popup {
 
         Text {
             Layout.fillWidth: true
-            text: qsTr("Started when Star Citizen starts, also when it was started without this launcher. The launcher has to be open, e.g. in the system tray. Quotes work as in a shell; for variables or pipes, start a script or sh -c '…'.")
+            text: qsTr("Started when Star Citizen starts or, if chosen, already with the RSI Launcher, also when they were started without this launcher. The launcher has to be open, e.g. in the system tray. Quotes work as in a shell; for variables or pipes, start a script or sh -c '…'.")
             wrapMode: Text.Wrap
             color: Theme.muted
             font.pixelSize: 12
@@ -146,13 +148,22 @@ Popup {
                             }
                         }
 
-                        RowLayout {
-                            spacing: 20
+                        // Wraps when the translated texts do not fit next to each other
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 16
 
                             Toggle {
                                 text: qsTr("Active")
                                 checked: modelData.enabled
                                 onSwitched: on => dialog.setRow(index, "enabled", on)
+                            }
+
+                            Toggle {
+                                objectName: "programWithLauncher" + index
+                                text: qsTr("Start it with the RSI Launcher")
+                                checked: modelData.startWithLauncher
+                                onSwitched: on => dialog.setRow(index, "startWithLauncher", on)
                             }
 
                             Toggle {
@@ -177,7 +188,7 @@ Popup {
         Text {
             Layout.fillWidth: true
             visible: dialog.failedPrograms.length > 0
-            text: qsTr("Could not be started at the last game start: %1").arg(dialog.failedPrograms.join(", "))
+            text: qsTr("Could not be started at the last start: %1").arg(dialog.failedPrograms.join(", "))
             wrapMode: Text.Wrap
             color: Theme.warning
             font.pixelSize: 11

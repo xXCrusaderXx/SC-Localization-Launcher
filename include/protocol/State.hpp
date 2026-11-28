@@ -160,9 +160,11 @@ struct Program
     bool enabled = true;
     // Ends the program when Star Citizen quits
     bool stopWithGame = false;
+    // Starts it already with the RSI Launcher instead of with the game
+    bool startWithLauncher = false;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Program, command, enabled, stopWithGame)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Program, command, enabled, stopWithGame, startWithLauncher)
 
 struct Channel
 {

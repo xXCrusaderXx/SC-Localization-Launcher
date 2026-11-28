@@ -850,12 +850,16 @@
         <translation>Programmes avec le jeu</translation>
     </message>
     <message>
-        <source>Started when Star Citizen starts, also when it was started without this launcher. The launcher has to be open, e.g. in the system tray. Quotes work as in a shell; for variables or pipes, start a script or sh -c &apos;…&apos;.</source>
-        <translation>Démarrés au lancement de Star Citizen, même s&apos;il a été lancé sans ce launcher. Le launcher doit être ouvert, p.&#xa0;ex. dans la zone de notification. Les guillemets fonctionnent comme dans un shell&#xa0;; pour des variables ou des pipes, lancez un script ou sh -c &apos;…&apos;.</translation>
+        <source>Started when Star Citizen starts or, if chosen, already with the RSI Launcher, also when they were started without this launcher. The launcher has to be open, e.g. in the system tray. Quotes work as in a shell; for variables or pipes, start a script or sh -c &apos;…&apos;.</source>
+        <translation>Démarrés au lancement de Star Citizen ou, si choisi, dès celui du RSI Launcher, même s&apos;ils ont été lancés sans ce launcher. Le launcher doit être ouvert, p.&#xa0;ex. dans la zone de notification. Les guillemets fonctionnent comme dans un shell&#xa0;; pour des variables ou des pipes, lancez un script ou sh -c &apos;…&apos;.</translation>
     </message>
     <message>
         <source>Active</source>
         <translation>Actif</translation>
+    </message>
+    <message>
+        <source>Start it with the RSI Launcher</source>
+        <translation>Démarrer avec le RSI Launcher</translation>
     </message>
     <message>
         <source>End it when the game quits</source>
@@ -866,8 +870,8 @@
         <translation>Aucun programme pour l&apos;instant.</translation>
     </message>
     <message>
-        <source>Could not be started at the last game start: %1</source>
-        <translation>Impossible à démarrer lors du dernier lancement du jeu&#xa0;: %1</translation>
+        <source>Could not be started at the last start: %1</source>
+        <translation>Impossible à démarrer lors du dernier lancement&#xa0;: %1</translation>
     </message>
     <message>
         <source>Choose program …</source>

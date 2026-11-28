@@ -850,12 +850,16 @@
         <translation>Programma&apos;s met het spel</translation>
     </message>
     <message>
-        <source>Started when Star Citizen starts, also when it was started without this launcher. The launcher has to be open, e.g. in the system tray. Quotes work as in a shell; for variables or pipes, start a script or sh -c &apos;…&apos;.</source>
-        <translation>Starten zodra Star Citizen start, ook als het zonder deze launcher is gestart. De launcher moet daarvoor open zijn, bijv. in het systeemvak. Aanhalingstekens werken als in een shell; start voor variabelen of pipes een script of sh -c &apos;…&apos;.</translation>
+        <source>Started when Star Citizen starts or, if chosen, already with the RSI Launcher, also when they were started without this launcher. The launcher has to be open, e.g. in the system tray. Quotes work as in a shell; for variables or pipes, start a script or sh -c &apos;…&apos;.</source>
+        <translation>Starten zodra Star Citizen of, indien gekozen, al de RSI Launcher start, ook als ze zonder deze launcher zijn gestart. De launcher moet daarvoor open zijn, bijv. in het systeemvak. Aanhalingstekens werken als in een shell; start voor variabelen of pipes een script of sh -c &apos;…&apos;.</translation>
     </message>
     <message>
         <source>Active</source>
         <translation>Actief</translation>
+    </message>
+    <message>
+        <source>Start it with the RSI Launcher</source>
+        <translation>Met de RSI Launcher starten</translation>
     </message>
     <message>
         <source>End it when the game quits</source>
@@ -866,8 +870,8 @@
         <translation>Nog geen programma&apos;s.</translation>
     </message>
     <message>
-        <source>Could not be started at the last game start: %1</source>
-        <translation>Kon bij de laatste spelstart niet worden gestart: %1</translation>
+        <source>Could not be started at the last start: %1</source>
+        <translation>Kon bij de laatste start niet worden gestart: %1</translation>
     </message>
     <message>
         <source>Choose program …</source>

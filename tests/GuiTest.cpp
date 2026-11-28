@@ -701,24 +701,31 @@ class GuiTest : public QObject
         QVERIFY(clickButton("Add command"));
 
         // Made by a Repeater, so only found in the visual tree
-        std::function<QQuickItem*(QQuickItem*)> walk = [&] (QQuickItem* item) -> QQuickItem*
+        std::function<QQuickItem*(QQuickItem*, const QString&)> walk = [&] (QQuickItem* item, const QString& name) -> QQuickItem*
         {
-            if(item->objectName() == "programCommand0") return item;
+            if(item->objectName() == name) return item;
             for(auto* child : item->childItems())
-                if(auto* found = walk(child)) return found;
+                if(auto* found = walk(child, name)) return found;
             return nullptr;
         };
         QQuickItem* field = nullptr;
-        QTRY_VERIFY((field = walk(window->contentItem())) && field->isVisible() && field->width() > 0);
+        QTRY_VERIFY((field = walk(window->contentItem(), "programCommand0")) && field->isVisible() && field->width() > 0);
         // As typing does; the offscreen window gives no reliable keyboard focus to a field in a popup
         field->setProperty("text", "true");
         QMetaObject::invokeMethod(field, "textEdited");
+        auto* withLauncher = walk(window->contentItem(), "programWithLauncher0");
+        QVERIFY(withLauncher);
+        QVERIFY(!withLauncher->property("checked").toBool());
+        QVERIFY(QMetaObject::invokeMethod(withLauncher, "clicked"));
+        // A changed row replaces the rows, and with them the switch
+        QTRY_VERIFY((withLauncher = walk(window->contentItem(), "programWithLauncher0")) && withLauncher->property("checked").toBool());
         QVERIFY(clickButton("Save"));
         QTRY_COMPARE(bridge->state()["programs"].toList().size(), 1);
         auto program = bridge->state()["programs"].toList().first().toMap();
         QCOMPARE(program["command"].toString(), QString("true"));
         QVERIFY(program["enabled"].toBool());
         QVERIFY(!program["stopWithGame"].toBool());
+        QVERIFY(program["startWithLauncher"].toBool());
 
         // Leaves no program behind for the other tests
         QVERIFY(click("−"));
