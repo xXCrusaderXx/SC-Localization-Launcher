@@ -210,6 +210,10 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>What changed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Repair</source>
         <translation type="unfinished"></translation>
     </message>
@@ -1497,6 +1501,57 @@
     <name>Toggle</name>
     <message>
         <source>SOON</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>TranslationChangesDialog</name>
+    <message>
+        <source>GitHub answers only a few requests per hour without an account. Please try again later.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GitHub cannot be reached. Please try again later.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GitHub did not answer as expected.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>What changed in %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Changes to the translation file in %1 on GitHub</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Releases of %1 on GitHub</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Asking GitHub …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The translation project has not published any releases or changes on GitHub yet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Newer than your installed copy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Open on GitHub</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>As the translation project published it.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>OK</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

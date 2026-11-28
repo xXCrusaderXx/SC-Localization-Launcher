@@ -25,6 +25,7 @@
 #include "managers/GameStatistics.hpp"
 #include "managers/ProfileBackup.hpp"
 #include "managers/SelfUpdateManager.hpp"
+#include "managers/TranslationChanges.hpp"
 #include "managers/UpdateManager.hpp"
 #include "protocol/Commands.hpp"
 #include "protocol/State.hpp"
@@ -54,6 +55,8 @@ class BackEnd
     ProfileBackup profileBackup;
     CompanionPrograms companionPrograms;
     GameStatistics gameStatistics;
+    // Only used by the changes job
+    TranslationChanges translationChanges;
     StateCallback stateCallback;
 
     std::thread languagesJob;
@@ -69,6 +72,7 @@ class BackEnd
     std::thread diagnosticsJob;
     std::thread backupJob;
     std::thread statisticsJob;
+    std::thread changesJob;
 
     // Declared last: its thread uses all members above
     TaskQueue queue;
@@ -502,7 +506,8 @@ class BackEnd
 
         state.languages.push_back({Protocol::ENGLISH, "English", {}, "", {}});
         for(const auto& language : data.languages)
-            state.languages.push_back({language.code, language.name, language.credit, language.folder, contributors(language.code)});
+            state.languages.push_back(
+                {language.code, language.name, language.credit, language.folder, contributors(language.code), language.repository});
 
         // Known channels in display order, then whatever else the sources list
         std::vector<std::string> names = Protocol::CHANNEL_NAMES;
@@ -538,6 +543,7 @@ class BackEnd
         state.theme = data.theme;
         state.statistics = data.statistics;
         state.dashboardTiles = data.dashboardTiles;
+        state.translationChanges = data.translationChanges;
         return state;
     }
 
@@ -1235,6 +1241,57 @@ class BackEnd
             data.statistics.error = "cannot write the report";
     }
 
+    void handle (const Protocol::LoadTranslationChanges& command)
+    {
+        const auto* channel = findChannel(command.channel);
+        if(!channel) return;
+        // One request at a time; the last channel asked for meanwhile follows
+        if(data.translationChanges.busy)
+        {
+            data.pendingChangesChannel = command.channel;
+            return;
+        }
+        const auto* language = findLanguage(channel->language);
+        data.translationChanges = {command.channel, channel->language, language ? language->repository : ""};
+        if(!language || language->repository.empty())
+        {
+            data.translationChanges.loaded = true;
+            return;
+        }
+
+        // The commits of the channel's own file, if it comes from the repository's files
+        std::optional<GitHubRepository::File> file;
+        if(auto urls = language->urls.find(command.channel); urls != language->urls.end())
+            for(const auto& url : urls->second)
+                if((file = GitHubRepository::fileOf(url, language->repository))) break;
+        // Only what an update would bring is pending; an up-to-date copy has everything that was published
+        std::optional<std::int64_t> installedAt;
+        if(channelStatus(command.channel, *channel) == Protocol::ChannelStatus::UpdateAvailable && channel->installed.language == channel->language)
+        {
+            std::error_code ec;
+            auto modified = std::filesystem::last_write_time(UpdateManager::translationFile(channel->installPath, channel->installed.folder), ec);
+            if(!ec)
+                installedAt = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::file_clock::to_sys(modified).time_since_epoch()).count();
+        }
+
+        data.translationChanges.busy = true;
+        startJob(changesJob,
+                 [this, repository = language->repository, file, installedAt, name = command.channel, code = channel->language]
+                 {
+                     auto result = translationChanges.load(repository, file, installedAt);
+                     queue.post(
+                         [this, result, name, code]
+                         {
+                             data.translationChanges = result;
+                             data.translationChanges.channel = name;
+                             data.translationChanges.language = code;
+                             if(auto next = std::exchange(data.pendingChangesChannel, ""); !next.empty())
+                                 handle(Protocol::LoadTranslationChanges{next});
+                             publish();
+                         });
+                 });
+    }
+
     void handle (const Protocol::SetTheme& command)
     {
         if(command.theme.empty() || command.theme == "dark" || command.theme == "light") data.theme = command.theme;
@@ -1256,6 +1313,7 @@ class BackEnd
         , updateManager(data.shuttingDown)
         , itemValues(data.shuttingDown)
         , selfUpdateManager(data.shuttingDown, updateSigningKey())
+        , translationChanges(data.shuttingDown)
         , stateCallback(std::move(stateCallback))
     {
         data.selfUpdate.currentVersion = std::move(version);
@@ -1278,7 +1336,7 @@ class BackEnd
         // Runs the commands still waiting, then no one starts new jobs
         queue.stop();
         for(auto* job : {&languagesJob, &updateJob, &searchJob, &versionCheckJob, &selfUpdateJob, &gameJob, &gameWatchJob, &checkTimerJob,
-                         &whatsNewJob, &cacheJob, &diagnosticsJob, &backupJob, &statisticsJob})
+                         &whatsNewJob, &cacheJob, &diagnosticsJob, &backupJob, &statisticsJob, &changesJob})
             if(job->joinable()) job->join();
         LOG_DEBUG(lg) << "destructed";
     }

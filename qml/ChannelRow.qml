@@ -7,7 +7,7 @@ Rectangle {
 
     // Protocol::Channel: { name, installPath, language, availableLanguages, status, notices, custom, gameVersion, translationVersion, translationOutdated }
     property var channel: ({})
-    // Protocol::State.languages: [{ code, name, credit }]
+    // Protocol::State.languages: [{ code, name, credit, repository }]
     property var languages: []
     property bool locked: false
 
@@ -15,6 +15,7 @@ Rectangle {
     signal pathRequested
     signal repairRequested
     signal customSourceRequested
+    signal changesRequested
 
     readonly property bool pathSet: (channel.installPath || "") !== ""
     readonly property var available: channel.availableLanguages || []
@@ -32,6 +33,13 @@ Rectangle {
         return channel.language || "";
     }
     readonly property string customUrl: (channel.custom || {}).url || ""
+    // GitHub repository of the chosen language's project; only then the row offers what changed
+    readonly property string repository: {
+        for (const language of languages)
+            if (language.code === channel.language)
+                return language.repository || "";
+        return "";
+    }
     // Every known language; the ones this channel does not offer right now are shown but cannot be picked.
     // Then the channel's own source, if set, and the entry that opens the dialog for it.
     readonly property var options: {
@@ -168,6 +176,15 @@ Rectangle {
                 cursorShape: Qt.PointingHandCursor
                 onClicked: row.pathRequested()
             }
+        }
+
+        // Releases or commits of the translation project; asked from GitHub only when clicked
+        IconButton {
+            objectName: "changesButton"
+            visible: row.pathSet && row.repository !== ""
+            glyph: "☰"
+            Accessible.name: qsTr("What changed")
+            onClicked: row.changesRequested()
         }
 
         // Downloads the translation again and rewrites user.cfg, e.g. after a game update

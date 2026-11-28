@@ -16,6 +16,7 @@
 
 #include "BundledLanguages.hpp"
 #include "backend/database/DataBase.hpp"
+#include "backend/utils/GitHubRepository.hpp"
 #include "backend/utils/paths.hpp"
 #include "backend/utils/platform.hpp"
 #include "logging/logging.h"
@@ -206,6 +207,19 @@ class LanguageCatalogParser
         return text;
     }
 
+    // Optional: a repository that is malformed or not the one of the language's files or project page is ignored,
+    // the language itself still loads
+    std::string checkedRepository (const Database::LanguageDefinition& language, const std::map<std::string, std::vector<std::string>>& urls) const
+    {
+        if(language.repository.empty()) return {};
+        std::vector<std::string> files;
+        for(const auto& [channel, list] : urls) files.insert(files.end(), list.begin(), list.end());
+        if(GitHubRepository::belongsTo(language.repository, language.credit.url, files)) return language.repository;
+        LOG_ERROR(lg) << "language '" << language.code << "': repository '" << language.repository
+                      << "' ignored, it must be the GitHub repository of its files or its project page";
+        return {};
+    }
+
     std::vector<std::string> allowedUrls (const std::vector<std::string>& urls) const
     {
         std::vector<std::string> result;
@@ -288,6 +302,7 @@ class LanguageCatalogParser
                     continue;
                 }
             }
+            language.repository = checkedRepository(definition, language.urls);
             languages.push_back(std::move(language));
         }
         return languages;

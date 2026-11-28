@@ -64,6 +64,7 @@ Game languages are listed in [`languages.json`](languages.json) in the repositor
                     "PTU":  ["https://raw.githubusercontent.com/<project>/main/ptu/global.ini"]
                 }
             },
+            "repository": "<owner>/<project>",
             "credit": {
                 "project": "<project name>",
                 "authors": "<maintainers, as they want to be credited>",
@@ -83,6 +84,7 @@ Game languages are listed in [`languages.json`](languages.json) in the repositor
 | `folder` | The game's localization folder that the `global.ini` goes into and that `g_language` in `user.cfg` points to, e.g. `french_(france)`, `spanish_(spain)`, `italian_(italy)`, `polish_(poland)`, `portuguese_(brazil)`, `german_(germany)`. Check that the game accepts the folder name. |
 | `credit` | Required. Shown under the language in the picker and in the settings. `project`, `authors` and `license` must not be empty, `url` (the project page) must use HTTPS, `licenseUrl` is optional and must use HTTPS if set. If the `global.ini` names its contributors in a comment line at the top (`; Contributors : Alice - Bob`, also `Contributeurs` or `Mitwirkende`), the settings list those names under the credit once the translation is installed. |
 | `notices` | Optional. A short notice per channel, written in the language itself, e.g. `{"LIVE": "Übersetzung wird vorbereitet", "*": "Beta"}`. The key is a channel name or `*` for all channels; a channel's own entry wins over `*`. Shown as plain text on one line, cut to 120 characters. |
+| `repository` | Optional. The project's GitHub repository as `owner/name`, e.g. `rjcncpt/StarCitizen-Deutsch-INI`. Each channel row then offers *What changed*: the project's latest releases, or, if it publishes none, the commits that changed the channel's file. Only set it when the `source` URLs are on that repository (`raw.githubusercontent.com/<owner>/<name>/…`) or `credit.url` is its page (`https://github.com/<owner>/<name>`); any other value is ignored with an error in the log, the language still loads. Launchers before this field ignore it. |
 | `source` | Either `channels`: per channel (`LIVE`, `HOTFIX`, `PTU`, `TECH-PREVIEW`, `EPTU`) a list of HTTPS URLs, primary first, then fallbacks; channels that are missing are not offered for this language. Or `channelList` + `server`: a channel list in the format the German project uses; the launcher takes `<server>` and `<server>_fallback` of each channel and respects its `active` flag. |
 
 Rules for a new language:
@@ -103,6 +105,8 @@ The launcher checks every entry when it loads the file. An invalid entry is skip
 - `source` has exactly one of `channels` or `channelList`;
 - `credit` is complete (see the table above);
 - every URL uses HTTPS. A `channels` language without any usable URL is dropped.
+
+`repository` is checked on its own: a value that is no `owner/name` or not the repository of the language's files or project page is ignored, and the language loads without *What changed*.
 
 ### Translating the interface
 

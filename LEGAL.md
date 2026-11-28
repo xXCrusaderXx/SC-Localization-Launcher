@@ -53,7 +53,7 @@ Don't add any of the following to this repository, and don't base a contribution
 
 ## Privacy
 
-The launcher only sends HTTPS requests to fetch the language list, the channel lists and translation files, and (once those features exist) game data from the Star Citizen Wiki API and its own update information from GitHub. It has no telemetry, collects no personal data, and has no accounts. Settings, logs and anything read from `Game.log` stay on the computer.
+The launcher only sends HTTPS requests to fetch the language list, the channel lists and translation files, and (once those features exist) game data from the Star Citizen Wiki API and its own update information from GitHub. When you open *What changed* for a translation, it asks GitHub's public API, without an account, for the releases or commits of that translation's repository. It has no telemetry, collects no personal data, and has no accounts. Settings, logs and anything read from `Game.log` stay on the computer.
 
 ## License and warranty
 

@@ -280,6 +280,43 @@ class BackendTest : public QObject
         std::ofstream(path) << text;
     }
 
+    // The GitHub API of the test project "test-owner/test-ini", as the local server serves it
+    static QByteArray releasesPath () { return "/github/repos/test-owner/test-ini/releases?per_page=10"; }
+    static QByteArray commitsPath () { return "/github/repos/test-owner/test-ini/commits?path=live%2Fglobal.ini&sha=main&per_page=10"; }
+
+    // Requests of the shared server for this GitHub path and status, e.g. githubRequests(releasesPath(), "304")
+    int githubRequests (const QByteArray& path, const QByteArray& status) { return server.requestCount("GET " + path + " " + status); }
+
+    static nlohmann::json commit (const std::string& message, const std::string& date, const std::string& url)
+    {
+        return {{"html_url", url}, {"commit", {{"message", message}, {"committer", {{"date", date}}}}}};
+    }
+
+    // Titles, each with " pending" if it is marked so
+    static Codes changeTitles (const Protocol::TranslationChanges& changes)
+    {
+        Codes titles;
+        for(const auto& entry : changes.entries) titles.push_back(entry.title + (entry.pending ? " pending" : ""));
+        return titles;
+    }
+
+    // Sends LoadTranslationChanges and returns the answer for this channel and language
+    std::optional<Protocol::TranslationChanges> loadChanges (const std::string& name, const std::string& language)
+    {
+        size_t from = published();
+        backEnd->execute(Protocol::LoadTranslationChanges{name});
+        auto found = waitForState(
+            [&] (const auto& s)
+            {
+                const auto& changes = s.translationChanges;
+                return changes.channel == name && changes.language == language && !changes.busy && changes.loaded;
+            },
+            from, 10000);
+        if(!found) return std::nullopt;
+        std::lock_guard lock(mutex);
+        return states[*found].translationChanges;
+    }
+
    private slots:
     void initTestCase ()
     {
@@ -293,6 +330,8 @@ class BackendTest : public QObject
         qputenv("SC_RELEASES_URL", server.url("/releases/latest").toUtf8());
         qputenv("SC_ITEM_MAPPING_URL", server.url("/item-mapping.json").toUtf8());
         qputenv("SC_WIKI_API_URL", server.url("/api/v2/").toUtf8());
+        qputenv("SC_GITHUB_API_URL", server.url("/github/").toUtf8());
+        qputenv("SC_GITHUB_RAW_URL", server.url("/raw/").toUtf8());
         server.setFile("/de.ini", TRANSLATION);
         server.setFile("/releases/latest", fixtureFiles().value("/releases/latest"));
         server.setFile("/languages.json", fixtureFiles().value("/languages.json"));
@@ -871,6 +910,219 @@ class BackendTest : public QObject
         QCOMPARE(channel(latest(), "LIVE").translationVersion, std::string("4.11.0"));
         QVERIFY(!channel(latest(), "LIVE").translationOutdated);
         server.setFile("/fr.ini", TRANSLATION_FR);
+    }
+
+    void checksTheRepositoryOfALanguage_data ()
+    {
+        QTest::addColumn<QString>("repository");
+        QTest::addColumn<QString>("projectUrl");
+        QTest::addColumn<QString>("fileUrl");
+        QTest::addColumn<bool>("accepted");
+        const QString raw = "https://raw.githubusercontent.com/rjcncpt/StarCitizen-Deutsch-INI/main/live/global.ini";
+        QTest::newRow("its files") << "rjcncpt/StarCitizen-Deutsch-INI" << "https://example.org" << raw << true;
+        QTest::newRow("other case") << "RJCNCPT/starcitizen-deutsch-ini" << "https://example.org" << raw << true;
+        QTest::newRow("its project page") << "Dymerz/StarCitizen-Localization" << "https://github.com/Dymerz/StarCitizen-Localization/"
+                                          << "https://example.org/x.ini" << true;
+        QTest::newRow("another repository") << "someone/else" << "https://github.com/rjcncpt/StarCitizen-Deutsch-INI" << raw << false;
+        QTest::newRow("a page of the project") << "rjcncpt/StarCitizen" << "https://github.com/rjcncpt/StarCitizen-Deutsch-INI" << raw << false;
+        QTest::newRow("full URL") << "https://github.com/rjcncpt/StarCitizen-Deutsch-INI" << "https://github.com/rjcncpt/StarCitizen-Deutsch-INI"
+                                  << raw << false;
+        QTest::newRow("path in it") << "rjcncpt/StarCitizen-Deutsch-INI/main" << "" << raw << false;
+        QTest::newRow("dot dot") << "rjcncpt/.." << "https://github.com/rjcncpt/.." << "" << false;
+        QTest::newRow("query") << "rjcncpt/x?y" << "https://github.com/rjcncpt/x?y" << "" << false;
+        QTest::newRow("owner with hyphen at the end") << "owner-/name" << "https://github.com/owner-/name" << "" << false;
+        QTest::newRow("plain HTTP page") << "rjcncpt/StarCitizen-Deutsch-INI" << "http://github.com/rjcncpt/StarCitizen-Deutsch-INI" << "" << false;
+    }
+
+    void checksTheRepositoryOfALanguage ()
+    {
+        QFETCH(QString, repository);
+        QFETCH(QString, projectUrl);
+        QFETCH(QString, fileUrl);
+        QFETCH(bool, accepted);
+        qunsetenv("SC_GITHUB_RAW_URL");
+        QCOMPARE(GitHubRepository::belongsTo(repository.toStdString(), projectUrl.toStdString(), {fileUrl.toStdString()}), accepted);
+    }
+
+    void findsTheTranslationFileInTheRepository_data ()
+    {
+        QTest::addColumn<QString>("url");
+        QTest::addColumn<QString>("expected");
+        const QString base = "https://raw.githubusercontent.com/Dymerz/StarCitizen-Localization/";
+        QTest::newRow("branch and path") << base + "main/data/Localization/french_(france)/global.ini"
+                                         << "main data/Localization/french_(france)/global.ini";
+        QTest::newRow("refs/heads") << base + "refs/heads/dev/live/global.ini" << "dev live/global.ini";
+        QTest::newRow("other repository") << "https://raw.githubusercontent.com/someone/else/main/global.ini" << "";
+        QTest::newRow("no path") << base + "main" << "";
+        QTest::newRow("dot dot") << base + "main/../secret.ini" << "";
+        QTest::newRow("empty part") << base + "main//global.ini" << "";
+        QTest::newRow("query") << base + "main/global.ini?token=1" << "";
+        QTest::newRow("escaped") << base + "main/%2e%2e/global.ini" << "";
+        QTest::newRow("not on GitHub") << "https://example.org/Dymerz/StarCitizen-Localization/main/global.ini" << "";
+    }
+
+    void findsTheTranslationFileInTheRepository ()
+    {
+        QFETCH(QString, url);
+        QFETCH(QString, expected);
+        qunsetenv("SC_GITHUB_RAW_URL");
+        auto file = GitHubRepository::fileOf(url.toStdString(), "Dymerz/StarCitizen-Localization");
+        QCOMPARE(file ? QString::fromStdString(file->branch + " " + file->path) : QString(), expected);
+    }
+
+    void cleansTextFromGitHub_data ()
+    {
+        QTest::addColumn<QByteArray>("text");
+        QTest::addColumn<bool>("oneLine");
+        QTest::addColumn<QByteArray>("expected");
+        QTest::newRow("markdown stays as text") << QByteArray("## Neu\r\n\r\n- <b>Text</b>  \r\n") << false << QByteArray("## Neu\n\n- <b>Text</b>");
+        QTest::newRow("empty lines") << QByteArray("a\n\n\n\n \nb") << false << QByteArray("a\n\nb");
+        QTest::newRow("control characters") << QByteArray("a\x01\x1b[31mb\x7f\tc") << false << QByteArray("a[31mb c");
+        QTest::newRow("one line") << QByteArray(" Titel\nzweite Zeile ") << true << QByteArray("Titel zweite Zeile");
+        QTest::newRow("cut") << QByteArray(250, 'x') << true << QByteArray(200, 'x') + "…";
+        // "ü" is two bytes; the cut must not leave half of one
+        QTest::newRow("cut in a character") << QByteArray(199, 'x') + "üü" << true << QByteArray(199, 'x') + "…";
+    }
+
+    void cleansTextFromGitHub ()
+    {
+        QFETCH(QByteArray, text);
+        QFETCH(bool, oneLine);
+        QFETCH(QByteArray, expected);
+        QCOMPARE(QByteArray::fromStdString(TranslationChanges::plainText(text.toStdString(), 200, oneLine)), expected);
+    }
+
+    void readsGitHubTimes ()
+    {
+        QCOMPARE(TranslationChanges::parseTime("1970-01-01T00:00:00Z"), std::int64_t(0));
+        QCOMPARE(TranslationChanges::parseTime("2026-11-22T10:47:15Z"), std::int64_t(1795344435));
+        QCOMPARE(TranslationChanges::parseTime("2000-02-29T12:00:00Z"), std::int64_t(951825600));
+        QCOMPARE(TranslationChanges::parseTime("2026-11-22 10:47:15"), std::int64_t(0));
+        QCOMPARE(TranslationChanges::parseTime("2026-13-01T00:00:00Z"), std::int64_t(0));
+    }
+
+    void showsTheReleasesOfATranslationProject ()
+    {
+        nlohmann::json releases = nlohmann::json::array(
+            {{{"tag_name", "v2"},
+              {"name", "<b>4.11</b> LIVE"},
+              {"body", "- Neu\r\n- Behoben"},
+              {"published_at", "2026-11-22T10:47:15Z"},
+              {"html_url", "https://github.com/test-owner/test-ini/releases/tag/v2"}},
+             {{"tag_name", "v3"}, {"draft", true}, {"body", "Entwurf"}},
+             {{"tag_name", "v1"}, {"body", 5}, {"published_at", "2026-10-01T00:00:00Z"}, {"html_url", "https://example.org/phishing"}}});
+        server.setFile(releasesPath(), QByteArray::fromStdString(releases.dump()));
+        QTemporaryDir cache;
+        std::atomic<bool> shuttingDown{false};
+        // Cached answers are revalidated every time
+        TranslationChanges changes(shuttingDown, cache.path().toStdString(), std::chrono::seconds(0));
+        int asked = githubRequests(releasesPath(), "200");
+        int notModified = githubRequests(releasesPath(), "304");
+        int commitsAsked = githubRequests(commitsPath(), "200");
+
+        auto result = changes.load("test-owner/test-ini", GitHubRepository::File{"main", "live/global.ini"},
+                                   TranslationChanges::parseTime("2026-11-01T00:00:00Z"));
+        QVERIFY(result.loaded);
+        QCOMPARE(result.kind, std::string("releases"));
+        // Newest first, without the draft; a name is plain text, a tag stands in for a missing name
+        QCOMPARE(changeTitles(result), (Codes{"<b>4.11</b> LIVE pending", "v1"}));
+        QCOMPARE(result.entries[0].text, std::string("- Neu\n- Behoben"));
+        QCOMPARE(result.entries[0].url, std::string("https://github.com/test-owner/test-ini/releases/tag/v2"));
+        // Not a page of the project: no link
+        QCOMPARE(result.entries[1].url, std::string());
+        QCOMPARE(result.entries[1].text, std::string());
+        // The commits are only asked for when there are no releases
+        QCOMPARE(githubRequests(commitsPath(), "200"), commitsAsked);
+
+        // The second time GitHub answers "not modified", which does not count against its limit
+        QCOMPARE(changeTitles(changes.load("test-owner/test-ini", std::nullopt, std::nullopt)), (Codes{"<b>4.11</b> LIVE", "v1"}));
+        QCOMPARE(githubRequests(releasesPath(), "200"), asked + 1);
+        QCOMPARE(githubRequests(releasesPath(), "304"), notModified + 1);
+
+        // Offline: the cached answer is used
+        qputenv("SC_GITHUB_API_URL", "http://127.0.0.1:1/");
+        TranslationChanges offline(shuttingDown, cache.path().toStdString(), std::chrono::seconds(0));
+        QCOMPARE(offline.load("test-owner/test-ini", std::nullopt, std::nullopt).entries.size(), size_t(2));
+        QCOMPARE(offline.load("other/project", std::nullopt, std::nullopt).error, std::string("network error"));
+    }
+
+    void respectsTheRateLimitOfGitHub ()
+    {
+        server.setFile(releasesPath(), "[]");
+        server.failNext(releasesPath(), 1, "429 Too Many Requests");
+        QTemporaryDir cache;
+        std::atomic<bool> shuttingDown{false};
+        TranslationChanges changes(shuttingDown, cache.path().toStdString(), std::chrono::seconds(0));
+        int limited = githubRequests(releasesPath(), "429");
+        int asked = githubRequests(releasesPath(), "200");
+
+        auto result = changes.load("test-owner/test-ini", std::nullopt, std::nullopt);
+        QCOMPARE(result.error, std::string("rate limit"));
+        QVERIFY(!result.loaded);
+        // Until GitHub's reset time it is not asked again
+        QCOMPARE(changes.load("test-owner/test-ini", std::nullopt, std::nullopt).error, std::string("rate limit"));
+        QCOMPARE(githubRequests(releasesPath(), "429"), limited + 1);
+        QCOMPARE(githubRequests(releasesPath(), "200"), asked);
+
+        // An answer that is not JSON is no list of releases, and it is not cached
+        server.setFile("/github/repos/test-owner/broken/releases?per_page=10", "<html>");
+        QCOMPARE(TranslationChanges(shuttingDown, cache.path().toStdString()).load("test-owner/broken", std::nullopt, std::nullopt).error,
+                 std::string("unexpected answer"));
+    }
+
+    void showsWhatChangedInATranslation ()
+    {
+        auto entry = catalogueEntry("de", "Deutsch", "german_(germany)", "LIVE");
+        entry["source"]["channels"]["LIVE"] = {"{base}/raw/test-owner/test-ini/main/live/global.ini"};
+        entry["repository"] = "test-owner/test-ini";
+        // Not the repository of its files or project page: ignored, the language itself stays
+        auto other = catalogueEntry("fr", "Français", "french_(france)", "LIVE");
+        other["repository"] = "someone/else";
+        serveCatalogue(nlohmann::json::array({entry, other}));
+        server.setFile("/raw/test-owner/test-ini/main/live/global.ini", TRANSLATION);
+        server.setFile(releasesPath(), "[]");
+        nlohmann::json commits =
+            nlohmann::json::array({commit("Neue Texte\n\n* Missionen", "2099-01-01T00:00:00Z", "https://github.com/test-owner/test-ini/commit/b"),
+                                   commit("Erste Version", "2001-01-01T00:00:00Z", "https://github.com/test-owner/test-ini/commit/a")});
+        server.setFile(commitsPath(), QByteArray::fromStdString(commits.dump()));
+
+        int releasesAsked = githubRequests(releasesPath(), "200");
+        int commitsAsked = githubRequests(commitsPath(), "200");
+
+        QTemporaryDir game;
+        QVERIFY(start());
+        QCOMPARE(latest().languages[1].repository, std::string("test-owner/test-ini"));
+        QCOMPARE(latest().languages[2].repository, std::string());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        QVERIFY(setLanguage("LIVE", "de"));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+
+        // Without releases, the commits of the channel's file; nothing is pending while the copy is up to date
+        auto changes = loadChanges("LIVE", "de");
+        QVERIFY(changes);
+        QCOMPARE(changes->kind, std::string("commits"));
+        QCOMPARE(changes->language, std::string("de"));
+        QCOMPARE(changeTitles(*changes), (Codes{"Neue Texte", "Erste Version"}));
+        QCOMPARE(changes->entries[0].text, std::string("* Missionen"));
+
+        // The project publishes a new version: what came after the installed copy is pending
+        server.setFile("/raw/test-owner/test-ini/main/live/global.ini", TRANSLATION + "neu=1\n");
+        QVERIFY(restart());
+        QVERIFY(waitForState([] (const auto& s) { return !s.checking && channel(s, "LIVE").status == ChannelStatus::UpdateAvailable; }));
+        changes = loadChanges("LIVE", "de");
+        QVERIFY(changes);
+        QCOMPARE(changeTitles(*changes), (Codes{"Neue Texte pending", "Erste Version"}));
+        // Answered from the cache, GitHub was asked once
+        QCOMPARE(githubRequests(commitsPath(), "200"), commitsAsked + 1);
+        QCOMPARE(githubRequests(releasesPath(), "200"), releasesAsked + 1);
+
+        // A language without a repository has nothing to show and asks nobody
+        QVERIFY(setLanguage("LIVE", "fr"));
+        changes = loadChanges("LIVE", "fr");
+        QVERIFY(changes);
+        QVERIFY(changes->entries.empty());
+        QCOMPARE(changes->repository, std::string());
+        QCOMPARE(githubRequests(releasesPath(), "200"), releasesAsked + 1);
     }
 
     void failedInstallLeavesTheGameFolderAlone_data ()

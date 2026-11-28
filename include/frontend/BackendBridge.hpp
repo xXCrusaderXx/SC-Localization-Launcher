@@ -201,6 +201,11 @@ class BackendBridge : public QObject
             .channel = channel.toStdString(), .url = url.trimmed().toStdString(), .folder = folder.trimmed().toStdString()});
     }
     Q_INVOKABLE void repairChannel (const QString& channel) { backEnd.execute(Protocol::RepairChannel{.channel = channel.toStdString()}); }
+    // When the user opens the list of what changed in the channel's translation, see State.translationChanges
+    Q_INVOKABLE void loadTranslationChanges (const QString& channel)
+    {
+        backEnd.execute(Protocol::LoadTranslationChanges{.channel = channel.toStdString()});
+    }
     Q_INVOKABLE void autoSearch () { backEnd.execute(Protocol::AutoSearch{}); }
     Q_INVOKABLE void checkForUpdate () { backEnd.execute(Protocol::CheckForUpdate{}); }
     Q_INVOKABLE void installUpdate () { backEnd.execute(Protocol::InstallUpdate{}); }

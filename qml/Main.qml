@@ -339,6 +339,11 @@ ApplicationWindow {
                 onPathRequested: window.choosePath(channel.name)
                 onRepairRequested: backend.repairChannel(channel.name)
                 onCustomSourceRequested: customSourceDialog.openFor(channel.name, channel.custom, window.localizationFolders)
+                onChangesRequested: {
+                    translationChangesDialog.channelName = channel.name;
+                    translationChangesDialog.open();
+                    backend.loadTranslationChanges(channel.name);
+                }
             }
         }
 
@@ -770,6 +775,14 @@ ApplicationWindow {
         onCheckRequested: backend.checkForUpdate()
         onInstallRequested: backend.installUpdate()
         onRestartRequested: backend.restartLauncher()
+    }
+
+    TranslationChangesDialog {
+        id: translationChangesDialog
+
+        changes: window.appState.translationChanges || ({})
+        languages: window.appState.languages || []
+        dateLocale: window.uiLocale
     }
 
     WhatsNewDialog {
