@@ -358,6 +358,8 @@ class BackEnd
         if(gameClosed)
             for(auto& [name, channel] : data.channels) applyGraphicsApi(channel);
         if(gameClosed && data.backgroundChecks) checkChannels();
+        // The RSI Launcher may have installed a new test channel meanwhile
+        if(gameClosed) offerLiveSettings();
         // A start in progress decides itself whether the RSI Launcher keeps running; a failed start stays visible
         bool shownRunning = data.game == Protocol::GameStart::Running || data.game == Protocol::GameStart::Playing;
         if(data.game != Protocol::GameStart::Starting && (process != Database::GameProcess::None || shownRunning)) data.game = gameStatus();
@@ -516,7 +518,7 @@ class BackEnd
             state.channels.push_back({name, channel.installPath.string(), channel.language, availableLanguages(name), channelStatus(name, channel),
                                       notices(name), channel.custom, channel.gameSettings, channel.settingsChecked, channel.ignoredSettings,
                                       channel.settingsError, channel.graphicsApiWaiting, gameVersion, translationVersion,
-                                      GameVersion::older(translationVersion, gameVersion)});
+                                      GameVersion::older(translationVersion, gameVersion), channel.liveSettingsOffer});
         }
 
         state.rsiLauncherPath = data.rsiLauncherPath.string();
@@ -538,6 +540,7 @@ class BackEnd
         state.theme = data.theme;
         state.statistics = data.statistics;
         state.dashboardTiles = data.dashboardTiles;
+        state.liveSettings = data.liveSettings;
         return state;
     }
 
@@ -571,6 +574,7 @@ class BackEnd
             data.channels[name].gameSettings = settings.gameSettings;
             data.channels[name].managedKeys = settings.managedKeys;
             data.channels[name].settingsWritten = settings.settingsWritten;
+            data.channels[name].liveSettingsAnswered = settings.liveSettingsAnswered;
         }
         data.rsiLauncherPath = file.rsiLauncherPath;
         data.options = file.options;
@@ -586,14 +590,15 @@ class BackEnd
         saveSettings();
         checkGameSettings();
         for(auto& [name, channel] : data.channels) applyGraphicsApi(channel);
+        offerLiveSettings();
     }
 
     SettingsFile settingsFile () const
     {
         SettingsFile file;
         for(const auto& [name, channel] : data.channels)
-            file.channels[name] = {channel.installPath.string(), channel.language,    channel.installed,      channel.custom,
-                                   channel.gameSettings,         channel.managedKeys, channel.settingsWritten};
+            file.channels[name] = {channel.installPath.string(), channel.language,    channel.installed,       channel.custom,
+                                   channel.gameSettings,         channel.managedKeys, channel.settingsWritten, channel.liveSettingsAnswered};
         file.rsiLauncherPath = data.rsiLauncherPath.string();
         file.options = data.options;
         file.lastSeenVersion = data.lastSeenVersion;
@@ -686,6 +691,51 @@ class BackEnd
             !GameSettings::applyGraphicsApi(*prefix, GameSettings::branchOf(channel.installPath / "Game.log"), channel.gameSettings.graphicsApi);
     }
 
+    static bool hasGameSettings (const Protocol::GameSettings& settings)
+    {
+        return settings.maxFps > 0 || settings.maxIdleFps > 0 || !settings.customLines.empty() || !settings.graphicsApi.empty();
+    }
+
+    // The language of LIVE that `channel` can take over: a catalogue language it offers too, or English
+    std::optional<std::string> liveLanguageFor (const std::string& channel) const
+    {
+        auto live = data.channels.find("LIVE");
+        if(live == data.channels.end()) return std::nullopt;
+        const auto& code = live->second.language;
+        if(code == Protocol::ENGLISH || (code != Protocol::CUSTOM && isAvailable(channel, code))) return code;
+        return std::nullopt;
+    }
+
+    // A new test channel (PTU, EPTU, Tech-Preview, ...) is a folder with nothing of its own yet: English, no game
+    // settings and no keybindings. It is offered LIVE's settings once, if LIVE has some to take over. The answer is
+    // forgotten when the folder is gone, so the next test phase in the same place is offered them again.
+    // Returns whether an offer changed.
+    bool offerLiveSettings ()
+    {
+        bool changed = false;
+        auto live = data.channels.find("LIVE");
+        std::optional<bool> liveProfile;
+        for(auto& [name, channel] : data.channels)
+        {
+            bool offer = false;
+            std::error_code ec;
+            if(name == "LIVE" || channel.installPath.empty() || !std::filesystem::is_directory(channel.installPath, ec))
+                channel.liveSettingsAnswered = false;
+            else if(!channel.liveSettingsAnswered && live != data.channels.end() && !live->second.installPath.empty() &&
+                    channel.language == Protocol::ENGLISH && !hasGameSettings(channel.gameSettings) &&
+                    !std::filesystem::equivalent(channel.installPath, live->second.installPath, ec) &&
+                    !ProfileBackup::hasKeybindings(channel.installPath))
+            {
+                auto language = liveLanguageFor(name);
+                if(!liveProfile) liveProfile = !ProfileBackup::clientFiles(live->second.installPath).empty();
+                offer = (language && *language != Protocol::ENGLISH) || hasGameSettings(live->second.gameSettings) || *liveProfile;
+            }
+            changed |= channel.liveSettingsOffer != offer;
+            channel.liveSettingsOffer = offer;
+        }
+        return changed;
+    }
+
     void loadLanguages ()
     {
         startJob(languagesJob,
@@ -729,6 +779,7 @@ class BackEnd
     {
         if(auto* channel = findChannel(command.channel))
         {
+            if(channel->installPath != command.path) channel->liveSettingsAnswered = false;
             channel->installPath = command.path;
             // The record described the previous folder
             channel->installed = {};
@@ -736,6 +787,7 @@ class BackEnd
             channel->damaged = false;
             channel->lastUpdateFailed = false;
         }
+        offerLiveSettings();
     }
 
     void handle (const Protocol::SetRsiLauncherPath& command) { data.rsiLauncherPath = command.path; }
@@ -817,7 +869,12 @@ class BackEnd
                          std::this_thread::sleep_for(std::chrono::milliseconds(250));
                          if(std::chrono::steady_clock::now() < next) continue;
                          next += interval;
-                         queue.post([this] { checkChannels(); });
+                         queue.post(
+                             [this]
+                             {
+                                 checkChannels();
+                                 if(offerLiveSettings()) publish();
+                             });
                      }
                  });
     }
@@ -943,7 +1000,13 @@ class BackEnd
                              if(result)
                              {
                                  data.rsiLauncherPath = result->rsiLauncherPath;
-                                 for(const auto& [name, path] : result->channelPaths) data.channels[name].installPath = path;
+                                 for(const auto& [name, path] : result->channelPaths)
+                                 {
+                                     auto& channel = data.channels[name];
+                                     if(channel.installPath != path) channel.liveSettingsAnswered = false;
+                                     channel.installPath = path;
+                                 }
+                                 offerLiveSettings();
                                  saveSettings();
                              }
                              data.searching = false;
@@ -1154,35 +1217,119 @@ class BackEnd
                  });
     }
 
-    void handle (const Protocol::SetGameSettings& command)
+    // Writes the settings into the channel's user.cfg; false and settingsError set if they were refused
+    bool applyGameSettings (Database::ChannelData& channel, const Protocol::GameSettings& settings)
     {
-        auto* channel = findChannel(command.channel);
-        if(!channel) return;
-        channel->settingsError.clear();
+        channel.settingsError.clear();
         std::string error;
-        auto lines = GameSettings::linesOf(command.settings, error);
+        auto lines = GameSettings::linesOf(settings, error);
         if(!lines)
         {
-            channel->settingsError = error;
-            return;
+            channel.settingsError = error;
+            return false;
         }
-        if(channel->installPath.empty())
+        if(channel.installPath.empty())
         {
-            channel->settingsError = "no game folder";
-            return;
+            channel.settingsError = "no game folder";
+            return false;
         }
-        auto keys = GameSettings::apply(channel->installPath / "user.cfg", *lines, channel->managedKeys);
+        auto keys = GameSettings::apply(channel.installPath / "user.cfg", *lines, channel.managedKeys);
         if(!keys)
         {
-            channel->settingsError = "cannot write user.cfg";
+            channel.settingsError = "cannot write user.cfg";
+            return false;
+        }
+        channel.gameSettings = settings;
+        channel.managedKeys = *keys;
+        channel.settingsWritten = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        channel.settingsChecked = false;
+        channel.ignoredSettings.clear();
+        applyGraphicsApi(channel);
+        return true;
+    }
+
+    void handle (const Protocol::SetGameSettings& command)
+    {
+        if(auto* channel = findChannel(command.channel)) applyGameSettings(*channel, command.settings);
+    }
+
+    void handle (const Protocol::CopyLiveSettings& command)
+    {
+        auto* channel = findChannel(command.channel);
+        auto live = data.channels.find("LIVE");
+        if(!channel || command.channel == "LIVE" || live == data.channels.end()) return;
+        // The backup job writes the same backups, an update the same user.cfg
+        if(data.backups.busy || data.liveSettings.busy || data.update == Protocol::UpdateStatus::Running)
+        {
+            LOG_DEBUG(lg) << "copyLiveSettings - a backup, a copy or an update is running";
             return;
         }
-        channel->gameSettings = command.settings;
-        channel->managedKeys = *keys;
-        channel->settingsWritten = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-        channel->settingsChecked = false;
-        channel->ignoredSettings.clear();
-        applyGraphicsApi(*channel);
+        channel->liveSettingsAnswered = true;
+        channel->liveSettingsOffer = false;
+        data.liveSettings = {.channel = command.channel};
+        // The game rewrites these files while it runs and when it quits
+        if(gamePlaying())
+        {
+            data.liveSettings.result = "Star Citizen is running";
+            return;
+        }
+        std::error_code ec;
+        const auto& from = live->second.installPath;
+        const auto& to = channel->installPath;
+        if(from.empty() || to.empty() || !std::filesystem::is_directory(from, ec) || !std::filesystem::is_directory(to, ec) ||
+           std::filesystem::equivalent(from, to, ec))
+        {
+            data.liveSettings.result = "no game folder";
+            return;
+        }
+
+        data.liveSettings.busy = true;
+        data.backups.busy = true;
+        startJob(backupJob,
+                 [this, command, from, to, version = data.selfUpdate.currentVersion, settings = settingsText(settingsFile())]
+                 {
+                     // What is replaced can be restored from the profile backups
+                     profileBackup.create(command.channel, to, version, settings);
+                     std::optional<int> copied = 0;
+                     if(command.profile) copied = ProfileBackup::copyClientFiles(from, to);
+                     auto entries = profileBackup.list();
+                     queue.post([this, command, copied, entries] { finishLiveSettings(command, copied, entries); });
+                 });
+    }
+
+    // On the backend thread, after the backup and the copied files: the settings kept by the launcher itself
+    void finishLiveSettings (const Protocol::CopyLiveSettings& command, std::optional<int> copied, const std::vector<Protocol::BackupEntry>& entries)
+    {
+        data.backups.busy = false;
+        data.backups.entries = entries;
+        data.liveSettings.busy = false;
+        data.liveSettings.files = copied.value_or(0);
+        data.liveSettings.result = copied ? "copied" : "cannot write";
+        auto* channel = findChannel(command.channel);
+        const auto& live = data.channels["LIVE"];
+        // A failed copy leaves the rest as it was
+        if(channel && copied && command.gameSettings && !applyGameSettings(*channel, live.gameSettings)) data.liveSettings.result = "cannot write";
+        bool install = false;
+        auto language = liveLanguageFor(command.channel);
+        if(channel && data.liveSettings.result == "copied" && command.language && language && channel->language != *language)
+        {
+            handle(Protocol::SetLanguage{command.channel, *language});
+            install = true;
+        }
+        LOG_INFO(lg) << "copyLiveSettings - " << command.channel << ": " << data.liveSettings.result << ", " << data.liveSettings.files
+                     << " profile files";
+        saveSettings();
+        if(install) handle(Protocol::StartUpdate{.channels = {command.channel}, .allowGameStart = false});
+        publish();
+    }
+
+    void handle (const Protocol::DismissLiveSettings& command)
+    {
+        if(auto* channel = findChannel(command.channel))
+        {
+            channel->liveSettingsAnswered = true;
+            channel->liveSettingsOffer = false;
+        }
     }
 
     void handle (const Protocol::LoadBackups&)

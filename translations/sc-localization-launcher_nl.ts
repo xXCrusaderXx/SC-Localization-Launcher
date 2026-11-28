@@ -270,6 +270,10 @@
         <source>Repair</source>
         <translation>Repareren</translation>
     </message>
+    <message>
+        <source>Take over settings from LIVE</source>
+        <translation>Instellingen van LIVE overnemen</translation>
+    </message>
 </context>
 <context>
     <name>CustomSourceDialog</name>
@@ -729,6 +733,92 @@
     <message>
         <source>Restart now</source>
         <translation>Nu herstarten</translation>
+    </message>
+</context>
+<context>
+    <name>LiveSettingsDialog</name>
+    <message>
+        <source>Own source</source>
+        <translation>Eigen bron</translation>
+    </message>
+    <message>
+        <source>Taken over from LIVE. The previous files of %1 were backed up first.</source>
+        <translation>Overgenomen van LIVE. Van de vorige bestanden van %1 is eerst een back-up gemaakt.</translation>
+    </message>
+    <message>
+        <source>Close Star Citizen first; the game rewrites these files.</source>
+        <translation>Sluit eerst Star Citizen; het spel herschrijft deze bestanden.</translation>
+    </message>
+    <message>
+        <source>LIVE and %1 each need their own game folder.</source>
+        <translation>LIVE en %1 hebben elk een eigen spelmap nodig.</translation>
+    </message>
+    <message>
+        <source>Failed: %1</source>
+        <translation>Mislukt: %1</translation>
+    </message>
+    <message>
+        <source>Take over settings from LIVE</source>
+        <translation>Instellingen van LIVE overnemen</translation>
+    </message>
+    <message>
+        <source>%1 can start with what you set up on LIVE. The current files of %1 are backed up first.</source>
+        <translation>%1 kan beginnen met wat je op LIVE hebt ingesteld. Van de huidige bestanden van %1 wordt eerst een back-up gemaakt.</translation>
+    </message>
+    <message>
+        <source>Language: %1</source>
+        <translation>Taal: %1</translation>
+    </message>
+    <message>
+        <source>Installed right away</source>
+        <translation>Wordt meteen geïnstalleerd</translation>
+    </message>
+    <message>
+        <source>%1 is currently not available for this channel</source>
+        <translation>%1 is momenteel niet beschikbaar voor dit kanaal</translation>
+    </message>
+    <message>
+        <source>Own user.cfg lines</source>
+        <translation>Eigen user.cfg-regels</translation>
+    </message>
+    <message>
+        <source>Frame limits, graphics API and your own lines from the game settings. The language lines stay those of %1.</source>
+        <translation>Framelimieten, grafische API en je eigen regels uit de spelinstellingen. De taalregels blijven die van %1.</translation>
+    </message>
+    <message>
+        <source>LIVE has no own lines yet.</source>
+        <translation>LIVE heeft nog geen eigen regels.</translation>
+    </message>
+    <message>
+        <source>Keybindings and profile</source>
+        <translation>Toetsbindingen en profiel</translation>
+    </message>
+    <message>
+        <source>Keybindings, profile settings, exported control mappings and saved characters</source>
+        <translation>Toetsbindingen, profielinstellingen, geëxporteerde besturingsindelingen en opgeslagen personages</translation>
+    </message>
+    <message>
+        <source>Taking over …</source>
+        <translation>Bezig met overnemen …</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n keybinding and profile file(s) copied.</source>
+        <translation>
+            <numerusform>%n bestand met toetsbindingen en profiel gekopieerd.</numerusform>
+            <numerusform>%n bestanden met toetsbindingen en profiel gekopieerd.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No, thanks</source>
+        <translation>Nee, bedankt</translation>
+    </message>
+    <message>
+        <source>Take over</source>
+        <translation>Overnemen</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Sluiten</translation>
     </message>
 </context>
 <context>

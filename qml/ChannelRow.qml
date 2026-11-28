@@ -10,11 +10,14 @@ Rectangle {
     // Protocol::State.languages: [{ code, name, credit }]
     property var languages: []
     property bool locked: false
+    // LIVE has a game folder whose settings this channel can take over
+    property bool liveSet: false
 
     signal languagePicked(string language)
     signal pathRequested
     signal repairRequested
     signal customSourceRequested
+    signal liveSettingsRequested
 
     readonly property bool pathSet: (channel.installPath || "") !== ""
     readonly property var available: channel.availableLanguages || []
@@ -178,6 +181,16 @@ Rectangle {
             Accessible.name: qsTr("Repair")
             onClicked: if (!row.locked)
                 row.repairRequested()
+        }
+
+        // Takes over the language, own user.cfg lines and keybindings of LIVE
+        IconButton {
+            objectName: "liveSettingsButton"
+            visible: row.pathSet && row.liveSet && row.channel.name !== "LIVE"
+            glyph: "⇆"
+            Accessible.name: qsTr("Take over settings from LIVE")
+            onClicked: if (!row.locked)
+                row.liveSettingsRequested()
         }
 
         IconButton {

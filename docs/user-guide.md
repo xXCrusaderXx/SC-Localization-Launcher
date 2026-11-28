@@ -41,7 +41,16 @@ Each game channel with a folder has a row:
 - After a game patch the line can read *Translation for game version 4.10.2, the game is 4.11.0: new texts stay in English*. The translation is up to date, but its project has not caught up with the patch yet; texts that are new in the game stay English until it does. The warning goes away with the next translation update for the new version. It needs a translation that names its game version in its file, and a translation project's own notice is shown instead when it has one.
 - The **drop-down** chooses the translation for this channel. *English* removes the translation again.
 - **↻ Repair** downloads the translation again and rewrites its lines in `user.cfg`, e.g. after a game update replaced the files.
+- **⇆** (not on LIVE) takes over the settings from LIVE, see below.
 - **✎** changes the channel's folder.
+
+**A new test channel** (PTU, EPTU, Tech-Preview, …) starts without your settings. When the launcher finds such a folder that has no language, game settings or keybindings of its own yet, it asks once: *Take over settings from LIVE*. Choose what to take over:
+
+- *Language: …* sets the LIVE translation for this channel and installs it right away, if its project offers it for this channel.
+- *Own user.cfg lines*: the frame limits, the graphics API and your own lines from *Game settings …*. The rest of the channel's `user.cfg` stays, and its language lines stay its own.
+- *Keybindings and profile*: keybindings, profile settings, exported control mappings and saved characters.
+
+*Take over* first backs up the channel's current files (see *Backups …*), so you can go back; it is refused while Star Citizen runs. *No, thanks* or closing the dialog does not ask again for this folder. When the folder is removed at the end of a test phase and a new one appears, the launcher asks again. The **⇆** button does the same at any time.
 
 The big button at the bottom right installs what is waiting. With *Start Star Citizen afterwards* switched on, it then starts the RSI Launcher (on Linux through the LUG Helper's `sc-launch.sh` or Lutris); if nothing is waiting, it only starts the game.
 

@@ -25,7 +25,7 @@
 // and settings (Profiles: actionmaps.xml, attributes.xml, ...), exported control mappings and saved characters.
 // The launcher's own settings travel along as SETTINGS_FILE; they are handed back to the caller, never written here.
 // One ZIP per backup in <data>/backups/<channel>/, the newest KEEP per channel are kept. Only these paths are ever
-// written back, and a restore first backs up what it replaces.
+// written back or copied into another channel, and a restore first backs up what it replaces.
 class ProfileBackup
 {
    public:
@@ -194,6 +194,46 @@ class ProfileBackup
         }
         std::sort(files.begin(), files.end());
         return files;
+    }
+
+    // The player set up keybindings in this channel folder: the game writes actionmaps.xml only once one was changed,
+    // and exported control mappings count too
+    static bool hasKeybindings (const std::filesystem::path& installPath)
+    {
+        auto files = profileFiles(installPath);
+        return std::any_of(files.begin(), files.end(), [] (const std::string& file)
+                           { return file.ends_with("/actionmaps.xml") || file.find("/controls/mappings/") != std::string::npos; });
+    }
+
+    // Profile files besides user.cfg, whose language lines belong to each channel
+    static std::vector<std::string> clientFiles (const std::filesystem::path& installPath)
+    {
+        auto files = profileFiles(installPath);
+        std::erase(files, "user.cfg");
+        return files;
+    }
+
+    // Copies the keybindings, profile settings, control mappings and characters of one channel folder into another;
+    // files only the target has stay. Nothing is written through a symlink below the target folder, so every file
+    // lands inside it. Returns the number of files copied, nullopt if one could not be written.
+    static std::optional<int> copyClientFiles (const std::filesystem::path& from, const std::filesystem::path& to)
+    {
+        int copied = 0;
+        for(const auto& file : clientFiles(from))
+        {
+            std::filesystem::path below;
+            bool linked = false;
+            for(const auto& part : std::filesystem::path(file).parent_path())
+            {
+                below /= part;
+                std::error_code ec;
+                linked |= std::filesystem::symlink_status(to / below, ec).type() == std::filesystem::file_type::symlink;
+            }
+            auto data = readFile(from / file);
+            if(linked || !data || !writeFile(to / file, *data)) return std::nullopt;
+            ++copied;
+        }
+        return copied;
     }
 
     // Newest first, all channels

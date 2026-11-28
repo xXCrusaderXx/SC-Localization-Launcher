@@ -270,6 +270,10 @@
         <source>Repair</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Take over settings from LIVE</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>CustomSourceDialog</name>
@@ -728,6 +732,92 @@
     </message>
     <message>
         <source>Open download page</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>LiveSettingsDialog</name>
+    <message>
+        <source>Own source</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Taken over from LIVE. The previous files of %1 were backed up first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close Star Citizen first; the game rewrites these files.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>LIVE and %1 each need their own game folder.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Take over settings from LIVE</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 can start with what you set up on LIVE. The current files of %1 are backed up first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Language: %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Installed right away</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 is currently not available for this channel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Own user.cfg lines</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Frame limits, graphics API and your own lines from the game settings. The language lines stay those of %1.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>LIVE has no own lines yet.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keybindings and profile</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Keybindings, profile settings, exported control mappings and saved characters</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Taking over …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message numerus="yes">
+        <source>%n keybinding and profile file(s) copied.</source>
+        <translation>
+            <numerusform>%n keybinding and profile file copied.</numerusform>
+            <numerusform>%n keybinding and profile files copied.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No, thanks</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Take over</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

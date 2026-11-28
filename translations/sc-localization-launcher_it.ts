@@ -270,6 +270,10 @@
         <source>Repair</source>
         <translation>Ripara</translation>
     </message>
+    <message>
+        <source>Take over settings from LIVE</source>
+        <translation>Riprendi le impostazioni da LIVE</translation>
+    </message>
 </context>
 <context>
     <name>CustomSourceDialog</name>
@@ -729,6 +733,92 @@
     <message>
         <source>Restart now</source>
         <translation>Riavvia ora</translation>
+    </message>
+</context>
+<context>
+    <name>LiveSettingsDialog</name>
+    <message>
+        <source>Own source</source>
+        <translation>Fonte personale</translation>
+    </message>
+    <message>
+        <source>Taken over from LIVE. The previous files of %1 were backed up first.</source>
+        <translation>Ripreso da LIVE. I file precedenti di %1 sono stati salvati prima.</translation>
+    </message>
+    <message>
+        <source>Close Star Citizen first; the game rewrites these files.</source>
+        <translation>Chiudi prima Star Citizen; il gioco riscrive questi file.</translation>
+    </message>
+    <message>
+        <source>LIVE and %1 each need their own game folder.</source>
+        <translation>LIVE e %1 hanno bisogno ciascuno di una propria cartella di gioco.</translation>
+    </message>
+    <message>
+        <source>Failed: %1</source>
+        <translation>Non riuscito: %1</translation>
+    </message>
+    <message>
+        <source>Take over settings from LIVE</source>
+        <translation>Riprendi le impostazioni da LIVE</translation>
+    </message>
+    <message>
+        <source>%1 can start with what you set up on LIVE. The current files of %1 are backed up first.</source>
+        <translation>%1 può partire con ciò che hai configurato su LIVE. I file attuali di %1 vengono salvati prima.</translation>
+    </message>
+    <message>
+        <source>Language: %1</source>
+        <translation>Lingua: %1</translation>
+    </message>
+    <message>
+        <source>Installed right away</source>
+        <translation>Installata subito</translation>
+    </message>
+    <message>
+        <source>%1 is currently not available for this channel</source>
+        <translation>%1 al momento non è disponibile per questo canale</translation>
+    </message>
+    <message>
+        <source>Own user.cfg lines</source>
+        <translation>Righe user.cfg personali</translation>
+    </message>
+    <message>
+        <source>Frame limits, graphics API and your own lines from the game settings. The language lines stay those of %1.</source>
+        <translation>Limiti di fotogrammi, API grafica e le tue righe dalle impostazioni di gioco. Le righe della lingua restano quelle di %1.</translation>
+    </message>
+    <message>
+        <source>LIVE has no own lines yet.</source>
+        <translation>LIVE non ha ancora righe personali.</translation>
+    </message>
+    <message>
+        <source>Keybindings and profile</source>
+        <translation>Comandi e profilo</translation>
+    </message>
+    <message>
+        <source>Keybindings, profile settings, exported control mappings and saved characters</source>
+        <translation>Comandi, impostazioni del profilo, mappature dei controlli esportate e personaggi salvati</translation>
+    </message>
+    <message>
+        <source>Taking over …</source>
+        <translation>Ripresa in corso …</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n keybinding and profile file(s) copied.</source>
+        <translation>
+            <numerusform>%n file di comandi e profilo copiato.</numerusform>
+            <numerusform>%n file di comandi e profilo copiati.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>No, thanks</source>
+        <translation>No, grazie</translation>
+    </message>
+    <message>
+        <source>Take over</source>
+        <translation>Riprendi</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Chiudi</translation>
     </message>
 </context>
 <context>

@@ -152,8 +152,9 @@ class GuiTest : public QObject
     // A failed test may leave a modal dialog open, which would swallow the clicks of the next test
     void cleanup ()
     {
-        for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog", "backupDialog",
-                                "gameSettingsDialog", "programsDialog", "setupAssistant", "statisticsDialog", "dashboardDialog", "systemInfoDialog"})
+        for(const char* name :
+            {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog", "backupDialog", "gameSettingsDialog",
+             "programsDialog", "setupAssistant", "statisticsDialog", "dashboardDialog", "systemInfoDialog", "liveSettingsDialog"})
         {
             auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
             if(!dialog || !dialog->property("visible").toBool()) continue;
@@ -654,6 +655,29 @@ class GuiTest : public QObject
         QTRY_VERIFY(!dialog->property("visible").toBool());
         panel->setProperty("open", false);
         QTRY_VERIFY(!panel->property("visible").toBool());
+    }
+
+    // LIVE has keybindings now (see the backup test), the PTU folder has nothing of its own
+    void offersLiveSettingsForANewTestChannel ()
+    {
+        bridge->setInstallPath("PTU", QUrl::fromLocalFile(ptuDir.path()));
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("liveSettingsDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        QCOMPARE(dialog->property("channelName").toString(), QString("PTU"));
+        QVERIFY(findText("Take over settings from LIVE"));
+        // The test catalogue has no German for PTU
+        QVERIFY(findText("Deutsch is currently not available for this channel"));
+        QVERIFY(findText("LIVE has no own lines yet."));
+        window->grabWindow();
+        QVERIFY(clickButton("Take over"));
+        QTRY_VERIFY(findText("Taken over from LIVE. The previous files of PTU were backed up first."));
+        QCOMPARE(bridge->state()["liveSettings"].toMap()["files"].toInt(), 1);
+        QVERIFY(QFile::exists(ptuDir.filePath("user/client/0/Profiles/default/actionmaps.xml")));
+        QVERIFY(!channel("PTU")["liveSettingsOffer"].toBool());
+        QCOMPARE(channel("PTU")["language"].toString(), QString("en"));
+        QVERIFY(clickButton("Close"));
+        QTRY_VERIFY(!dialog->property("visible").toBool());
     }
 
     void savesGameSettingsFromTheSettings ()

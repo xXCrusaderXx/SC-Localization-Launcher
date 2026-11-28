@@ -192,11 +192,14 @@ struct Channel
     std::string translationVersion;
     // translationVersion is older than gameVersion: texts new in this game version show up in English
     bool translationOutdated = false;
+    // A channel other than LIVE whose folder has no settings of its own yet: the window offers once to take over
+    // LIVE's, see CopyLiveSettings and DismissLiveSettings
+    bool liveSettingsOffer = false;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Channel, name, installPath, language, availableLanguages, status, notices, custom, gameSettings,
                                                 settingsChecked, ignoredSettings, settingsError, graphicsApiWaiting, gameVersion, translationVersion,
-                                                translationOutdated)
+                                                translationOutdated, liveSettingsOffer)
 
 // Updates of the launcher itself, from the GitHub releases of the project
 enum class SelfUpdateStatus
@@ -404,6 +407,19 @@ struct Backups
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Backups, busy, entries, result, resultChannel, comparison)
 
+// Of the last CopyLiveSettings
+struct LiveSettings
+{
+    bool busy = false;
+    std::string channel;
+    // "copied", or an error such as "Star Citizen is running" or "no game folder"
+    std::string result;
+    // Keybinding and profile files copied
+    int files = 0;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(LiveSettings, busy, channel, result, files)
+
 struct NamedCount
 {
     std::string name;
@@ -528,10 +544,11 @@ struct State
     Statistics statistics;
     // Tiles of the main window's dashboard, in order, see DASHBOARD_TILES
     std::vector<std::string> dashboardTiles;
+    LiveSettings liveSettings;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
                                                 handledCommands, whatsNew, caches, diagnostics, backups, programs, failedPrograms, interfaceLanguage,
-                                                setupNeeded, theme, statistics, dashboardTiles)
+                                                setupNeeded, theme, statistics, dashboardTiles, liveSettings)
 
 }  // namespace Protocol

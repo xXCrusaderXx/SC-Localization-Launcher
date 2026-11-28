@@ -23,9 +23,12 @@ struct ChannelSettings
     Protocol::GameSettings gameSettings;
     std::vector<std::string> managedKeys;
     int64_t settingsWritten = 0;
+    // The offer to take over LIVE's settings was answered for this folder
+    bool liveSettingsAnswered = false;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelSettings, installPath, language, installed, custom, gameSettings, managedKeys, settingsWritten)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelSettings, installPath, language, installed, custom, gameSettings, managedKeys, settingsWritten,
+                                                liveSettingsAnswered)
 
 struct SettingsFile
 {
