@@ -462,12 +462,60 @@
         <translation>Governor della CPU</translation>
     </message>
     <message>
+        <source>Translation source answers with an error</source>
+        <translation>La fonte della traduzione risponde con un errore</translation>
+    </message>
+    <message>
+        <source>Translation source reachable</source>
+        <translation>Fonte della traduzione raggiungibile</translation>
+    </message>
+    <message>
+        <source>Translation source not reachable</source>
+        <translation>Fonte della traduzione non raggiungibile</translation>
+    </message>
+    <message>
+        <source>Star Citizen Wiki API answers with an error</source>
+        <translation>La Star Citizen Wiki API risponde con un errore</translation>
+    </message>
+    <message>
+        <source>Star Citizen Wiki API reachable</source>
+        <translation>Star Citizen Wiki API raggiungibile</translation>
+    </message>
+    <message>
+        <source>Star Citizen Wiki API not reachable</source>
+        <translation>Star Citizen Wiki API non raggiungibile</translation>
+    </message>
+    <message>
+        <source>GitHub answers with an error</source>
+        <translation>GitHub risponde con un errore</translation>
+    </message>
+    <message>
+        <source>GitHub reachable</source>
+        <translation>GitHub raggiungibile</translation>
+    </message>
+    <message>
+        <source>GitHub not reachable</source>
+        <translation>GitHub non raggiungibile</translation>
+    </message>
+    <message>
+        <source>Second installation of this channel</source>
+        <translation>Seconda installazione di questo canale</translation>
+    </message>
+    <message>
+        <source>Game folder that no channel uses</source>
+        <translation>Cartella di gioco che nessun canale usa</translation>
+    </message>
+    <message>
         <source>To set it permanently, run in a terminal:</source>
         <translation>Per impostarlo in modo permanente, esegui in un terminale:</translation>
     </message>
     <message>
         <source>Set DefaultLimitNOFILE=524288 in /etc/systemd/system.conf and /etc/systemd/user.conf, then restart the computer.</source>
         <translation>Imposta DefaultLimitNOFILE=524288 in /etc/systemd/system.conf e /etc/systemd/user.conf, poi riavvia il computer.</translation>
+    </message>
+    <message>
+        <source>The launcher only uses the game folder set in the settings. If you no longer need this copy, delete it to free disk space.</source>
+        <translation>Il launcher usa solo la cartella di gioco indicata nelle impostazioni. Se questa copia non ti serve più, eliminala per liberare spazio su disco.</translation>
     </message>
     <message>
         <source>Check the installation</source>

@@ -33,15 +33,6 @@ class LanguageCatalogParser
     // Some server channel names differ from the installation folder names
     inline static const std::map<std::string, std::string> CHANNEL_ALIASES{{"TECH-PREV", "TECH-PREVIEW"}};
 
-    static std::string languagesUrl ()
-    {
-#ifdef SC_TESTING
-        // Test builds only: the tests serve languages.json from a local server
-        if(const char* url = std::getenv("SC_LANGUAGES_URL")) return url;
-#endif
-        return LANGUAGES_URL;
-    }
-
     static std::string normalizeChannelName (const std::string& name)
     {
         auto it = CHANNEL_ALIASES.find(name);
@@ -221,6 +212,15 @@ class LanguageCatalogParser
     }
 
    public:
+    static std::string languagesUrl ()
+    {
+#ifdef SC_TESTING
+        // Test builds only: the tests serve languages.json from a local server
+        if(const char* url = std::getenv("SC_LANGUAGES_URL")) return url;
+#endif
+        return LANGUAGES_URL;
+    }
+
     // Also used for the sources users enter themselves
     static bool isAllowedUrl (const std::string& url)
     {

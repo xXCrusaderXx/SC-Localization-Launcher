@@ -58,6 +58,22 @@ Popup {
             return ok ? qsTr("GameMode installed") : qsTr("GameMode not installed (optional)");
         case "cpuGovernor":
             return qsTr("CPU governor");
+        case "translationServer":
+            if (check.status === "warning")
+                return qsTr("Translation source answers with an error");
+            return ok ? qsTr("Translation source reachable") : qsTr("Translation source not reachable");
+        case "wikiApi":
+            if (check.status === "warning")
+                return qsTr("Star Citizen Wiki API answers with an error");
+            return ok ? qsTr("Star Citizen Wiki API reachable") : qsTr("Star Citizen Wiki API not reachable");
+        case "github":
+            if (check.status === "warning")
+                return qsTr("GitHub answers with an error");
+            return ok ? qsTr("GitHub reachable") : qsTr("GitHub not reachable");
+        case "duplicate":
+            return qsTr("Second installation of this channel");
+        case "unusedInstallation":
+            return qsTr("Game folder that no channel uses");
         default:
             return check.id;
         }
@@ -72,6 +88,8 @@ Popup {
             return qsTr("To set it permanently, run in a terminal:") + "\necho 'vm.max_map_count = 16777216' | sudo tee /etc/sysctl.d/99-starcitizen.conf && sudo sysctl --system";
         case "openFiles":
             return qsTr("Set DefaultLimitNOFILE=524288 in /etc/systemd/system.conf and /etc/systemd/user.conf, then restart the computer.");
+        case "duplicate":
+            return qsTr("The launcher only uses the game folder set in the settings. If you no longer need this copy, delete it to free disk space.");
         default:
             return "";
         }

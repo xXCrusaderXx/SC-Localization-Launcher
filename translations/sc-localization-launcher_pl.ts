@@ -462,12 +462,60 @@
         <translation>Regulator CPU (governor)</translation>
     </message>
     <message>
+        <source>Translation source answers with an error</source>
+        <translation>Źródło tłumaczenia odpowiada błędem</translation>
+    </message>
+    <message>
+        <source>Translation source reachable</source>
+        <translation>Źródło tłumaczenia osiągalne</translation>
+    </message>
+    <message>
+        <source>Translation source not reachable</source>
+        <translation>Źródło tłumaczenia nieosiągalne</translation>
+    </message>
+    <message>
+        <source>Star Citizen Wiki API answers with an error</source>
+        <translation>Star Citizen Wiki API odpowiada błędem</translation>
+    </message>
+    <message>
+        <source>Star Citizen Wiki API reachable</source>
+        <translation>Star Citizen Wiki API osiągalne</translation>
+    </message>
+    <message>
+        <source>Star Citizen Wiki API not reachable</source>
+        <translation>Star Citizen Wiki API nieosiągalne</translation>
+    </message>
+    <message>
+        <source>GitHub answers with an error</source>
+        <translation>GitHub odpowiada błędem</translation>
+    </message>
+    <message>
+        <source>GitHub reachable</source>
+        <translation>GitHub osiągalny</translation>
+    </message>
+    <message>
+        <source>GitHub not reachable</source>
+        <translation>GitHub nieosiągalny</translation>
+    </message>
+    <message>
+        <source>Second installation of this channel</source>
+        <translation>Druga instalacja tego kanału</translation>
+    </message>
+    <message>
+        <source>Game folder that no channel uses</source>
+        <translation>Folder gry, którego nie używa żaden kanał</translation>
+    </message>
+    <message>
         <source>To set it permanently, run in a terminal:</source>
         <translation>Aby ustawić to na stałe, uruchom w terminalu:</translation>
     </message>
     <message>
         <source>Set DefaultLimitNOFILE=524288 in /etc/systemd/system.conf and /etc/systemd/user.conf, then restart the computer.</source>
         <translation>Ustaw DefaultLimitNOFILE=524288 w /etc/systemd/system.conf i /etc/systemd/user.conf, a następnie uruchom komputer ponownie.</translation>
+    </message>
+    <message>
+        <source>The launcher only uses the game folder set in the settings. If you no longer need this copy, delete it to free disk space.</source>
+        <translation>Launcher używa tylko folderu gry ustawionego w ustawieniach. Jeśli ta kopia nie jest już potrzebna, usuń ją, aby zwolnić miejsce na dysku.</translation>
     </message>
     <message>
         <source>Check the installation</source>

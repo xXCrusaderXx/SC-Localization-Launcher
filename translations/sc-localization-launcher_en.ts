@@ -462,11 +462,59 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Translation source answers with an error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Translation source reachable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Translation source not reachable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Star Citizen Wiki API answers with an error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Star Citizen Wiki API reachable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Star Citizen Wiki API not reachable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GitHub answers with an error</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GitHub reachable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>GitHub not reachable</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Second installation of this channel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Game folder that no channel uses</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>To set it permanently, run in a terminal:</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
         <source>Set DefaultLimitNOFILE=524288 in /etc/systemd/system.conf and /etc/systemd/user.conf, then restart the computer.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The launcher only uses the game folder set in the settings. If you no longer need this copy, delete it to free disk space.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

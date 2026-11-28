@@ -105,6 +105,12 @@ The link in the message opens the log. The end of `sc-launch.log` (LUG Helper) u
 **Linux: the game crashes while loading, or stutters badly.**
 Settings → Help → *Check installation …* checks two system limits. With *Memory map limit (vm.max_map_count) too low*, Star Citizen crashes while loading; the dialog shows the command that raises it to 16777216 for good. With *Open-file limit too low*, Wine's esync and fsync do not work; the dialog says which systemd setting to change. The launcher only reports this and changes nothing on your system.
 
+**A translation does not download, or item values stay empty.**
+Settings → Help → *Check installation …* asks every translation source of your channels, the Star Citizen Wiki API and GitHub whether they answer, and shows how long it took. *Not reachable* means no connection (offline, DNS, firewall or proxy); *answers with an error* means the server is there but refuses the file, for example a source that has moved. If only the first source of a channel fails, the launcher uses the next one. The check only asks; it downloads nothing.
+
+**The game takes up twice the disk space, or the RSI Launcher updates a different folder.**
+*Check installation …* lists game folders with a `Data.p4k` that the launcher does not use: *Second installation of this channel* (e.g. `LIVE_old` next to `LIVE`, or a `LIVE` in another Wine prefix) and *Game folder that no channel uses*. The launcher only uses the folders set in the settings. Delete a copy you no longer need yourself; the launcher deletes nothing.
+
 **A setting from "Game settings" has no effect.**
 If the dialog lists it as ignored ("not whitelisted"), Star Citizen does not accept it from `user.cfg`. The graphics API only changes when the game is not running; the dialog says when it is still waiting.
 

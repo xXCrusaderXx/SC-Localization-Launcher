@@ -105,6 +105,12 @@ Der Link in der Meldung öffnet das Log. Das Ende von `sc-launch.log` (LUG Helpe
 **Linux: Das Spiel stürzt beim Laden ab oder ruckelt stark.**
 Einstellungen → Hilfe → *Installation prüfen …* prüft zwei Systemgrenzen. Bei *Speicherzuordnungs-Limit (vm.max_map_count) zu niedrig* stürzt Star Citizen beim Laden ab; der Dialog zeigt den Befehl, der es dauerhaft auf 16777216 setzt. Bei *Limit offener Dateien zu niedrig* funktionieren esync und fsync von Wine nicht; der Dialog nennt die systemd-Einstellung, die du ändern musst. Der Launcher meldet das nur und ändert nichts an deinem System.
 
+**Eine Übersetzung lädt nicht, oder die Item-Werte bleiben leer.**
+Einstellungen → Hilfe → *Installation prüfen …* fragt jede Übersetzungsquelle deiner Spielversionen, die Star Citizen Wiki API und GitHub, ob sie antworten, und zeigt, wie lange das gedauert hat. *Nicht erreichbar* heißt: keine Verbindung (offline, DNS, Firewall oder Proxy); *antwortet mit einem Fehler* heißt: Der Server ist da, gibt die Datei aber nicht heraus, z. B. weil eine Quelle umgezogen ist. Fällt nur die erste Quelle einer Spielversion aus, nimmt der Launcher die nächste. Die Prüfung fragt nur an und lädt nichts herunter.
+
+**Das Spiel belegt doppelt so viel Platz, oder der RSI Launcher aktualisiert einen anderen Ordner.**
+*Installation prüfen …* listet Spielordner mit einer `Data.p4k`, die der Launcher nicht nutzt: *Zweite Installation dieser Spielversion* (z. B. `LIVE_old` neben `LIVE` oder ein `LIVE` in einem anderen Wine-Prefix) und *Spielordner, den keine Spielversion nutzt*. Der Launcher nutzt nur die Ordner aus den Einstellungen. Eine Kopie, die du nicht mehr brauchst, löschst du selbst; der Launcher löscht nichts.
+
 **Eine Spieleinstellung wirkt nicht.**
 Steht sie im Dialog als ignoriert („not whitelisted“), nimmt Star Citizen sie aus der `user.cfg` nicht an. Die Grafik-API ändert sich nur, wenn das Spiel nicht läuft; der Dialog sagt, wenn sie noch wartet.
 

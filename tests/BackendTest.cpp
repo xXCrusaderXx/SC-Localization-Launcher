@@ -2233,6 +2233,103 @@ class BackendTest : public QObject
         QCOMPARE(readFile(gamePath / "user.cfg"), std::string("r_DisplayInfo = 2\n"));
     }
 
+    void diagnosticsAskTheServersWithoutDownloading ()
+    {
+        QTemporaryDir game;
+        QVERIFY(installGerman(game));
+        int downloads = server.requestCount("GET /de.ini 200");
+        int asked = server.requestCount("HEAD /de.ini 200");
+        auto result = runDiagnostics(false);
+
+        QStringList servers;
+        for(const auto& check : result.checks)
+            if(check.id == "translationServer" || check.id == "wikiApi" || check.id == "github")
+                servers << QString::fromStdString(check.channel + " " + check.id + " " + nlohmann::json(check.status).get<std::string>());
+        // The German LIVE source lists a missing file first, the test server has no Wiki API page for one item
+        QCOMPARE(servers, QStringList({" wikiApi warning", " github ok", "LIVE translationServer warning", "LIVE translationServer ok"}));
+        QCOMPARE(server.requestCount("HEAD /de.ini 200"), asked + 1);
+        QCOMPARE(server.requestCount("GET /de.ini 200"), downloads);
+    }
+
+    void checksWhetherTheServersAnswer ()
+    {
+        std::map<std::string, Diagnostics::Probe> answers{
+            {"https://primary.example/live/global.ini", {200, 85, ""}},
+            {"https://fallback.example/live/global.ini", {404, 40, ""}},
+            {"https://api.star-citizen.wiki/api/v2/items?page%5Bsize%5D=1", {0, 0, "Timeout was reached"}},
+            {"https://github.com/owner/repo/releases/latest/download/languages.json", {302, 130, ""}}};
+        std::mutex asked;
+        std::map<std::string, int> requests;
+        auto probe = [&] (const std::string& url)
+        {
+            std::lock_guard lock(asked);
+            ++requests[url];
+            return answers.at(url);
+        };
+        std::vector<Diagnostics::Input::Server> servers{{"wikiApi", "", "https://api.star-citizen.wiki/api/v2/items?page%5Bsize%5D=1"},
+                                                        {"github", "", "https://github.com/owner/repo/releases/latest/download/languages.json"},
+                                                        {"translationServer", "LIVE", "https://primary.example/live/global.ini"},
+                                                        {"translationServer", "LIVE", "https://fallback.example/live/global.ini"},
+                                                        {"translationServer", "HOTFIX", "https://primary.example/live/global.ini"}};
+
+        QStringList found;
+        for(const auto& check : Diagnostics::serverChecks(servers, probe))
+            found << QString::fromStdString(check.channel + "|" + check.id + "|" + nlohmann::json(check.status).get<std::string>() + "|" +
+                                            check.detail);
+        QCOMPARE(found, QStringList({"|wikiApi|error|api.star-citizen.wiki · Timeout was reached", "|github|ok|github.com · 130 ms",
+                                     "LIVE|translationServer|ok|https://primary.example/live/global.ini · 85 ms",
+                                     "LIVE|translationServer|warning|https://fallback.example/live/global.ini · HTTP 404 · 40 ms",
+                                     "HOTFIX|translationServer|ok|https://primary.example/live/global.ini · 85 ms"}));
+        // Two channels with the same source: it is asked once
+        QCOMPARE(requests.at("https://primary.example/live/global.ini"), 1);
+    }
+
+    void refusesToAskAServerWithoutHttps ()
+    {
+        auto answer = Diagnostics::headRequest("http://example.com/global.ini");
+        QCOMPARE(answer.status, 0L);
+        QCOMPARE(answer.error, std::string("not an HTTPS address"));
+    }
+
+    void findsSecondAndUnusedInstallations ()
+    {
+        QTemporaryDir dir;
+        std::filesystem::path root = dir.path().toStdString();
+        auto game = [&root] (const std::string& folder)
+        {
+            std::filesystem::create_directories(root / folder);
+            std::ofstream(root / folder / "Data.p4k") << "game data";
+        };
+        game("prefix/StarCitizen/LIVE");
+        game("prefix/StarCitizen/PTU");
+        game("prefix/StarCitizen/LIVE_old");
+        game("prefix/StarCitizen/live (2)");
+        game("prefix/StarCitizen/EPTU");
+        game("prefix/StarCitizen/Backup");
+        game("prefix/StarCitizen/LIVEFOO");
+        // No Data.p4k: an empty or half-deleted folder is no installation
+        std::filesystem::create_directories(root / "prefix/StarCitizen/PTU-copy/Bin64");
+        game("old-prefix/StarCitizen/LIVE");
+        // Another way to the folder the launcher uses
+        std::filesystem::create_directories(root / "link");
+        std::filesystem::create_directory_symlink(root / "prefix/StarCitizen/PTU", root / "link/PTU");
+
+        std::vector<Diagnostics::Input::Channel> channels{{"LIVE", root / "prefix/StarCitizen/LIVE", "", "installed"},
+                                                          {"PTU", root / "prefix/StarCitizen/PTU", "", "installed"}};
+        std::vector<std::filesystem::path> libraries{root / "prefix/StarCitizen", root / "old-prefix/StarCitizen", root / "link",
+                                                     root / "prefix/StarCitizen", root / "does-not-exist"};
+        QStringList found;
+        for(const auto& check : Diagnostics::installationChecks(channels, libraries))
+        {
+            auto relative = std::filesystem::path(check.detail).lexically_relative(root).generic_string();
+            found << QString::fromStdString(check.channel + "|" + check.id + "|" + nlohmann::json(check.status).get<std::string>() + "|" + relative);
+        }
+        QCOMPARE(found, QStringList({"|unusedInstallation|info|prefix/StarCitizen/Backup", "|unusedInstallation|info|prefix/StarCitizen/EPTU",
+                                     "|unusedInstallation|info|prefix/StarCitizen/LIVEFOO", "LIVE|duplicate|warning|prefix/StarCitizen/LIVE_old",
+                                     "LIVE|duplicate|warning|prefix/StarCitizen/live (2)", "LIVE|duplicate|warning|old-prefix/StarCitizen/LIVE"}));
+        QVERIFY(std::filesystem::exists(root / "prefix/StarCitizen/LIVE_old/Data.p4k"));
+    }
+
     void checksTheLinuxSystemLimits_data ()
     {
         QTest::addColumn<QByteArray>("mapCount");

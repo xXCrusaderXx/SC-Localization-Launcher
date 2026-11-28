@@ -1,5 +1,6 @@
 #pragma once
 
+#include <curl/curl.h>
 #include <QStandardPaths>
 #include <QSysInfo>
 #include <algorithm>
@@ -9,14 +10,19 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <functional>
+#include <future>
 #include <iomanip>
 #include <map>
 #include <nlohmann/json.hpp>
 #include <optional>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include "backend/DirectoryFinder.hpp"
+#include "backend/jsonParser/LanguageCatalogParser.hpp"
 #include "backend/managers/UpdateManager.hpp"
 #include "backend/utils/ZipWriter.hpp"
 #include "backend/utils/paths.hpp"
@@ -57,7 +63,28 @@ class Diagnostics
         std::vector<Channel> channels;
         // settings.json as the launcher would write it
         std::string settings;
+
+        // An address the launcher downloads from, asked whether it answers
+        struct Server
+        {
+            // translationServer (with channel), wikiApi, github
+            std::string id;
+            std::string channel;
+            std::string url;
+        };
+
+        std::vector<Server> servers;
     };
+
+    // The answer to one HEAD request; status 0: no answer, error says why
+    struct Probe
+    {
+        long status = 0;
+        long milliseconds = 0;
+        std::string error;
+    };
+
+    using Prober = std::function<Probe(const std::string& url)>;
 
    private:
     LoggerFramework::LogEx lg;
@@ -121,6 +148,26 @@ class Diagnostics
         return {std::move(id), std::move(channel), status, anonymize(detail)};
     }
 
+    static std::string hostOf (const std::string& url)
+    {
+        size_t start = url.find("://");
+        start = start == std::string::npos ? 0 : start + 3;
+        return url.substr(start, url.find_first_of("/?#", start) - start);
+    }
+
+    // "LIVE", "live_old", "LIVE (2)" -> LIVE; empty if the name starts with no channel name
+    static std::string channelOf (const std::string& folderName)
+    {
+        std::string name = folderName;
+        std::transform(name.begin(), name.end(), name.begin(), [] (unsigned char c) { return static_cast<char>(std::toupper(c)); });
+        auto channels = Protocol::CHANNEL_NAMES;
+        std::sort(channels.begin(), channels.end(), [] (const auto& a, const auto& b) { return a.size() > b.size(); });
+        for(const auto& channel : channels)
+            if(name.starts_with(channel) && (name.size() == channel.size() || !std::isalpha(static_cast<unsigned char>(name[channel.size()]))))
+                return channel;
+        return "";
+    }
+
    public:
     // Linux settings that often break Star Citizen, read below `root` ("/" outside tests). They only report: the launcher
     // changes nothing on the system. openFiles is the hard limit of open files, which Wine's esync and fsync raise the soft one to.
@@ -153,6 +200,120 @@ class Diagnostics
             checks.push_back({"cpuGovernor", "", Status::Info, governor});
         return checks;
     }
+
+    // HEAD only, so nothing is downloaded. The timeouts are short: the dialog waits for the slowest server.
+    static Probe headRequest (const std::string& url)
+    {
+        Probe probe;
+        if(!LanguageCatalogParser::isAllowedUrl(url))
+        {
+            probe.error = "not an HTTPS address";
+            return probe;
+        }
+        CURL* curl = curl_easy_init();
+        Platform::useSystemCertificates(curl);
+        if(!curl)
+        {
+            probe.error = "curl not available";
+            return probe;
+        }
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_NOBODY, 1L);
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "SC-Localization-Launcher (https://github.com/xXCrusaderXx/SC-Localization-Launcher)");
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+#if LIBCURL_VERSION_NUM >= 0x075500
+        curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS_STR, "https");
+#else
+        curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS, CURLPROTO_HTTPS);
+#endif
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 5L);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+
+        CURLcode code = curl_easy_perform(curl);
+        curl_off_t microseconds = 0;
+        curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME_T, &microseconds);
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &probe.status);
+        curl_easy_cleanup(curl);
+        probe.milliseconds = static_cast<long>(microseconds / 1000);
+        if(code != CURLE_OK)
+        {
+            probe.status = 0;
+            probe.error = curl_easy_strerror(code);
+        }
+        return probe;
+    }
+
+    // Whether the servers answer, and how long it took. All are asked at once, each address once.
+    // Translation sources show their whole address (primary and fallback often share a host), the others their host.
+    static std::vector<Check> serverChecks (const std::vector<Input::Server>& servers, const Prober& probe)
+    {
+        std::map<std::string, std::shared_future<Probe>> answers;
+        for(const auto& server : servers)
+            if(!answers.contains(server.url)) answers[server.url] = std::async(std::launch::async, probe, server.url).share();
+
+        std::vector<Check> checks;
+        for(const auto& server : servers)
+        {
+            const Probe& answer = answers.at(server.url).get();
+            std::string detail = server.channel.empty() ? hostOf(server.url) : server.url;
+            Status status = answer.status == 0 ? Status::Error : answer.status < 400 ? Status::Ok : Status::Warning;
+            if(status == Status::Error)
+                detail += " · " + answer.error;
+            else
+            {
+                if(status == Status::Warning) detail += " · HTTP " + std::to_string(answer.status);
+                detail += " · " + std::to_string(answer.milliseconds) + " ms";
+            }
+            checks.push_back({server.id, server.channel, status, detail});
+        }
+        return checks;
+    }
+
+    // Game folders (those with a Data.p4k) in `libraries` that no channel uses: a second installation of a channel the
+    // launcher uses ("duplicate", a warning under that channel), or one it does not use at all ("unusedInstallation").
+    // Only lists folders; the size of Data.p4k is not even read.
+    static std::vector<Check> installationChecks (const std::vector<Input::Channel>& channels, const std::vector<std::filesystem::path>& libraries)
+    {
+        auto used = [&channels] (const std::filesystem::path& folder)
+        {
+            return std::any_of(channels.begin(), channels.end(),
+                               [&folder] (const auto& channel)
+                               {
+                                   std::error_code ec;
+                                   return std::filesystem::equivalent(folder, channel.installPath, ec);
+                               });
+        };
+
+        std::vector<Check> checks;
+        std::set<std::filesystem::path> seen;
+        for(const auto& library : libraries)
+        {
+            std::vector<std::filesystem::path> folders;
+            std::error_code ec;
+            for(std::filesystem::directory_iterator it(library, std::filesystem::directory_options::skip_permission_denied, ec), end;
+                !ec && it != end; it.increment(ec))
+                folders.push_back(it->path());
+            std::sort(folders.begin(), folders.end());
+
+            for(const auto& folder : folders)
+            {
+                if(!std::filesystem::is_directory(folder, ec) || !std::filesystem::is_regular_file(folder / "Data.p4k", ec)) continue;
+                auto canonical = std::filesystem::weakly_canonical(folder, ec);
+                if(!seen.insert(ec ? folder : canonical).second || used(folder)) continue;
+
+                std::string channel = channelOf(folder.filename().string());
+                bool known = !channel.empty() && std::any_of(channels.begin(), channels.end(), [&] (const auto& c) { return c.name == channel; });
+                if(known)
+                    checks.push_back({"duplicate", channel, Status::Warning, folder.string()});
+                else
+                    checks.push_back({"unusedInstallation", "", Status::Info, folder.string()});
+            }
+        }
+        return checks;
+    }
+
+    // Asks the servers; the tests replace it, so they need no network
+    Prober probe = headRequest;
 
     Diagnostics ()
         : lg("Diagnostics")
@@ -241,12 +402,36 @@ class Diagnostics
         for(auto& system : systemChecks("/", openFiles, gameMode)) checks.push_back(std::move(system));
 #endif
 
+        std::vector<Check> servers = serverChecks(input.servers, probe);
+        for(const auto& server : servers)
+            if(server.channel.empty()) checks.push_back(server);
+
+        // Next to every channel, next to the RSI Launcher and at the places the installation search looks first
+        std::vector<std::filesystem::path> libraries;
+        for(const auto& channel : input.channels) libraries.push_back(channel.installPath.parent_path());
+        if(!input.rsiLauncherPath.empty()) libraries.push_back(input.rsiLauncherPath.parent_path() / "StarCitizen");
+        for(auto& library : DirectoryFinder::knownLibraries()) libraries.push_back(std::move(library));
+        std::vector<Check> installations = installationChecks(input.channels, libraries);
+        for(const auto& installation : installations)
+            if(installation.channel.empty()) checks.push_back(check(installation.id, installation.status, installation.detail));
+
+        // Also for a missing folder: the game may sit in one of the others
+        auto serversAndCopies = [&] (const Input::Channel& channel)
+        {
+            for(const auto& server : servers)
+                if(server.channel == channel.name) checks.push_back(server);
+            for(const auto& installation : installations)
+                if(installation.channel == channel.name)
+                    checks.push_back(check(installation.id, installation.status, installation.detail, channel.name));
+        };
+
         for(const auto& channel : input.channels)
         {
             const auto& path = channel.installPath;
             if(!std::filesystem::is_directory(path, ec))
             {
                 checks.push_back(check("folder", Status::Error, path.string(), channel.name));
+                serversAndCopies(channel);
                 continue;
             }
             checks.push_back(check("folder", Status::Ok, path.string(), channel.name));
@@ -270,6 +455,7 @@ class Diagnostics
             if(!ec)
                 checks.push_back(
                     check("diskSpace", space.available < LOW_SPACE ? Status::Warning : Status::Ok, gigabytes(space.available), channel.name));
+            serversAndCopies(channel);
         }
         return checks;
     }

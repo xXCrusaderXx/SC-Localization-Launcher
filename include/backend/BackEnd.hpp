@@ -26,6 +26,7 @@
 #include "managers/ProfileBackup.hpp"
 #include "managers/SelfUpdateManager.hpp"
 #include "managers/UpdateManager.hpp"
+#include "managers/WikiApiClient.hpp"
 #include "protocol/Commands.hpp"
 #include "protocol/State.hpp"
 
@@ -1040,9 +1041,14 @@ class BackEnd
             {
                 auto language = languageFor(name, channel.language);
                 folder = language ? language->folder : channel.installed.folder;
+                if(language && language->urls.contains(name))
+                    for(const auto& url : language->urls.at(name)) input.servers.push_back({"translationServer", name, url});
             }
             input.channels.push_back({name, channel.installPath, folder, nlohmann::json(channelStatus(name, channel)).get<std::string>()});
         }
+        // The hosts the launcher downloads from besides the translations: item values and its own releases
+        input.servers.push_back({"wikiApi", "", WikiApiClient::probeUrl()});
+        input.servers.push_back({"github", "", LanguageCatalogParser::languagesUrl()});
         input.settings = nlohmann::json(settingsFile()).dump(2) + "\n";
         return input;
     }
