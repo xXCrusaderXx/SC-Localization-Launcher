@@ -23,9 +23,11 @@ struct ChannelSettings
     Protocol::GameSettings gameSettings;
     std::vector<std::string> managedKeys;
     int64_t settingsWritten = 0;
+    std::string textOverrides;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelSettings, installPath, language, installed, custom, gameSettings, managedKeys, settingsWritten)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelSettings, installPath, language, installed, custom, gameSettings, managedKeys, settingsWritten,
+                                                textOverrides)
 
 struct SettingsFile
 {

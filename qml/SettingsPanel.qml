@@ -18,6 +18,7 @@ Item {
     signal diagnosticsRequested
     signal backupsRequested
     signal gameSettingsRequested
+    signal textOverridesRequested
     signal programsRequested
     signal setupRequested
     signal statisticsRequested
@@ -444,6 +445,27 @@ Item {
                                 }
                             }
                         }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 24
+                    Layout.rightMargin: 24
+                    spacing: 12
+
+                    Text {
+                        Layout.fillWidth: true
+                        text: qsTr("Your own texts for single entries of the translation per channel, written again after every update")
+                        wrapMode: Text.Wrap
+                        color: Theme.muted
+                        font.pixelSize: 11
+                    }
+
+                    DialogButton {
+                        text: qsTr("Own texts …")
+                        enabled: !panel.locked
+                        onClicked: panel.textOverridesRequested()
                     }
                 }
 

@@ -61,6 +61,14 @@ The **dashboard** below the rows shows tiles such as play time, last played, fav
 - *Add size, class and grade to item names*, e.g. "Holdstrong (S4 Military A)". Armour gets its weight class, e.g. "ADP Core (Heavy)", and mining lasers their size.
 - *Add item values to descriptions*, e.g. "HP 100,000 · Regen 19,000/s" for shields. Armour and mining items keep their descriptions, which list their values in the game already.
 
+**Own texts** (Settings → Translations → *Own texts …*) replace single texts of a channel's translation with your own, e.g. a shorter name or a personal fix:
+
+- One `key=value` per line, with the key as in `global.ini` (upper and lower case do not matter); lines starting with `;` are comments. A line that is no `key=value` or repeats a key is refused, and nothing is saved.
+- *Save* writes them into the installed translation right away; if none is installed yet, or Star Citizen runs, they follow with the next update. After every translation update they are written again, after the item values, so your texts win.
+- A key the translation does not have is added at the end of the file. The dialog lists those keys, so a typo shows.
+- A line you remove gets the translation's own text back: the launcher downloads the file again and writes only the texts that are left.
+- Your texts stay on your computer. The report of *Check installation …* leaves them out.
+
 **The launcher's own language** is set under Settings → Behaviour → *Language of the launcher*: *Automatic (system language)* or one of English, Deutsch, Español, Français, Italiano, Nederlands, Polski, Português. *Appearance* chooses a dark or light theme, or follows the system. *Streamer mode* hides your user name and home folder in the paths the launcher shows, while you stream or record.
 
 ## Updates
@@ -107,6 +115,9 @@ Settings → Help → *Check installation …* checks two system limits. With *M
 
 **A setting from "Game settings" has no effect.**
 If the dialog lists it as ignored ("not whitelisted"), Star Citizen does not accept it from `user.cfg`. The graphics API only changes when the game is not running; the dialog says when it is still waiting.
+
+**An own text does not show in the game.**
+If *Own texts …* lists its key as added at the end, the translation has no such key; check the spelling against `global.ini`. Star Citizen reads the texts at its start, so restart it after saving.
 
 **Starting the launcher only brings an open window to the front.**
 Only one launcher runs at a time. If it is in the tray, a second start opens that one. To start a different version, quit the running one first: tray → *Quit*.

@@ -71,9 +71,13 @@ struct InstalledTranslation
     std::string folder;
     // Signature of the Wiki item values added to it (ItemValues::Plan), empty for none
     std::string itemValues;
+    // Signature of the player's own texts written into it (TextOverrides::signature), empty for none
+    std::string textOverrides;
+    // Keys of those texts the translation does not have; they were added at the end of the file
+    std::vector<std::string> appendedOverrides;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(InstalledTranslation, language, etag, fileHash, folder, itemValues)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(InstalledTranslation, language, etag, fileHash, folder, itemValues, textOverrides, appendedOverrides)
 
 struct ChannelData
 {
@@ -98,6 +102,10 @@ struct ChannelData
     std::vector<std::string> ignoredSettings;
     std::string settingsError;
     bool graphicsApiWaiting = false;
+    // The player's own "key=value" lines for global.ini, as entered, see TextOverrides
+    std::string textOverrides;
+    // Why the last SetTextOverrides was refused
+    std::string overridesError;
 };
 
 // What SelfUpdateManager::install() needs from a release; filled by its check() when a matching signed package exists

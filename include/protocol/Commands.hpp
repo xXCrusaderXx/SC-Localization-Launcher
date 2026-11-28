@@ -163,6 +163,15 @@ struct SetGameSettings
     GameSettings settings;
 };
 
+// The player's own "key=value" lines for the channel's global.ini; empty removes them. Written into the installed
+// translation right away when it is installed and nothing runs, otherwise with the next update.
+struct SetTextOverrides
+{
+    static constexpr const char* name = "setTextOverrides";
+    std::string channel;
+    std::string lines;
+};
+
 // Replaces the programs started with the game; entries without a command are dropped
 struct SetPrograms
 {
@@ -238,6 +247,8 @@ inline void to_json (nlohmann::json& j, const LoadBackups&) { j = nlohmann::json
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CreateBackup, channel)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RestoreBackup, channel, backup)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetGameSettings, channel, settings)
+// The player's texts stay out of the log
+inline void to_json (nlohmann::json& j, const SetTextOverrides& c) { j = {{"channel", c.channel}, {"bytes", c.lines.size()}}; }
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetPrograms, programs)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetInterfaceLanguage, language)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetTheme, theme)
@@ -246,7 +257,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(SetDashboardTiles, tiles)
 using Command = std::variant<SetLanguage, SetInstallPath, SetRsiLauncherPath, SetOption, StartUpdate, StartGame, AutoSearch, CheckForUpdate,
                              InstallUpdate, RepairChannel, SetCustomSource, StartBackgroundChecks, LoadWhatsNew, DismissWhatsNew, ScanCaches,
                              ClearCaches, RunDiagnostics, SaveReport, LoadBackups, CreateBackup, RestoreBackup, SetGameSettings, SetPrograms,
-                             SetInterfaceLanguage, FinishSetup, SetTheme, LoadStatistics, SaveStatisticsReport, SetDashboardTiles>;
+                             SetInterfaceLanguage, FinishSetup, SetTheme, LoadStatistics, SaveStatisticsReport, SetDashboardTiles, SetTextOverrides>;
 
 // For the log, e.g. setLanguage {"channel":"LIVE","language":"de"}
 inline std::string toString (const Command& command)

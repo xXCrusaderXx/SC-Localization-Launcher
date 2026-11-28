@@ -2284,6 +2284,8 @@ class BackendTest : public QObject
     {
         QTemporaryDir game;
         QVERIFY(installGerman(game));
+        // The player's own texts stay on the computer
+        QCOMPARE(setTextOverrides("test_key=Private text").overridesError, std::string());
         auto result = runDiagnostics(true);
         QVERIFY2(!result.reportPath.empty(), result.error.c_str());
         std::string zip = readFile(result.reportPath);
@@ -2291,6 +2293,7 @@ class BackendTest : public QObject
         for(const char* name : {"report.txt", "checks.json", "settings.json", "logs/"}) QVERIFY2(zip.find(name) != std::string::npos, name);
         // The test home holds the game folder and the logs; none of it may show its real path
         QVERIFY(zip.find(PATHS::getUserRootPath().string()) == std::string::npos);
+        QVERIFY(zip.find("Private text") == std::string::npos);
         // Same check as unzip -t, where Python is there to do it
         if(QFile::exists("/usr/bin/python3"))
             QCOMPARE(QProcess::execute("/usr/bin/python3", {"-c", "import sys, zipfile; sys.exit(zipfile.ZipFile(sys.argv[1]).testzip() is not None)",
@@ -3087,6 +3090,136 @@ class BackendTest : public QObject
         // Still shown as outdated, so the next update tries again
         QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::UpdateAvailable);
         QVERIFY(readFile(std::filesystem::path(game.path().toStdString()) / "user.cfg").find("g_language = german_(germany)") != std::string::npos);
+    }
+
+    // Sets the own texts of LIVE and waits for the update they start, if any
+    Protocol::Channel setTextOverrides (const std::string& lines)
+    {
+        backEnd->execute(Protocol::SetTextOverrides{"LIVE", lines});
+        waitForPreviousCommands();
+        auto done = waitForState([] (const auto& s) { return s.update != UpdateStatus::Running; }, published() - 1);
+        std::lock_guard lock(mutex);
+        return channel(done ? states[*done] : states.back(), "LIVE");
+    }
+
+    void writesOwnTextsAfterTheItemValues ()
+    {
+        serveItemData();
+        QTemporaryDir game;
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetOption{"itemNameDetails", true});
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", game.path().toStdString()});
+        QVERIFY(setLanguage("LIVE", "de"));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+
+        // Saved while the translation is installed: written right away, over the item values, keys without case
+        auto live = setTextOverrides("; mine\n\nITEM_NAMESHLD_TEST = Schild  \n  other=Mein Text\nnew_Key=Neu=1\n");
+        QCOMPARE(live.overridesError, std::string());
+        QCOMPARE(installedItemFile(game), std::string("\xEF\xBB\xBFitem_NameSHLD_Test=Schild\r\nitem_DescSHLD_Test=Ein Schild\r\n"
+                                                      "item_NameGun_Test=Kanone (S3)\r\nother=Mein Text\r\nnew_Key=Neu=1\r\n"));
+        QCOMPARE(live.status, ChannelStatus::Installed);
+        QVERIFY(!live.overridesPending);
+        QCOMPARE(live.appendedOverrides, Codes{"new_Key"});
+
+        // Kept through a restart; the integrity check knows the file with the texts
+        QVERIFY(restart());
+        QVERIFY(waitForState([] (const auto& s) { return !s.checking; }));
+        live = channel(latest(), "LIVE");
+        QCOMPARE(live.status, ChannelStatus::Installed);
+        QCOMPARE(live.textOverrides, std::string("; mine\n\nITEM_NAMESHLD_TEST = Schild  \n  other=Mein Text\nnew_Key=Neu=1\n"));
+        QCOMPARE(live.appendedOverrides, Codes{"new_Key"});
+
+        // A removed text gets the translation's own one back
+        live = setTextOverrides("other=Mein Text");
+        QCOMPARE(installedItemFile(game), std::string("\xEF\xBB\xBFitem_NameSHLD_Test=Holdstrong (S4 Militär A)\r\nitem_DescSHLD_Test=Ein Schild\r\n"
+                                                      "item_NameGun_Test=Kanone (S3)\r\nother=Mein Text\r\n"));
+        QVERIFY(live.appendedOverrides.empty());
+        setTextOverrides("");
+        QCOMPARE(installedItemFile(game), std::string("\xEF\xBB\xBFitem_NameSHLD_Test=Holdstrong (S4 Militär A)\r\nitem_DescSHLD_Test=Ein Schild\r\n"
+                                                      "item_NameGun_Test=Kanone (S3)\r\nother=Text\r\n"));
+        QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::Installed);
+    }
+
+    void ownTextsFollowWithTheNextUpdate ()
+    {
+        // Settings of a version without own texts
+        QTemporaryDir game;
+        writeSettingsFile({{"channels", {{"LIVE", {{"installPath", game.path().toStdString()}, {"language", "de"}}}}}});
+        QVERIFY(start());
+        QVERIFY(waitForState([] (const auto& s) { return !s.checking; }));
+        auto live = channel(latest(), "LIVE");
+        QCOMPARE(live.textOverrides, std::string());
+        QVERIFY(!live.overridesPending);
+
+        // Not installed yet: nothing is downloaded for them, the update brings them along
+        live = setTextOverrides("test_key=Eigener Text");
+        QCOMPARE(live.status, ChannelStatus::NotInstalled);
+        QVERIFY(live.overridesPending);
+        QCOMPARE(readSettingsFile()["channels"]["LIVE"]["textOverrides"].get<std::string>(), std::string("test_key=Eigener Text"));
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        auto file = std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini";
+        QCOMPARE(readFile(file), std::string("test_key=Eigener Text\n"));
+        QVERIFY(!channel(latest(), "LIVE").overridesPending);
+
+        // A repair downloads the file again and writes them again
+        std::ofstream(file) << "test_key=Vom Spiel ersetzt\n";
+        QVERIFY(restart());
+        QVERIFY(waitForState([] (const auto& s) { return !s.checking; }));
+        QCOMPARE(channel(latest(), "LIVE").status, ChannelStatus::Damaged);
+        QCOMPARE(runUpdate(), UpdateStatus::Succeeded);
+        QCOMPARE(readFile(file), std::string("test_key=Eigener Text\n"));
+    }
+
+    void refusesInvalidOwnTexts ()
+    {
+        QTemporaryDir game;
+        QVERIFY(installGerman(game));
+        QCOMPARE(setTextOverrides("test_key=Mein Text").overridesError, std::string());
+        auto file = std::filesystem::path(game.path().toStdString()) / "data/Localization/german_(germany)/global.ini";
+
+        // Refused as a whole: the file and the stored texts stay
+        for(const char* lines : {"just some text", "=no key", "two words=x", "a=1\nA=2"})
+        {
+            auto live = setTextOverrides(lines);
+            QCOMPARE(live.overridesError, std::string(lines).substr(std::string(lines).rfind('\n') + 1));
+            QCOMPARE(live.textOverrides, std::string("test_key=Mein Text"));
+        }
+        QCOMPARE(setTextOverrides(std::string(TextOverrides::MAX_SIZE + 1, ';')).overridesError, std::string("too long"));
+        QCOMPARE(readFile(file), std::string("test_key=Mein Text\n"));
+        // Only a comment: nothing of the player's is left in the file
+        QCOMPARE(setTextOverrides(std::string(TextOverrides::MAX_SIZE, ';')).overridesError, std::string());
+        QCOMPARE(readFile(file), TRANSLATION.toStdString());
+    }
+
+    void writesOwnTextsInTheFormatOfTheFile_data ()
+    {
+        QTest::addColumn<QByteArray>("before");
+        QTest::addColumn<QByteArray>("after");
+        QTest::addColumn<QStringList>("appended");
+        QTest::newRow("no ending at the end") << QByteArray("a=1\nb=2") << QByteArray("a=Eins\nb=2\nc=Neu\n") << QStringList{"c"};
+        QTest::newRow("CRLF without ending") << QByteArray("a=1\r\nb=2") << QByteArray("a=Eins\r\nb=2\r\nc=Neu\r\n") << QStringList{"c"};
+        const QByteArray bom("\xEF\xBB\xBF");
+        QTest::newRow("byte order mark") << bom + "a=1\n" << bom + "a=Eins\nc=Neu\n" << QStringList{"c"};
+        QTest::newRow("empty") << QByteArray() << QByteArray("a=Eins\nc=Neu\n") << QStringList{"a", "c"};
+    }
+
+    void writesOwnTextsInTheFormatOfTheFile ()
+    {
+        QFETCH(QByteArray, before);
+        QFETCH(QByteArray, after);
+        QFETCH(QStringList, appended);
+        QTemporaryDir dir;
+        auto file = std::filesystem::path(dir.path().toStdString()) / "global.ini";
+        std::ofstream(file, std::ios::binary) << before.toStdString();
+        std::string error;
+        auto overrides = TextOverrides::parse("a=Eins\nc=Neu", error);
+        QVERIFY(overrides);
+        auto keys = TextOverrides::apply(file, *overrides);
+        QVERIFY(keys);
+        QStringList appendedKeys;
+        for(const auto& key : *keys) appendedKeys << QString::fromStdString(key);
+        QCOMPARE(appendedKeys, appended);
+        QCOMPARE(QByteArray::fromStdString(readFile(file)), after);
     }
 };
 

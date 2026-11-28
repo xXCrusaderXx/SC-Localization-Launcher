@@ -1037,6 +1037,14 @@
         <translation>Mostrar los nombres</translation>
     </message>
     <message>
+        <source>Your own texts for single entries of the translation per channel, written again after every update</source>
+        <translation>Tus propios textos para entradas sueltas de la traducción por canal, escritos de nuevo tras cada actualización</translation>
+    </message>
+    <message>
+        <source>Own texts …</source>
+        <translation>Textos propios …</translation>
+    </message>
+    <message>
         <source>TOOLS</source>
         <translation>HERRAMIENTAS</translation>
     </message>
@@ -1491,6 +1499,49 @@
     <message>
         <source>Close</source>
         <translation>Cerrar</translation>
+    </message>
+</context>
+<context>
+    <name>TextOverridesDialog</name>
+    <message>
+        <source>Not saved – at most 64 KB of own texts per channel.</source>
+        <translation>No guardado – como máximo 64 KB de textos propios por canal.</translation>
+    </message>
+    <message>
+        <source>Not saved – this line is no &quot;key=value&quot; or repeats a key: %1</source>
+        <translation>No guardado – esta línea no es «key=value» o repite una clave: %1</translation>
+    </message>
+    <message>
+        <source>Used once this channel has a translation; English has no file to change.</source>
+        <translation>Se usan cuando este canal tenga una traducción; el inglés no tiene archivo que cambiar.</translation>
+    </message>
+    <message>
+        <source>Written into the translation with its next update.</source>
+        <translation>Se escriben en la traducción con su próxima actualización.</translation>
+    </message>
+    <message>
+        <source>Not in the translation, added at its end: %1. If the game does not show them, check the spelling.</source>
+        <translation>No están en la traducción, añadidos al final: %1. Si el juego no los muestra, revisa la ortografía.</translation>
+    </message>
+    <message>
+        <source>In the installed translation; written again after every update.</source>
+        <translation>En la traducción instalada; se escriben de nuevo tras cada actualización.</translation>
+    </message>
+    <message>
+        <source>Own texts</source>
+        <translation>Textos propios</translation>
+    </message>
+    <message>
+        <source>Replaces single texts of the channel&apos;s translation with your own, e.g. a shorter name. One &quot;key=value&quot; per line, with the key as in global.ini; lines starting with ; are comments. They stay on this computer.</source>
+        <translation>Sustituye textos sueltos de la traducción del canal por los tuyos, p. ej. un nombre más corto. Un «key=value» por línea, con la clave como en global.ini; las líneas que empiezan por ; son comentarios. Se quedan en este ordenador.</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Cerrar</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Guardar</translation>
     </message>
 </context>
 <context>

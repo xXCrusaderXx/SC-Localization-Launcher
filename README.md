@@ -19,6 +19,7 @@ New here? The [user guide](docs/user-guide.md) ([Deutsch](docs/user-guide.de.md)
 - A setup assistant on the first start finds the game and sets the translation in four steps.
 - Choose the translation for each channel, or switch a channel back to English.
 - Optionally adds size, class and grade to item names (the weight class to armour, the size to mining lasers) and a line of values to item descriptions, from the [Star Citizen Wiki](https://star-citizen.wiki).
+- Your own texts for single entries of a channel's translation, e.g. a shorter name or a personal fix (Settings → Translations → "Own texts …"). They are written into the installed `global.ini` after the item values and again after every translation update, and they stay on your computer.
 - Shows the credit and license of every translation in the settings, and the contributors a translation names in its file.
 - Finds Star Citizen installations automatically, or lets you pick the folder.
 - Downloads the translation safely: a failed download never replaces a working one, and only the language lines in your `user.cfg` are changed.
