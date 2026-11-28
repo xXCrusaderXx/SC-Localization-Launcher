@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <sstream>
 
 #include "TestSupport.hpp"
@@ -2174,6 +2175,214 @@ class BackendTest : public QObject
         game.waitForFinished();
         QVERIFY(refused);
         QVERIFY(std::filesystem::exists(path));
+    }
+
+    // A small Star Citizen library: LIVE with game files, its own logs and login, and a symlink that leads out of it.
+    // Returns the library folder.
+    static std::filesystem::path channelLibrary (const std::filesystem::path& root, const std::filesystem::path& outside)
+    {
+        auto write = [] (const std::filesystem::path& file, size_t bytes)
+        {
+            std::filesystem::create_directories(file.parent_path());
+            std::ofstream(file, std::ios::binary) << std::string(bytes, 'x');
+        };
+        auto library = root / "Roberts Space Industries/StarCitizen";
+        write(library / "LIVE/Data.p4k", 300);
+        write(library / "LIVE/Bin64/StarCitizen.exe", 50);
+        write(library / "LIVE/data/Localization/german_(germany)/global.ini", 20);
+        write(library / "LIVE/user.cfg", 10);
+        write(library / "LIVE/Game.log", 7);
+        write(library / "LIVE/logbackups/old.log", 7);
+        write(library / "LIVE/loginData.json", 7);
+        write(outside / "keep.bin", 70);
+        std::filesystem::create_directory_symlink(outside, library / "LIVE/outside");
+        return library;
+    }
+
+    static std::set<std::string> entriesOf (const std::filesystem::path& folder)
+    {
+        std::set<std::string> names;
+        for(const auto& entry : std::filesystem::directory_iterator(folder)) names.insert(entry.path().filename().string());
+        return names;
+    }
+
+    static Protocol::ChannelFolder folderOf (const Protocol::ChannelFolders& folders, const std::string& name)
+    {
+        auto it = std::find_if(folders.folders.begin(), folders.folders.end(), [&] (const auto& f) { return f.name == name; });
+        return it != folders.folders.end() ? *it : Protocol::ChannelFolder{};
+    }
+
+    Protocol::ChannelFolders scanChannelFolders ()
+    {
+        size_t from = published();
+        backEnd->execute(Protocol::ScanChannelFolders{});
+        auto found = waitForState([] (const auto& s) { return s.channelFolders.scanned && !s.channelFolders.busy; }, from);
+        if(!found) return {};
+        std::lock_guard lock(mutex);
+        return states[*found].channelFolders;
+    }
+
+    // Sends a CreateChannel or RemoveChannel and returns the state that shows its result
+    Protocol::State channelCommand (const Protocol::Command& command, const std::string& channel)
+    {
+        // A state published before the command was handled may still show the result of the one before
+        if(!waitForPreviousCommands()) return {};
+        auto handled = latest().handledCommands;
+        size_t from = published();
+        backEnd->execute(command);
+        auto done = waitForState(
+            [&] (const auto& s)
+            {
+                return s.handledCommands > handled && !s.channelFolders.busy && s.channelFolders.resultChannel == channel &&
+                       !s.channelFolders.result.empty();
+            },
+            from);
+        if(!done) return {};
+        std::lock_guard lock(mutex);
+        return states[*done];
+    }
+
+    void createsAChannelFromLiveAndRemovesIt ()
+    {
+        QTemporaryDir rootDir, outsideDir;
+        std::filesystem::path outside = outsideDir.path().toStdString();
+        auto library = channelLibrary(rootDir.path().toStdString(), outside);
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", (library / "LIVE").string()});
+        QVERIFY(setLanguage("PTU", "de"));
+
+        auto folders = scanChannelFolders();
+        // Without its logs and its login
+        QCOMPARE(folders.copyBytes, uint64_t(300 + 50 + 20 + 10));
+        QVERIFY(folders.freeBytes > 0);
+        auto live = folderOf(folders, "LIVE");
+        QVERIFY(live.exists && !live.canCreate && !live.canRemove);
+        QCOMPARE(live.bytes, uint64_t(401));
+        for(const char* name : {"PTU", "EPTU", "TECH-PREVIEW"})
+        {
+            auto folder = folderOf(folders, name);
+            QVERIFY(folder.canCreate && !folder.exists && !folder.canRemove);
+            QCOMPARE(folder.path, (library / name).string());
+        }
+        QVERIFY(!folderOf(folders, "HOTFIX").canCreate);
+
+        auto state = channelCommand(Protocol::CreateChannel{"PTU"}, "PTU");
+        QCOMPARE(state.channelFolders.result, std::string("created"));
+        QCOMPARE(channel(state, "PTU").installPath, (library / "PTU").string());
+        QCOMPARE(channel(state, "PTU").language, std::string("de"));
+        QCOMPARE(entriesOf(library), (std::set<std::string>{"LIVE", "PTU"}));
+        QCOMPARE(entriesOf(library / "PTU"), (std::set<std::string>{"Bin64", "Data.p4k", "data", "outside", "user.cfg"}));
+        QCOMPARE(readFile(library / "PTU/Data.p4k"), std::string(300, 'x'));
+        QCOMPARE(std::filesystem::last_write_time(library / "PTU/Data.p4k"), std::filesystem::last_write_time(library / "LIVE/Data.p4k"));
+        QVERIFY(std::filesystem::is_symlink(library / "PTU/outside"));
+        // Never a hard link
+        QCOMPARE(std::filesystem::hard_link_count(library / "LIVE/Data.p4k"), uintmax_t(1));
+        auto ptu = folderOf(state.channelFolders, "PTU");
+        QVERIFY(ptu.exists && ptu.canRemove && !ptu.canCreate);
+        QCOMPARE(ptu.bytes, uint64_t(380));
+        QCOMPARE(jsonText(readSettingsFile()["channels"]["PTU"]["installPath"]), jsonText((library / "PTU").string()));
+
+        state = channelCommand(Protocol::RemoveChannel{"PTU"}, "PTU");
+        QCOMPARE(state.channelFolders.result, std::string("removed"));
+        QCOMPARE(entriesOf(library), (std::set<std::string>{"LIVE"}));
+        QCOMPARE(channel(state, "PTU").installPath, std::string());
+        QCOMPARE(channel(state, "PTU").language, std::string("de"));
+        QVERIFY(folderOf(state.channelFolders, "PTU").canCreate);
+        // The symlink went, not what it pointed to
+        QVERIFY(std::filesystem::exists(outside / "keep.bin"));
+        QCOMPARE(readFile(library / "LIVE/Data.p4k"), std::string(300, 'x'));
+    }
+
+    void refusesUnsafeChannelFolderChanges ()
+    {
+        qputenv("PATH", "/usr/bin:/bin");
+        QTemporaryDir rootDir, outsideDir;
+        std::filesystem::path root = rootDir.path().toStdString();
+        std::filesystem::path outside = outsideDir.path().toStdString();
+        auto library = channelLibrary(root, outside);
+        std::filesystem::create_directories(library / "EPTU");
+        std::ofstream(library / "EPTU/keep.txt") << "mine";
+        std::filesystem::create_directories(root / "elsewhere");
+        std::ofstream(root / "elsewhere/keep.txt") << "mine";
+        std::filesystem::create_directory_symlink(outside, library / "PTU");
+        QVERIFY(start());
+        backEnd->execute(Protocol::SetInstallPath{"LIVE", (library / "LIVE").string()});
+        backEnd->execute(Protocol::SetInstallPath{"PTU", (library / "PTU").string()});
+        backEnd->execute(Protocol::SetInstallPath{"TECH-PREVIEW", (root / "elsewhere").string()});
+
+        auto folders = scanChannelFolders();
+        for(const char* name : {"LIVE", "PTU", "EPTU", "TECH-PREVIEW"}) QVERIFY(!folderOf(folders, name).canCreate);
+        for(const char* name : {"LIVE", "PTU", "TECH-PREVIEW"}) QVERIFY(!folderOf(folders, name).canRemove);
+
+        auto refused = [&] (const Protocol::Command& command, const std::string& channel)
+        { return channelCommand(command, channel).channelFolders.result; };
+        QCOMPARE(refused(Protocol::RemoveChannel{"LIVE"}, "LIVE"), std::string("live"));
+        // Not empty, a symlink, or no channel made from LIVE
+        QCOMPARE(refused(Protocol::CreateChannel{"EPTU"}, "EPTU"), std::string("exists"));
+        QCOMPARE(refused(Protocol::CreateChannel{"PTU"}, "PTU"), std::string("exists"));
+        QCOMPARE(refused(Protocol::CreateChannel{"HOTFIX"}, "HOTFIX"), std::string("notAllowed"));
+        // A symlink, and a folder that is not named after its channel
+        QCOMPARE(refused(Protocol::RemoveChannel{"PTU"}, "PTU"), std::string("notAllowed"));
+        QCOMPARE(refused(Protocol::RemoveChannel{"TECH-PREVIEW"}, "TECH-PREVIEW"), std::string("notAllowed"));
+        QCOMPARE(refused(Protocol::RemoveChannel{"EPTU"}, "EPTU"), std::string("notFound"));
+
+        backEnd->execute(Protocol::SetInstallPath{"EPTU", (library / "EPTU").string()});
+        QProcess game;
+        game.start("/bin/bash", {"-c", QString::fromStdString(fakeWineProcess(testGameProgram()))});
+        QVERIFY(game.waitForStarted());
+        QVERIFY(waitForState([] (const auto& s) { return s.game == GameStart::Playing; }));
+        auto removed = refused(Protocol::RemoveChannel{"EPTU"}, "EPTU");
+        auto created = refused(Protocol::CreateChannel{"TECH-PREVIEW"}, "TECH-PREVIEW");
+        game.kill();
+        game.waitForFinished();
+        QCOMPARE(removed, std::string("gameRunning"));
+        QCOMPARE(created, std::string("gameRunning"));
+
+        QCOMPARE(entriesOf(library), (std::set<std::string>{"LIVE", "PTU", "EPTU"}));
+        QCOMPARE(readFile(library / "EPTU/keep.txt"), std::string("mine"));
+        QCOMPARE(readFile(root / "elsewhere/keep.txt"), std::string("mine"));
+        QVERIFY(std::filesystem::exists(outside / "keep.bin"));
+        QCOMPARE(std::filesystem::file_size(library / "LIVE/Data.p4k"), uintmax_t(300));
+    }
+
+    void aStoppedChannelCopyLeavesNothing ()
+    {
+        QTemporaryDir rootDir, outsideDir;
+        auto library = channelLibrary(rootDir.path().toStdString(), outsideDir.path().toStdString());
+        auto live = library / "LIVE";
+        ChannelFolderManager manager;
+        auto plan = ChannelFolderManager::plan(live, [] { return false; });
+
+        bool stop = false;
+        auto result = manager.copy(live, plan, library / "PTU", [&] (uint64_t, uint64_t) { stop = true; }, [&] { return stop; });
+        QCOMPARE(result, std::string("cancelled"));
+        QCOMPARE(entriesOf(library), (std::set<std::string>{"LIVE"}));
+
+        // Left over by a launcher that was killed during a copy; an empty target folder is fine
+        std::filesystem::create_directories(library / ".sc-launcher-EPTU.copying/half");
+        std::filesystem::create_directories(library / "EPTU");
+        result = manager.copy(live, plan, library / "EPTU", [] (uint64_t, uint64_t) {}, [] { return false; });
+        QCOMPARE(result, std::string("created"));
+        QCOMPARE(entriesOf(library), (std::set<std::string>{"LIVE", "EPTU"}));
+        QVERIFY(!std::filesystem::exists(library / "EPTU/half"));
+        // Into a folder that has something in it, never
+        QCOMPARE(manager.copy(live, plan, library / "EPTU", [] (uint64_t, uint64_t) {}, [] { return false; }), std::string("exists"));
+
+        // Whether this file system shares data is found by trying it
+        bool shared = Platform::cloneFile(live / "user.cfg", library / "probe");
+        QCOMPARE(ChannelFolderManager::canReflink(live, plan, library), shared);
+        QCOMPARE(entriesOf(library).contains(".sc-launcher-reflink-probe"), false);
+
+        const auto margin = ChannelFolderManager::SPACE_MARGIN;
+        QVERIFY(!ChannelFolderManager::enoughSpace(100, static_cast<int64_t>(100 + margin - 1), false));
+        QVERIFY(ChannelFolderManager::enoughSpace(100, static_cast<int64_t>(100 + margin), false));
+        QVERIFY(ChannelFolderManager::enoughSpace(100, static_cast<int64_t>(margin), true));
+        QVERIFY(!ChannelFolderManager::enoughSpace(100, -1, true));
+
+        QVERIFY(ChannelFolderManager::libraryOf("/games/StarCitizen/PTU/", "PTU") == std::filesystem::path("/games/StarCitizen"));
+        QVERIFY(!ChannelFolderManager::libraryOf("/games/Other/PTU", "PTU"));
+        QVERIFY(!ChannelFolderManager::libraryOf("/games/StarCitizen/LIVE", "PTU"));
+        QVERIFY(!ChannelFolderManager::libraryOf("/games/StarCitizen/PTU/..", "PTU"));
     }
 
     void zipChecksumMatchesTheReference () { QCOMPARE(ZipWriter::crc32("123456789"), uint32_t(0xcbf43926)); }

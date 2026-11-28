@@ -207,6 +207,10 @@ class BackendBridge : public QObject
     Q_INVOKABLE void loadWhatsNew () { backEnd.execute(Protocol::LoadWhatsNew{}); }
     Q_INVOKABLE void dismissWhatsNew () { backEnd.execute(Protocol::DismissWhatsNew{}); }
     Q_INVOKABLE void scanCaches () { backEnd.execute(Protocol::ScanCaches{}); }
+    Q_INVOKABLE void scanChannelFolders () { backEnd.execute(Protocol::ScanChannelFolders{}); }
+    Q_INVOKABLE void createChannel (const QString& channel) { backEnd.execute(Protocol::CreateChannel{.channel = channel.toStdString()}); }
+    Q_INVOKABLE void cancelChannelCopy () { backEnd.execute(Protocol::CancelChannelCopy{}); }
+    Q_INVOKABLE void removeChannel (const QString& channel) { backEnd.execute(Protocol::RemoveChannel{.channel = channel.toStdString()}); }
     Q_INVOKABLE void runDiagnostics () { backEnd.execute(Protocol::RunDiagnostics{}); }
     Q_INVOKABLE void saveReport () { backEnd.execute(Protocol::SaveReport{}); }
     Q_INVOKABLE void loadBackups () { backEnd.execute(Protocol::LoadBackups{}); }

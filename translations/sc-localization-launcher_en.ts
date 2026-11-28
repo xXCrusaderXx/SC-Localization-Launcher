@@ -215,6 +215,141 @@
     </message>
 </context>
 <context>
+    <name>ChannelsDialog</name>
+    <message>
+        <source>%1 GB</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 MB</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 KB</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 was created. Open the RSI Launcher, choose %1 and let it verify the files; it downloads only what differs from LIVE.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>%1 was removed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The copy was cancelled; nothing of it was kept.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close Star Citizen and the RSI Launcher first.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Wait until the translations are updated.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The folder of %1 is not empty; nothing was copied.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not enough free space for the copy.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>LIVE cannot be removed here; use the RSI Launcher for that.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The folder of %1 was not found.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Only a channel folder directly inside the StarCitizen folder can be created or removed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Failed; the log has the details.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Channels</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Measuring the channel folders …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>To create a channel from LIVE, LIVE&apos;s folder must be the folder LIVE inside the StarCitizen folder of the RSI Launcher.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>A new PTU, EPTU or Tech-Preview channel can start as a copy of LIVE, so the RSI Launcher only downloads what differs. A channel you no longer play can be removed.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Create from LIVE</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Remove …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete %1 (%2) in %3? The game files of this channel are deleted, and the launcher forgets its settings except the language. The RSI Launcher can install it again.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>LIVE (%1) is copied to %2. This file system shares the data of the copy with LIVE, so it takes almost no extra space at first; the saving can shrink after game patches.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>LIVE (%1) is copied to %2. This file system cannot share the data with LIVE, so the copy needs %1; %3 are free.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Not enough free space: the copy needs %1 and leaves 1 GB free for the patch.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Delete %1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copy LIVE</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Copying LIVE to %1 … %2 %</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Deleting %1 …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Cancel copy</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Start RSI Launcher</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>CustomSourceDialog</name>
     <message>
         <source>Own source for %1</source>
@@ -1050,6 +1185,14 @@
     </message>
     <message>
         <source>Disk space and caches …</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Create PTU, EPTU or Tech-Preview as a copy of LIVE, or remove a channel you no longer play</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Channels …</source>
         <translation type="unfinished"></translation>
     </message>
     <message>

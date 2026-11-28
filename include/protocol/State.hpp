@@ -310,6 +310,49 @@ struct Caches
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Caches, busy, scanned, entries, usage)
 
+// A channel's folder in the Star Citizen library, see ChannelFolderManager
+struct ChannelFolder
+{
+    std::string name;
+    // The channel's folder, or where a copy of LIVE would go; empty if neither is known
+    std::string path;
+    bool exists = false;
+    // Size of the folder, 0 if it does not exist
+    std::uint64_t bytes = 0;
+    // CreateChannel may copy LIVE here
+    bool canCreate = false;
+    // RemoveChannel may delete it
+    bool canRemove = false;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelFolder, name, path, exists, bytes, canCreate, canRemove)
+
+struct ChannelFolders
+{
+    // Scanning, copying or removing
+    bool busy = false;
+    bool scanned = false;
+    // In display order
+    std::vector<ChannelFolder> folders;
+    // What a copy of LIVE writes
+    std::uint64_t copyBytes = 0;
+    // The copy can share LIVE's data (Btrfs, XFS, bcachefs) and then needs almost no space
+    bool reflink = false;
+    // Free space in the library; -1 if unknown
+    std::int64_t freeBytes = -1;
+    // "copy" or "remove" while one runs, for `channel`; progress of a copy 0..1
+    std::string operation;
+    std::string channel;
+    double progress = 0;
+    // Of the last CreateChannel or RemoveChannel: created, removed, cancelled, or why it was refused: gameRunning,
+    // updateRunning, exists, noSpace, notAllowed, live, notFound, failed
+    std::string result;
+    std::string resultChannel;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ChannelFolders, busy, scanned, folders, copyBytes, reflink, freeBytes, operation, channel, progress,
+                                                result, resultChannel)
+
 enum class CheckStatus
 {
     Info,
@@ -479,6 +522,7 @@ struct State
     std::uint64_t handledCommands = 0;
     WhatsNew whatsNew;
     Caches caches;
+    ChannelFolders channelFolders;
     Diagnostics diagnostics;
     Backups backups;
     // Started when StarCitizen.exe starts, also when the game was started without this launcher
@@ -497,7 +541,7 @@ struct State
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(State, languages, channels, rsiLauncherPath, options, update, game, searching, checking, selfUpdate,
-                                                handledCommands, whatsNew, caches, diagnostics, backups, programs, failedPrograms, interfaceLanguage,
-                                                setupNeeded, theme, statistics, dashboardTiles)
+                                                handledCommands, whatsNew, caches, channelFolders, diagnostics, backups, programs, failedPrograms,
+                                                interfaceLanguage, setupNeeded, theme, statistics, dashboardTiles)
 
 }  // namespace Protocol

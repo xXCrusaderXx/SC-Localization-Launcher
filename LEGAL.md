@@ -25,6 +25,8 @@ The launcher **does not**:
 
 Contributions that would change any of these points will not be accepted.
 
+On the player's request (Settings → Tools → "Channels …"), the launcher can copy a whole channel folder, e.g. LIVE into a new PTU folder, as a reflink or a plain copy, and delete a whole channel folder other than LIVE after a confirmation. It never changes, patches or hard-links game files, never touches the content of executables or the anti-cheat, and leaves verifying and patching the copied files to the RSI Launcher. The login file of a channel (`loginData.json`) is not copied.
+
 ## Translation texts
 
 The translation texts are **not part of this repository** and are not covered by its license. They are made by independent community projects. [`languages.json`](languages.json) only lists where each project publishes its files, and the launcher downloads them from there at runtime. For example, the German translation comes from [StarCitizen-Deutsch-INI](https://github.com/rjcncpt/StarCitizen-Deutsch-INI), licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).

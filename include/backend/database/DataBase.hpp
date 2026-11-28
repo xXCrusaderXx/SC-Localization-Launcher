@@ -162,6 +162,11 @@ struct BackendData
     std::string lastSeenVersion;
     Protocol::WhatsNew whatsNew;
     Protocol::Caches caches;
+    Protocol::ChannelFolders channelFolders;
+    // Set to stop a running copy of LIVE; read by the channel job
+    std::atomic<bool> cancelChannelCopy{false};
+    // The copy was stopped because Star Citizen or the RSI Launcher started
+    bool channelCopyStoppedByGame = false;
     Protocol::Diagnostics diagnostics;
     Protocol::Backups backups;
     std::vector<Protocol::Program> programs;

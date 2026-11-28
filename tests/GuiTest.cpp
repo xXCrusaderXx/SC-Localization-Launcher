@@ -5,6 +5,7 @@
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QRegularExpression>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTranslator>
@@ -86,6 +87,14 @@ class GuiTest : public QObject
         return true;
     }
 
+    // A dialog that grows or shrinks moves its buttons only when the next frame lays it out
+    bool waitForFrame ()
+    {
+        QSignalSpy frames(window, &QQuickWindow::frameSwapped);
+        window->update();
+        return frames.wait(5000);
+    }
+
     QVariantMap channel (const QString& name) const
     {
         for(const auto& c : bridge->state()["channels"].toList())
@@ -152,8 +161,9 @@ class GuiTest : public QObject
     // A failed test may leave a modal dialog open, which would swallow the clicks of the next test
     void cleanup ()
     {
-        for(const char* name : {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "diagnosticsDialog", "backupDialog",
-                                "gameSettingsDialog", "programsDialog", "setupAssistant", "statisticsDialog", "dashboardDialog", "systemInfoDialog"})
+        for(const char* name :
+            {"launcherUpdateDialog", "customSourceDialog", "whatsNewDialog", "cacheDialog", "channelsDialog", "diagnosticsDialog", "backupDialog",
+             "gameSettingsDialog", "programsDialog", "setupAssistant", "statisticsDialog", "dashboardDialog", "systemInfoDialog"})
         {
             auto* dialog = engine->rootObjects().first()->findChild<QObject*>(name);
             if(!dialog || !dialog->property("visible").toBool()) continue;
@@ -1028,6 +1038,59 @@ class GuiTest : public QObject
         QCOMPARE(channel("LIVE")["custom"].toMap()["url"].toString(), url);
         QCOMPARE(channel("LIVE")["custom"].toMap()["folder"].toString(), QString("german_(germany)"));
         QTRY_VERIFY(!dialog->property("visible").toBool());
+    }
+
+    // Last: LIVE points to a folder of its own meanwhile
+    void createsAndRemovesAChannelFromTheSettings ()
+    {
+        QTemporaryDir root;
+        QString library = root.filePath("Roberts Space Industries/StarCitizen");
+        QVERIFY(QDir().mkpath(library + "/LIVE/Bin64"));
+        QFile exe(library + "/LIVE/Bin64/StarCitizen.exe");
+        QVERIFY(exe.open(QIODevice::WriteOnly) && exe.write("game") == 4);
+        exe.close();
+        bridge->setInstallPath("LIVE", QUrl::fromLocalFile(library + "/LIVE"));
+        QTRY_COMPARE(channel("LIVE")["installPath"].toString(), library + "/LIVE");
+
+        auto* panel = engine->rootObjects().first()->findChild<QObject*>("settingsPanel");
+        panel->setProperty("open", true);
+        // The button sits below the visible part of the panel; its signal is what it would send
+        QMetaObject::invokeMethod(panel, "channelsRequested");
+        auto* dialog = engine->rootObjects().first()->findChild<QObject*>("channelsDialog");
+        QVERIFY(dialog);
+        QTRY_VERIFY(dialog->property("opened").toBool());
+        // PTU points to a folder of the earlier tests, so the first channel offered may be EPTU
+        QTRY_VERIFY(findButton("Create from LIVE"));
+        QVERIFY(waitForFrame());
+        QVERIFY(clickButton("Create from LIVE"));
+        QTRY_VERIFY(findButton("Copy LIVE"));
+        QVERIFY(waitForFrame());
+        QVERIFY(clickButton("Copy LIVE"));
+        QTRY_VERIFY(findButton("Start RSI Launcher"));
+        QString created = bridge->state()["channelFolders"].toMap()["resultChannel"].toString();
+        QVERIFY(created == "PTU" || created == "EPTU");
+        QVERIFY(findText(created + " was created. Open the RSI Launcher, choose " + created +
+                         " and let it verify the files; it downloads only what differs from LIVE."));
+        QVERIFY(QFile::exists(library + "/" + created + "/Bin64/StarCitizen.exe"));
+        QCOMPARE(channel(created)["installPath"].toString(), library + "/" + created);
+
+        // Only the new channel lies in the StarCitizen folder, so it is the only one that can be removed
+        QTRY_VERIFY(findButton("Remove …"));
+        QVERIFY(waitForFrame());
+        QVERIFY(clickButton("Remove …"));
+        QTRY_VERIFY(findButton("Delete 1 KB"));
+        QVERIFY(waitForFrame());
+        QVERIFY(clickButton("Delete 1 KB"));
+        QTRY_VERIFY(findText(created + " was removed."));
+        QVERIFY(!QFile::exists(library + "/" + created));
+        QVERIFY(channel(created)["installPath"].toString().isEmpty());
+
+        QTest::keyClick(window, Qt::Key_Escape);
+        QTRY_VERIFY(!dialog->property("visible").toBool());
+        panel->setProperty("open", false);
+        QTRY_VERIFY(!panel->property("visible").toBool());
+        bridge->setInstallPath("LIVE", QUrl::fromLocalFile(liveDir.path()));
+        QTRY_COMPARE(channel("LIVE")["installPath"].toString(), liveDir.path());
     }
 };
 
